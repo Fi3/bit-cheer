@@ -1,0 +1,17 @@
+[package]
+name = "bit-cheer-audio"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Allocation-free render loop for Bit Cheer's Rust/WASM two-deck trainer"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+

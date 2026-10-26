@@ -1,0 +1,7204 @@
+{
+  "skins": [
+    {
+      "id": "classic",
+      "name": "Classic 2.91",
+      "md5": "5e4f10275dcb1fb211d4a8b4f1bda236",
+      "preview": "/skins/classic.png",
+      "archive": "/skins/classic.wsz",
+      "source": "https://skins.webamp.org/skin/5e4f10275dcb1fb211d4a8b4f1bda236/",
+      "author": "Nullsoft",
+      "description": "Native Bit Cheer adaptation; original Winamp archive and preview included for reference."
+    },
+    {
+      "id": "classified3",
+      "name": "Winamp 3 Classified",
+      "md5": "cd251187a5e6ff54ce938d26f1f2de02",
+      "preview": "/skins/classified3.png",
+      "archive": "/skins/classified3.wsz",
+      "source": "https://skins.webamp.org/skin/cd251187a5e6ff54ce938d26f1f2de02/",
+      "author": "Steve Gedikian; John Slegers; PeterPan; Wildrose-Wally",
+      "description": "Native Bit Cheer adaptation; original Winamp archive and preview included for reference."
+    },
+    {
+      "id": "classified5",
+      "name": "Winamp 5 Classified",
+      "md5": "b0fb83cc20af3abe264291bb17fb2a13",
+      "preview": "/skins/classified5.png",
+      "archive": "/skins/classified5.wsz",
+      "source": "https://skins.webamp.org/skin/b0fb83cc20af3abe264291bb17fb2a13/",
+      "author": "Sven Kistner; Zarko Jovic; GuidoD; Wildrose-Wally",
+      "description": "Native Bit Cheer adaptation; original Winamp archive and preview included for reference."
+    },
+    {
+      "id": "bento",
+      "name": "Bento Classified",
+      "md5": "d6010aa35bed659bc1311820daa4b341",
+      "preview": "/skins/bento.png",
+      "archive": "/skins/bento.wsz",
+      "source": "https://skins.webamp.org/skin/d6010aa35bed659bc1311820daa4b341/",
+      "author": "LuigiHann",
+      "description": "Native Bit Cheer adaptation; original Winamp archive and preview included for reference."
+    },
+    {
+      "id": "alien",
+      "name": "Headspace \u00b7 Alien Lime",
+      "preview": "/skins/alien.png",
+      "archive": "/skins/alien.wal",
+      "source": "https://winamp.spacecatsamba.com/skin/headamp/",
+      "author": "HeadAMP by sambaneko; Headspace original by Microsoft / Carolyn Farino",
+      "description": "Native Bit Cheer adaptation of the user-linked green Headspace design; HeadAMP Winamp Modern reference."
+    }
+  ],
+  "tracks": [
+    {
+      "id": "selection",
+      "title": "Selection",
+      "artist": "abece",
+      "genre": "House",
+      "source": "https://sampleswap.org/mp3/song.php?id=488",
+      "download": "https://sampleswap.org/mp3/artist/18748/abece_selection-160.mp3",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "url": "/tracks/selection.mp3",
+      "bpm": 130.0,
+      "duration": 29.538,
+      "excerptStart": 30.078,
+      "bpmEstimated": true,
+      "changes": "64-beat practice excerpt, re-encoded to 160 kbps MP3; 5 ms fades at edges. BPM estimated from low-frequency onsets; adjust grid by ear."
+    },
+    {
+      "id": "house-tweek",
+      "title": "My First House Tweek",
+      "artist": "TEAMFOCUS",
+      "genre": "House",
+      "source": "https://sampleswap.org/mp3/song.php?id=955",
+      "download": "https://sampleswap.org/mp3/artist/33933/TEAMFOCUS_my-first-house-tweek-160.mp3",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "url": "/tracks/house-tweek.mp3",
+      "bpm": 123.0,
+      "duration": 31.22,
+      "excerptStart": 30.315,
+      "bpmEstimated": true,
+      "changes": "64-beat practice excerpt, re-encoded to 160 kbps MP3; 5 ms fades at edges. BPM estimated from low-frequency onsets; adjust grid by ear."
+    },
+    {
+      "id": "techno-shonen",
+      "title": "21seiki Techno Shonen",
+      "artist": "emanon",
+      "genre": "Techno",
+      "source": "https://sampleswap.org/mp3/song.php?id=413",
+      "download": "https://sampleswap.org/mp3/artist/23531/emanon_21seiki-Techno-Shonen-160.mp3",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "url": "/tracks/techno-shonen.mp3",
+      "bpm": 148.19,
+      "duration": 25.913,
+      "excerptStart": 30.11,
+      "bpmEstimated": true,
+      "changes": "64-beat practice excerpt, re-encoded to 160 kbps MP3; 5 ms fades at edges. BPM estimated from low-frequency onsets; adjust grid by ear."
+    },
+    {
+      "id": "robowalk",
+      "title": "Robowalk",
+      "artist": "sausageblowfly",
+      "genre": "Techno",
+      "source": "https://sampleswap.org/mp3/song.php?id=1455",
+      "download": "https://sampleswap.org/mp3/artist/73054/sausageblowfly_Robowalk-160.mp3",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "url": "/tracks/robowalk.mp3",
+      "bpm": 130.0,
+      "duration": 29.538,
+      "excerptStart": 30.282,
+      "bpmEstimated": true,
+      "changes": "64-beat practice excerpt, re-encoded to 160 kbps MP3; 5 ms fades at edges. BPM estimated from low-frequency onsets; adjust grid by ear."
+    }
+  ],
+  "beatmatchSource": "https://www.beatmatch.pro/practice",
+  "referenceTracks": [
+    {
+      "id": "473",
+      "title": "T66",
+      "source": "https://facta.bandcamp.com/track/t66",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "436",
+      "title": "Lickshot",
+      "source": "https://timreaper.bandcamp.com/track/lickshot",
+      "tags": [
+        "drum&bass",
+        "electronic",
+        "jungle",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "456",
+      "title": "Cycle B",
+      "source": "https://binaryalgorithms.bandcamp.com/track/cycle-b",
+      "tags": [
+        "electronic",
+        "ambient",
+        "ambient electronic",
+        "breaks",
+        "dub-techno",
+        "techno",
+        "colombia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "466",
+      "title": "Gym Mrawag",
+      "source": "https://pleasurepatterns.bandcamp.com/track/gym-mrawag",
+      "tags": [
+        "electronic",
+        "progressive house",
+        "progressive trance",
+        "disco",
+        "genre-bending",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "186",
+      "title": "I Like It Like That 2",
+      "source": "https://fcukers.bandcamp.com/track/i-like-it-like-that-2?action=download",
+      "tags": [
+        "electronic",
+        "house",
+        "club music",
+        "indie dance",
+        "indie house",
+        "new york"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "209",
+      "title": "La Musica Hot Dj Version 3",
+      "source": "https://toytonics.bandcamp.com/track/la-musica-hot-dj-version-3",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "206",
+      "title": "I Can Never Be Yours 3",
+      "source": "https://toytonics.bandcamp.com/track/i-can-never-be-yours-3",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "203",
+      "title": "Misterio Severino Horse Meat Disco Remix 3",
+      "source": "https://toytonics.bandcamp.com/track/misterio-severino-horse-meat-disco-remix-3",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "218",
+      "title": "Playing With My Mind 4",
+      "source": "https://toytonics.bandcamp.com/track/playing-with-my-mind-4",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "221",
+      "title": "Arpy Brown Vesta",
+      "source": "https://toytonics.bandcamp.com/track/arpy-brown-vesta",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "212",
+      "title": "Get Down Brother 2",
+      "source": "https://toytonics.bandcamp.com/track/get-down-brother-2",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "215",
+      "title": "Moves 3",
+      "source": "https://toytonics.bandcamp.com/track/moves-3",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "224",
+      "title": "Spaceship",
+      "source": "https://toytonics.bandcamp.com/track/spaceship",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "239",
+      "title": "Miomo 2",
+      "source": "https://thebasementdiscos.bandcamp.com/track/miomo-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "237",
+      "title": "Bodega Disko 2",
+      "source": "https://thebasementdiscos.bandcamp.com/track/bodega-disko-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "263",
+      "title": "Where You At",
+      "source": "https://melladee.bandcamp.com/track/where-you-at",
+      "tags": [
+        "electronic",
+        "warehouse techno",
+        "acid",
+        "bleeps",
+        "house",
+        "techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "269",
+      "title": "Dark Matter",
+      "source": "https://limousinedream.bandcamp.com/track/dark-matter",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "251",
+      "title": "Swole Patrol",
+      "source": "https://limousinedream.bandcamp.com/track/swole-patrol",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "248",
+      "title": "Late Again",
+      "source": "https://pearlypearly.bandcamp.com/track/late-again",
+      "tags": [
+        "house",
+        "electronic",
+        "classic house",
+        "deep house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "274",
+      "title": "The Massive One",
+      "source": "https://woddauk.bandcamp.com/track/the-massive-one",
+      "tags": [
+        "electronic",
+        "breaks",
+        "garage",
+        "speed-garage",
+        "trance",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "260",
+      "title": "Captain It S Wednesday",
+      "source": "https://limousinedream.bandcamp.com/track/captain-it-s-wednesday",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "257",
+      "title": "Hedonic Setpoint 85 3",
+      "source": "https://malingenie.bandcamp.com/track/hedonic-setpoint-85-3",
+      "tags": [
+        "electronic",
+        "deep house",
+        "dub",
+        "house",
+        "malin genie",
+        "techno",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "242",
+      "title": "Sem Frescura 2",
+      "source": "https://thebasementdiscos.bandcamp.com/track/sem-frescura-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "280",
+      "title": "Y Tu Quie N Eres",
+      "source": "https://limousinedream.bandcamp.com/track/y-tu-quie-n-eres",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "254",
+      "title": "Potion Potluck",
+      "source": "https://limousinedream.bandcamp.com/track/potion-potluck",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "278",
+      "title": "Whisper",
+      "source": "https://limousinedream.bandcamp.com/track/whisper",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "245",
+      "title": "Flow 2",
+      "source": "https://thebasementdiscos.bandcamp.com/track/flow-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "233",
+      "title": "Mc Slaya 2",
+      "source": "https://thebasementdiscos.bandcamp.com/track/mc-slaya-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "227",
+      "title": "Enough 3",
+      "source": "https://thebasementdiscos.bandcamp.com/track/enough-3",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "264",
+      "title": "Maximum Murk",
+      "source": "https://woddauk.bandcamp.com/track/maximum-murk",
+      "tags": [
+        "electronic",
+        "breaks",
+        "garage",
+        "speed-garage",
+        "trance",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "276",
+      "title": "Escola De Samba 2",
+      "source": "https://beads1.bandcamp.com/track/escola-de-samba-2",
+      "tags": [
+        "techno",
+        "electronic",
+        "hardgroove",
+        "hardgroove techno",
+        "rave",
+        "tribal techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "272",
+      "title": "Its That Time Again",
+      "source": "https://thebasementdiscos.bandcamp.com/track/its-that-time-again",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "238",
+      "title": "A To Z Bowy 2",
+      "source": "https://thebasementdiscos.bandcamp.com/track/a-to-z-bowy-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "230",
+      "title": "Only You 2",
+      "source": "https://thebasementdiscos.bandcamp.com/track/only-you-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "246",
+      "title": "Phantom Melodies",
+      "source": "https://chaosinthecbd.bandcamp.com/track/phantom-melodies",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "jazz",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "243",
+      "title": "Nomada Chris Costavez Remix",
+      "source": "https://thebasementdiscos.bandcamp.com/track/nomada-chris-costavez-remix",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "149",
+      "title": "Amtraxx Funky",
+      "source": "https://loveinternationalrecordings.bandcamp.com/track/amtraxx-funky",
+      "tags": [
+        "bristol"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "291",
+      "title": "Lose Control",
+      "source": "https://klauslayer.bandcamp.com/track/lose-control",
+      "tags": [
+        "alternative",
+        "hip hop",
+        "house",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "285",
+      "title": "Look At The Owl",
+      "source": "https://balkanvinyl.bandcamp.com/track/look-at-the-owl",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "295",
+      "title": "Xtasy",
+      "source": "https://balkanvinyl.bandcamp.com/track/xtasy",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "492",
+      "title": "Tears You Cry Feat Reinen",
+      "source": "https://daisybelledj.bandcamp.com/track/tears-you-cry-feat-reinen",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "balearic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "512",
+      "title": "Eniac Deluxe Remaster",
+      "source": "https://octaveone.bandcamp.com/track/eniac-deluxe-remaster",
+      "tags": [
+        "detroit house",
+        "detroit techno",
+        "electronic",
+        "house",
+        "techno",
+        "detroit"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "535",
+      "title": "Traffic",
+      "source": "https://asatate-techsupport.bandcamp.com/track/traffic",
+      "tags": [
+        "electronic",
+        "balearic",
+        "chug",
+        "house",
+        "italo",
+        "leftfield",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "540",
+      "title": "Unlocked Love",
+      "source": "https://tomvr.bandcamp.com/track/unlocked-love",
+      "tags": [
+        "electronic",
+        "electronica",
+        "garage",
+        "house",
+        "other",
+        "techno",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "562",
+      "title": "Kutika Daichi Remix",
+      "source": "https://visceratransmissions.bandcamp.com/track/kutika-daichi-remix",
+      "tags": [
+        "electronic",
+        "acid",
+        "balearic",
+        "breaks",
+        "disco",
+        "electro",
+        "house",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "624",
+      "title": "Lucky 2",
+      "source": "https://caribouband.bandcamp.com/track/lucky-2",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "474",
+      "title": "Caroline Caroline Polachek Tell Me I Never Knew That K Lone Edit",
+      "source": "https://k-lone.bandcamp.com/track/caroline-caroline-polachek-tell-me-i-never-knew-that-k-lone-edit",
+      "tags": [
+        "electronic",
+        "brighton"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "437",
+      "title": "Whipcrack",
+      "source": "https://timreaper.bandcamp.com/track/whipcrack",
+      "tags": [
+        "drum&bass",
+        "electronic",
+        "jungle",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "457",
+      "title": "Lift Off 4",
+      "source": "https://binaryalgorithms.bandcamp.com/track/lift-off-4",
+      "tags": [
+        "electronic",
+        "ambient",
+        "ambient electronic",
+        "breaks",
+        "dub-techno",
+        "techno",
+        "colombia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "470",
+      "title": "Passing Time Ahni Remix",
+      "source": "https://shapelessculture.bandcamp.com/track/passing-time-ahni-remix",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "196",
+      "title": "House Nation",
+      "source": "https://thebasementdiscos.bandcamp.com/track/house-nation",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "297",
+      "title": "Youre Becoming Everything I Hoped You Would",
+      "source": "https://kalaharioystercult.bandcamp.com/track/youre-becoming-everything-i-hoped-you-would",
+      "tags": [
+        "acid",
+        "ambient",
+        "breakbeat",
+        "downtempo",
+        "electro",
+        "house",
+        "leftfield",
+        "techno",
+        "trance",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "289",
+      "title": "Quasar Salimjan Alhamdu Limusik",
+      "source": "https://skylaxrecords.bandcamp.com/track/quasar-salimjan-alhamdu-limusik",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "house music",
+        "italo disco",
+        "paris"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "294",
+      "title": "1 Crosswalks Feat Remax",
+      "source": "https://klauslayer.bandcamp.com/track/1-crosswalks-feat-remax",
+      "tags": [
+        "alternative",
+        "hip hop",
+        "house",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "296",
+      "title": "Quasar Salimjan Urkus",
+      "source": "https://skylaxrecords.bandcamp.com/track/quasar-salimjan-urkus",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "house music",
+        "italo disco",
+        "paris"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "188",
+      "title": "Dancing Times",
+      "source": "https://thebasementdiscos.bandcamp.com/track/dancing-times?action=download",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "191",
+      "title": "Waterfall Feat Dee Diggs Cc Disco Remix 2",
+      "source": "https://closecounters.bandcamp.com/track/waterfall-feat-dee-diggs-cc-disco-remix-2?action=download",
+      "tags": [
+        "broken beat",
+        "dance",
+        "electronic",
+        "house",
+        "soul",
+        "melbourne"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "197",
+      "title": "Ill Be There For You Club Mix",
+      "source": "https://closecounters.bandcamp.com/track/ill-be-there-for-you-club-mix?action=download",
+      "tags": [
+        "broken beat",
+        "dance",
+        "electronic",
+        "house",
+        "soul",
+        "melbourne"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "193",
+      "title": "Ill Be There For You Crackazat Remix",
+      "source": "https://closecounters.bandcamp.com/track/ill-be-there-for-you-crackazat-remix?action=download",
+      "tags": [
+        "broken beat",
+        "dance",
+        "electronic",
+        "house",
+        "soul",
+        "melbourne"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "207",
+      "title": "Mystery Feat Guinny",
+      "source": "https://toytonics.bandcamp.com/track/mystery-feat-guinny",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "213",
+      "title": "That Song",
+      "source": "https://toytonics.bandcamp.com/track/that-song",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "216",
+      "title": "Cash Sam Ruffillo Kapote Remix 2",
+      "source": "https://toytonics.bandcamp.com/track/cash-sam-ruffillo-kapote-remix-2",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "219",
+      "title": "Ya Late",
+      "source": "https://toytonics.bandcamp.com/track/ya-late",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "222",
+      "title": "Get2Gether Gee Lane Remix 2",
+      "source": "https://toytonics.bandcamp.com/track/get2gether-gee-lane-remix-2",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "204",
+      "title": "Chiamami Subito",
+      "source": "https://toytonics.bandcamp.com/track/chiamami-subito",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "210",
+      "title": "Are U Talking To Me",
+      "source": "https://toytonics.bandcamp.com/track/are-u-talking-to-me",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "201",
+      "title": "Tokyo Love Affair 2",
+      "source": "https://toytonics.bandcamp.com/track/tokyo-love-affair-2",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "19",
+      "title": "Scat Man",
+      "source": "https://limousinedream.bandcamp.com/track/scat-man",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": 131
+    },
+    {
+      "id": "106",
+      "title": "Love Change Over Fire Island Club Vocal Mix",
+      "source": "https://zrecords.bandcamp.com/track/love-change-over-fire-island-club-vocal-mix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 124
+    },
+    {
+      "id": "151",
+      "title": "Believe 2",
+      "source": "https://wearerhythmsection.bandcamp.com/track/believe-2",
+      "tags": [
+        "big room",
+        "deep house",
+        "house",
+        "tech house",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "147",
+      "title": "Phone Xone",
+      "source": "https://fortunesignal.bandcamp.com/track/phone-xone",
+      "tags": [
+        "electronic",
+        "house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "107",
+      "title": "Got The Bug",
+      "source": "https://zrecords.bandcamp.com/track/got-the-bug",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 125.1
+    },
+    {
+      "id": "127",
+      "title": "Picking Up Threads From An Old Life",
+      "source": "https://fortunesignal.bandcamp.com/track/picking-up-threads-from-an-old-life",
+      "tags": [
+        "electronic",
+        "house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "145",
+      "title": "12 Peckham",
+      "source": "https://fortunesignal.bandcamp.com/track/12-peckham",
+      "tags": [
+        "electronic",
+        "house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "104",
+      "title": "The Energy Feel The Vibe",
+      "source": "https://zrecords.bandcamp.com/track/the-energy-feel-the-vibe",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 125.9
+    },
+    {
+      "id": "122",
+      "title": "Give A Little",
+      "source": "https://peachdiscs.bandcamp.com/track/give-a-little",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": 131
+    },
+    {
+      "id": "5",
+      "title": "Pascal Moscheni Rakim Under Amor Total",
+      "source": "https://polifonic.bandcamp.com/track/pascal-moscheni-rakim-under-amor-total",
+      "tags": [
+        "milan"
+      ],
+      "bpm": 130
+    },
+    {
+      "id": "178",
+      "title": "Detection Zone",
+      "source": "https://bobbydonny-aceseries.bandcamp.com/track/detection-zone?action=download",
+      "tags": [
+        "electronic",
+        "deep house",
+        "house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "117",
+      "title": "Sprouty Sundays",
+      "source": "https://peachdiscs.bandcamp.com/track/sprouty-sundays",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": 132
+    },
+    {
+      "id": "172",
+      "title": "Hold On",
+      "source": "https://footshooterbeats.bandcamp.com/track/hold-on?action=download",
+      "tags": [
+        "electronic",
+        "broken beat",
+        "house",
+        "jazz",
+        "jazz-house",
+        "london"
+      ],
+      "bpm": 125
+    },
+    {
+      "id": "4",
+      "title": "The D C S",
+      "source": "https://limousinedream.bandcamp.com/track/the-d-c-s",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": 131
+    },
+    {
+      "id": "160",
+      "title": "Sculptures Snakes",
+      "source": "https://loveinternationalrecordings.bandcamp.com/track/sculptures-snakes?action=download",
+      "tags": [
+        "bristol"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "159",
+      "title": "Coraz N",
+      "source": "https://bobbydonny-aceseries.bandcamp.com/track/coraz-n?action=download",
+      "tags": [
+        "electronic",
+        "deep house",
+        "house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "17",
+      "title": "Dancing Club Nf Version",
+      "source": "https://neilfrances.bandcamp.com/track/dancing-club-nf-version",
+      "tags": [
+        "alternative",
+        "dance",
+        "electronic",
+        "indie pop",
+        "los angeles"
+      ],
+      "bpm": 123
+    },
+    {
+      "id": "133",
+      "title": "Https://Ambientbabestationmeltdownborai.Bandcamp.Com/Album/Why The Tiger And The Monkey Are Sworn Enemies",
+      "source": "https://ambientbabestationmeltdownborai.bandcamp.com/album/why-the-tiger-and-the-monkey-are-sworn-enemies",
+      "tags": [
+        "electronic",
+        "acid",
+        "acid electro",
+        "chug",
+        "electro",
+        "electronica",
+        "tech house",
+        "trippy",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "116",
+      "title": "Loopy",
+      "source": "https://peachdiscs.bandcamp.com/track/loopy",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": 134
+    },
+    {
+      "id": "536",
+      "title": "Andromeda",
+      "source": "https://asatate-techsupport.bandcamp.com/track/andromeda",
+      "tags": [
+        "electronic",
+        "balearic",
+        "chug",
+        "house",
+        "italo",
+        "leftfield",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "493",
+      "title": "La Deseable With System Olympia",
+      "source": "https://daisybelledj.bandcamp.com/track/la-deseable-with-system-olympia",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "balearic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "513",
+      "title": "Empower Deluxe Remaster",
+      "source": "https://octaveone.bandcamp.com/track/empower-deluxe-remaster",
+      "tags": [
+        "detroit house",
+        "detroit techno",
+        "electronic",
+        "house",
+        "techno",
+        "detroit"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "563",
+      "title": "Robot",
+      "source": "https://timreaper.bandcamp.com/track/robot",
+      "tags": [
+        "drum&bass",
+        "electronic",
+        "jungle",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "544",
+      "title": "Wiggler Eris Drew Remix",
+      "source": "https://erisdrew.bandcamp.com/track/wiggler-eris-drew-remix",
+      "tags": [
+        "electronic",
+        "house",
+        "motherbeat",
+        "united states"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "476",
+      "title": "The Grove",
+      "source": "https://fortunesignal.bandcamp.com/track/the-grove",
+      "tags": [
+        "electronic",
+        "house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "438",
+      "title": "Dancing Toms",
+      "source": "https://timreaper.bandcamp.com/track/dancing-toms",
+      "tags": [
+        "drum&bass",
+        "electronic",
+        "jungle",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "455",
+      "title": "Endure 4",
+      "source": "https://binaryalgorithms.bandcamp.com/track/endure-4",
+      "tags": [
+        "electronic",
+        "ambient",
+        "ambient electronic",
+        "breaks",
+        "dub-techno",
+        "techno",
+        "colombia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "472",
+      "title": "Nicki",
+      "source": "https://pleasurepatterns.bandcamp.com/track/nicki",
+      "tags": [
+        "electronic",
+        "progressive house",
+        "progressive trance",
+        "disco",
+        "genre-bending",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "98",
+      "title": "Stand Up For The Soul Vocal Mix",
+      "source": "https://zrecords.bandcamp.com/track/stand-up-for-the-soul-vocal-mix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 122
+    },
+    {
+      "id": "125",
+      "title": "Fire",
+      "source": "https://wearerhythmsection.bandcamp.com/track/fire",
+      "tags": [
+        "disco",
+        "disco edit",
+        "edit",
+        "funk",
+        "new wave",
+        "punk funk",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "175",
+      "title": "Man A",
+      "source": "https://pangaeauk.bandcamp.com/track/man-a?action=download",
+      "tags": [
+        "electronic",
+        "house",
+        "techno",
+        "uk garage",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "121",
+      "title": "Demons Quick Mix",
+      "source": "https://peachdiscs.bandcamp.com/track/demons-quick-mix",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": 132
+    },
+    {
+      "id": "156",
+      "title": "B1 Pancratio I Promise",
+      "source": "https://loveontherocks.bandcamp.com/track/b1-pancratio-i-promise?action=download",
+      "tags": [
+        "electronic",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "21",
+      "title": "Pocket Beagle",
+      "source": "https://makeadance.bandcamp.com/track/pocket-beagle",
+      "tags": [
+        "electronic",
+        "breaks",
+        "disco",
+        "house",
+        "re-edits",
+        "london"
+      ],
+      "bpm": 128
+    },
+    {
+      "id": "252",
+      "title": "Smack My Glitch Up",
+      "source": "https://limousinedream.bandcamp.com/track/smack-my-glitch-up",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "228",
+      "title": "Toma Todo 2",
+      "source": "https://thebasementdiscos.bandcamp.com/track/toma-todo-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "270",
+      "title": "Horizon Code",
+      "source": "https://limousinedream.bandcamp.com/track/horizon-code",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "267",
+      "title": "Constraints Of Time Travel",
+      "source": "https://chaosinthecbd.bandcamp.com/track/constraints-of-time-travel",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "jazz",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "236",
+      "title": "Talk To Me 2",
+      "source": "https://thebasementdiscos.bandcamp.com/track/talk-to-me-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "231",
+      "title": "Take Note Please Dj Windows 7 Rework Ft Julzy",
+      "source": "https://thebasementdiscos.bandcamp.com/track/take-note-please-dj-windows-7-rework-ft-julzy",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "234",
+      "title": "The Realm 2",
+      "source": "https://thebasementdiscos.bandcamp.com/track/the-realm-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "20",
+      "title": "Tout Est Fini Feat Logea",
+      "source": "https://medlar.bandcamp.com/track/tout-est-fini-feat-logea",
+      "tags": [
+        "electronic",
+        "house",
+        "london"
+      ],
+      "bpm": 125
+    },
+    {
+      "id": "99",
+      "title": "9 Freak It Tony Humphries Instrumental Mix",
+      "source": "https://zrecords.bandcamp.com/track/9-freak-it-tony-humphries-instrumental-mix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 123.3
+    },
+    {
+      "id": "101",
+      "title": "The Murder Track",
+      "source": "https://zrecords.bandcamp.com/track/the-murder-track",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 123.9
+    },
+    {
+      "id": "140",
+      "title": "Queens House",
+      "source": "https://fortunesignal.bandcamp.com/track/queens-house",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "new york city",
+        "new york house",
+        "piano house",
+        "leftfield house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "139",
+      "title": "Young Man Club Dub 909",
+      "source": "https://makeadance.bandcamp.com/track/young-man-club-dub-909",
+      "tags": [
+        "electronic",
+        "breaks",
+        "disco",
+        "house",
+        "re-edits",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "142",
+      "title": "Liquor Rhythm",
+      "source": "https://wearerhythmsection.bandcamp.com/track/liquor-rhythm",
+      "tags": [
+        "big room",
+        "disco",
+        "french touch",
+        "house",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "113",
+      "title": "New Transition Extended 12 Mix",
+      "source": "https://toytonics.bandcamp.com/track/new-transition-extended-12-mix",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": 125
+    },
+    {
+      "id": "120",
+      "title": "Helio Auz",
+      "source": "https://peachdiscs.bandcamp.com/track/helio-auz",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": 131
+    },
+    {
+      "id": "2",
+      "title": "Think",
+      "source": "https://medlar.bandcamp.com/track/think",
+      "tags": [
+        "electronic",
+        "house",
+        "london"
+      ],
+      "bpm": 125
+    },
+    {
+      "id": "119",
+      "title": "Dance All Night",
+      "source": "https://peachdiscs.bandcamp.com/track/dance-all-night",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": 139
+    },
+    {
+      "id": "118",
+      "title": "Run To",
+      "source": "https://peachdiscs.bandcamp.com/track/run-to",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": 138
+    },
+    {
+      "id": "167",
+      "title": "House Fm",
+      "source": "https://hitty.bandcamp.com/track/house-fm",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "tech house",
+        "vocal house",
+        "united kingdom"
+      ],
+      "bpm": 133
+    },
+    {
+      "id": "8",
+      "title": "Infiltrator",
+      "source": "https://benyayer.bandcamp.com/track/infiltrator",
+      "tags": [
+        "electronic",
+        "house",
+        "techno",
+        "uk funky",
+        "uk garage",
+        "ambient",
+        "bassline",
+        "breaks",
+        "dubstep",
+        "grime",
+        "london"
+      ],
+      "bpm": 132
+    },
+    {
+      "id": "138",
+      "title": "Contact",
+      "source": "https://fortunesignal.bandcamp.com/track/contact",
+      "tags": [
+        "electronic",
+        "house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "185",
+      "title": "You Got Me Dj Love Remix",
+      "source": "https://markbroom.bandcamp.com/track/you-got-me-dj-love-remix",
+      "tags": [
+        "dj love",
+        "electronic",
+        "mark broom",
+        "hardgroove",
+        "hardgroove techno",
+        "techno",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "176",
+      "title": "Martinii Perdido",
+      "source": "https://borderlineblack.bandcamp.com/track/martinii-perdido",
+      "tags": [
+        "breakbeat",
+        "deep tech",
+        "electronic",
+        "minimal",
+        "minimal house",
+        "mexico city"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "144",
+      "title": "Free Girl",
+      "source": "https://fortunesignal.bandcamp.com/track/free-girl",
+      "tags": [
+        "electronic",
+        "house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "6",
+      "title": "It S Always Been There",
+      "source": "https://qess.bandcamp.com/track/it-s-always-been-there",
+      "tags": [
+        "electronic",
+        "deep house",
+        "electronic",
+        "house",
+        "tech house",
+        "london"
+      ],
+      "bpm": 124
+    },
+    {
+      "id": "13",
+      "title": "Percy",
+      "source": "https://medlar.bandcamp.com/track/percy",
+      "tags": [
+        "electronic",
+        "house",
+        "london"
+      ],
+      "bpm": 123
+    },
+    {
+      "id": "10",
+      "title": "How I Feel",
+      "source": "https://1-800girls.bandcamp.com/track/how-i-feel",
+      "tags": [
+        "80s",
+        "electronic",
+        "house",
+        "ambient electronic",
+        "lofi",
+        "techno",
+        "london"
+      ],
+      "bpm": 138
+    },
+    {
+      "id": "184",
+      "title": "Galileo Road",
+      "source": "https://bobbydonny-aceseries.bandcamp.com/track/galileo-road?action=download",
+      "tags": [
+        "electronic",
+        "deep house",
+        "house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "153",
+      "title": "Lazy Susan",
+      "source": "https://loveinternationalrecordings.bandcamp.com/track/lazy-susan?action=download",
+      "tags": [
+        "bristol"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "180",
+      "title": "1000",
+      "source": "https://kalaharioystercult.bandcamp.com/track/1000",
+      "tags": [
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "15",
+      "title": "Popup Pirate",
+      "source": "https://medlar.bandcamp.com/track/popup-pirate",
+      "tags": [
+        "electronic",
+        "house",
+        "london"
+      ],
+      "bpm": 129
+    },
+    {
+      "id": "514",
+      "title": "Cosmic Surf Deluxe Remaster",
+      "source": "https://octaveone.bandcamp.com/track/cosmic-surf-deluxe-remaster",
+      "tags": [
+        "detroit house",
+        "detroit techno",
+        "electronic",
+        "house",
+        "techno",
+        "detroit"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "537",
+      "title": "Echotex Freak Mix",
+      "source": "https://asatate-techsupport.bandcamp.com/track/echotex-freak-mix",
+      "tags": [
+        "electronic",
+        "balearic",
+        "chug",
+        "house",
+        "italo",
+        "leftfield",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "495",
+      "title": "Get It Right",
+      "source": "https://daisybelledj.bandcamp.com/track/get-it-right",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "balearic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "475",
+      "title": "Speed Jazz",
+      "source": "https://soulquestrecords.bandcamp.com/track/speed-jazz",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "439",
+      "title": "Operator",
+      "source": "https://timreaper.bandcamp.com/track/operator",
+      "tags": [
+        "drum&bass",
+        "electronic",
+        "jungle",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "458",
+      "title": "Register 03",
+      "source": "https://binaryalgorithms.bandcamp.com/track/register-03",
+      "tags": [
+        "detroit techno",
+        "electronic",
+        "tunja",
+        "ambient",
+        "ambient electronic",
+        "breaks",
+        "dub",
+        "dub techno",
+        "dub-techno",
+        "dubtechno",
+        "techno",
+        "colombia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "469",
+      "title": "Nicki No Polices Doof Remix",
+      "source": "https://pleasurepatterns.bandcamp.com/track/nicki-no-polices-doof-remix",
+      "tags": [
+        "electronic",
+        "progressive house",
+        "progressive trance",
+        "disco",
+        "genre-bending",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "174",
+      "title": "Galantar 2",
+      "source": "https://cadenzarecords.bandcamp.com/track/galantar-2",
+      "tags": [
+        "switzerland"
+      ],
+      "bpm": 130
+    },
+    {
+      "id": "132",
+      "title": "Say Something Sick",
+      "source": "https://wearerhythmsection.bandcamp.com/track/say-something-sick",
+      "tags": [
+        "ibiza",
+        "tech house",
+        "rhythm section",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "182",
+      "title": "Before Dawn",
+      "source": "https://bobbydonny-aceseries.bandcamp.com/track/before-dawn?action=download",
+      "tags": [
+        "electronic",
+        "deep house",
+        "house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "126",
+      "title": "It Is What It Is",
+      "source": "https://fortunesignal.bandcamp.com/track/it-is-what-it-is",
+      "tags": [
+        "electronic",
+        "house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "136",
+      "title": "Music Room",
+      "source": "https://fortunesignal.bandcamp.com/track/music-room",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "new york city",
+        "new york house",
+        "piano house",
+        "leftfield house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "171",
+      "title": "I Can Change Your Life Deep Dub",
+      "source": "https://eglorecords.bandcamp.com/track/i-can-change-your-life-deep-dub?action=download",
+      "tags": [
+        "electronica/dance",
+        "house",
+        "london"
+      ],
+      "bpm": 127
+    },
+    {
+      "id": "9",
+      "title": "Mason",
+      "source": "https://jdanvers.bandcamp.com/track/mason",
+      "tags": [
+        "broken beat",
+        "electronic",
+        "house",
+        "world",
+        "jazz",
+        "techno",
+        "london"
+      ],
+      "bpm": 119
+    },
+    {
+      "id": "96",
+      "title": "New York Style",
+      "source": "https://zrecords.bandcamp.com/track/new-york-style",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 123.6
+    },
+    {
+      "id": "134",
+      "title": "Zapp",
+      "source": "https://wearerhythmsection.bandcamp.com/track/zapp",
+      "tags": [
+        "90s house",
+        "chicago house",
+        "house",
+        "new york house",
+        "prog",
+        "prog house",
+        "red zone",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "128",
+      "title": "Drift",
+      "source": "https://wearerhythmsection.bandcamp.com/track/drift",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "115",
+      "title": "Soul Emotion",
+      "source": "https://peachdiscs.bandcamp.com/track/soul-emotion",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": 132
+    },
+    {
+      "id": "164",
+      "title": "Turning",
+      "source": "https://footshooterbeats.bandcamp.com/track/turning?action=download",
+      "tags": [
+        "electronic",
+        "broken beat",
+        "house",
+        "jazz",
+        "jazz-house",
+        "london"
+      ],
+      "bpm": 134
+    },
+    {
+      "id": "90",
+      "title": "Casey Screams",
+      "source": "https://freerangerecords.bandcamp.com/track/casey-screams",
+      "tags": [
+        "london"
+      ],
+      "bpm": 126
+    },
+    {
+      "id": "108",
+      "title": "Choose Me Joey Negro Club Mix",
+      "source": "https://zrecords.bandcamp.com/track/choose-me-joey-negro-club-mix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 121.4
+    },
+    {
+      "id": "92",
+      "title": "Changes 2",
+      "source": "https://freerangerecords.bandcamp.com/track/changes-2",
+      "tags": [
+        "london"
+      ],
+      "bpm": 125
+    },
+    {
+      "id": "105",
+      "title": "Thinkin About You The Tommy Musto Perspective",
+      "source": "https://zrecords.bandcamp.com/track/thinkin-about-you-the-tommy-musto-perspective",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 124.2
+    },
+    {
+      "id": "102",
+      "title": "Ncameu Ron Trent Main Mix",
+      "source": "https://zrecords.bandcamp.com/track/ncameu-ron-trent-main-mix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 121.1
+    },
+    {
+      "id": "3",
+      "title": "Ice Cream Dream Boy K Lone Creamix",
+      "source": "https://shanticeleste.bandcamp.com/track/ice-cream-dream-boy-k-lone-creamix",
+      "tags": [
+        "electronic",
+        "deep house",
+        "electronic",
+        "house",
+        "remix",
+        "techno",
+        "london"
+      ],
+      "bpm": 133
+    },
+    {
+      "id": "94",
+      "title": "Joy Kerris Kaoz Gone Insane",
+      "source": "https://zrecords.bandcamp.com/track/joy-kerris-kaoz-gone-insane",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 120
+    },
+    {
+      "id": "123",
+      "title": "Down",
+      "source": "https://makeadance.bandcamp.com/track/down",
+      "tags": [
+        "electronic",
+        "breaks",
+        "disco",
+        "house",
+        "re-edits",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "88",
+      "title": "Jazz Mutant",
+      "source": "https://freerangerecords.bandcamp.com/track/jazz-mutant",
+      "tags": [
+        "london"
+      ],
+      "bpm": 130
+    },
+    {
+      "id": "130",
+      "title": "B1 I Promise",
+      "source": "https://loveontherocks.bandcamp.com/track/b1-i-promise",
+      "tags": [
+        "electronic",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "173",
+      "title": "Gene Tellem Tough City",
+      "source": "https://genetellem.bandcamp.com/track/gene-tellem-tough-city?action=download",
+      "tags": [
+        "electronic",
+        "new york",
+        "driving",
+        "house",
+        "house music",
+        "instrumental",
+        "montreal",
+        "techno",
+        "montreal"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "179",
+      "title": "Call You Back",
+      "source": "https://joshbutlermusic.bandcamp.com/track/call-you-back",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "tech house",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "158",
+      "title": "Private Energy 2",
+      "source": "https://bobbydonny-aceseries.bandcamp.com/track/private-energy-2?action=download",
+      "tags": [
+        "electronic",
+        "deep house",
+        "house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "143",
+      "title": "Remedy",
+      "source": "https://fortunesignal.bandcamp.com/track/remedy",
+      "tags": [
+        "acid house",
+        "acid techno",
+        "electronic",
+        "house",
+        "tech house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "129",
+      "title": "Do It Like Dis",
+      "source": "https://wearerhythmsection.bandcamp.com/track/do-it-like-dis",
+      "tags": [
+        "bass",
+        "big room",
+        "house",
+        "ibiza",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "177",
+      "title": "Martinii Pasaje",
+      "source": "https://borderlineblack.bandcamp.com/track/martinii-pasaje",
+      "tags": [
+        "breakbeat",
+        "deep tech",
+        "electronic",
+        "minimal",
+        "minimal house",
+        "mexico city"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "131",
+      "title": "Music Room Ali Berger Remix",
+      "source": "https://fortunesignal.bandcamp.com/track/music-room-ali-berger-remix",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "new york city",
+        "new york house",
+        "piano house",
+        "leftfield house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "162",
+      "title": "Angel S",
+      "source": "https://footshooterbeats.bandcamp.com/track/angel-s?action=download",
+      "tags": [
+        "electronic",
+        "broken beat",
+        "house",
+        "jazz",
+        "jazz-house",
+        "london"
+      ],
+      "bpm": 108.6
+    },
+    {
+      "id": "87",
+      "title": "Mereces",
+      "source": "https://freerangerecords.bandcamp.com/track/mereces",
+      "tags": [
+        "london"
+      ],
+      "bpm": 125
+    },
+    {
+      "id": "183",
+      "title": "Better",
+      "source": "https://codycurrie.bandcamp.com/track/better",
+      "tags": [
+        "electronic",
+        "house",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "150",
+      "title": "Grasping For Acid",
+      "source": "https://fortunesignal.bandcamp.com/track/grasping-for-acid",
+      "tags": [
+        "electronic",
+        "house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "155",
+      "title": "Whippets Bladder",
+      "source": "https://loveinternationalrecordings.bandcamp.com/track/whippets-bladder?action=download",
+      "tags": [
+        "bristol"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "91",
+      "title": "Til The Break Of Dawn",
+      "source": "https://freerangerecords.bandcamp.com/track/til-the-break-of-dawn",
+      "tags": [
+        "london"
+      ],
+      "bpm": 124
+    },
+    {
+      "id": "538",
+      "title": "Echotex Deep Dub",
+      "source": "https://asatate-techsupport.bandcamp.com/track/echotex-deep-dub",
+      "tags": [
+        "electronic",
+        "balearic",
+        "chug",
+        "house",
+        "italo",
+        "leftfield",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "515",
+      "title": "I Believe Feat Lisa Newberry Deluxe Remaster",
+      "source": "https://octaveone.bandcamp.com/track/i-believe-feat-lisa-newberry-deluxe-remaster",
+      "tags": [
+        "detroit house",
+        "detroit techno",
+        "electronic",
+        "house",
+        "techno",
+        "detroit"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "496",
+      "title": "Meet Her At The Love Parade Edit",
+      "source": "https://jerrymargarita.bandcamp.com/track/meet-her-at-the-love-parade-edit",
+      "tags": [
+        "electronic",
+        "house",
+        "tech house",
+        "techno",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "604",
+      "title": "Aetheric Life Mix",
+      "source": "https://peachdiscs.bandcamp.com/track/aetheric-life-mix",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "477",
+      "title": "Rock Ya Soul",
+      "source": "https://fortunesignal.bandcamp.com/track/rock-ya-soul",
+      "tags": [
+        "electronic",
+        "house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "440",
+      "title": "Globex Corp Black Label Track 4",
+      "source": "https://globexcorp.bandcamp.com/track/globex-corp-black-label-track-4",
+      "tags": [
+        "electronic",
+        "hardcore",
+        "jungle",
+        "oldskool",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "459",
+      "title": "Cycle C",
+      "source": "https://binaryalgorithms.bandcamp.com/track/cycle-c",
+      "tags": [
+        "electronic",
+        "ambient",
+        "ambient electronic",
+        "breaks",
+        "dub-techno",
+        "techno",
+        "colombia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "468",
+      "title": "Changing Colors Maltitz Remix",
+      "source": "https://shapelessculture.bandcamp.com/track/changing-colors-maltitz-remix",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "198",
+      "title": "Waiting Feat Benni Ola Dam Swindle Remix",
+      "source": "https://needwantofficial.bandcamp.com/track/waiting-feat-benni-ola-dam-swindle-remix",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "146",
+      "title": "Man A",
+      "source": "https://pangaeauk.bandcamp.com/track/man-a",
+      "tags": [
+        "electronic",
+        "house",
+        "techno",
+        "uk garage",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "148",
+      "title": "Ten Options",
+      "source": "https://wearerhythmsection.bandcamp.com/track/ten-options",
+      "tags": [
+        "italo",
+        "milan",
+        "milano",
+        "tech house",
+        "house",
+        "italia",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "141",
+      "title": "S S D D Curry Remix",
+      "source": "https://fortunesignal.bandcamp.com/track/s-s-d-d-curry-remix",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage",
+        "garage house",
+        "house",
+        "jackin house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "170",
+      "title": "Dojo",
+      "source": "https://footshooterbeats.bandcamp.com/track/dojo?action=download",
+      "tags": [
+        "electronic",
+        "broken beat",
+        "house",
+        "jazz",
+        "jazz-house",
+        "london"
+      ],
+      "bpm": 134
+    },
+    {
+      "id": "169",
+      "title": "Soft Touch",
+      "source": "https://bobbydonny-aceseries.bandcamp.com/track/soft-touch?action=download",
+      "tags": [
+        "electronic",
+        "deep house",
+        "house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "1",
+      "title": "Meditations",
+      "source": "https://gideonuk.bandcamp.com/track/meditations",
+      "tags": [
+        "ballroom house",
+        "deep house",
+        "electronic",
+        "house",
+        "northern soul",
+        "queer",
+        "london"
+      ],
+      "bpm": 120
+    },
+    {
+      "id": "103",
+      "title": "An Instrumental Need Club Need",
+      "source": "https://zrecords.bandcamp.com/track/an-instrumental-need-club-need",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 123.5
+    },
+    {
+      "id": "7",
+      "title": "Italo Disco Banger",
+      "source": "https://bergeraclabel.bandcamp.com/track/italo-disco-banger",
+      "tags": [
+        "electronic",
+        "beats",
+        "disco",
+        "garage",
+        "house",
+        "techno",
+        "bristol"
+      ],
+      "bpm": 126
+    },
+    {
+      "id": "161",
+      "title": "Crush Ccl Roza Terenzi Remix",
+      "source": "https://nicknoexit.bandcamp.com/track/crush-ccl-roza-terenzi-remix",
+      "tags": [
+        "electronic",
+        "ambient",
+        "miami",
+        "percussion",
+        "miami"
+      ],
+      "bpm": 134
+    },
+    {
+      "id": "137",
+      "title": "Piano Movers",
+      "source": "https://fortunesignal.bandcamp.com/track/piano-movers",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "new york city",
+        "new york house",
+        "piano house",
+        "leftfield house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "18",
+      "title": "Tinashe Nasty K Lone Refix",
+      "source": "https://wisdomteethuk.bandcamp.com/track/tinashe-nasty-k-lone-refix",
+      "tags": [
+        "london"
+      ],
+      "bpm": 123
+    },
+    {
+      "id": "135",
+      "title": "Essence Theme",
+      "source": "https://fortunesignal.bandcamp.com/track/essence-theme",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "new york city",
+        "new york house",
+        "piano house",
+        "leftfield house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "112",
+      "title": "Mighty Power Of Love Mood Ii Swing Dub",
+      "source": "https://zrecords.bandcamp.com/track/mighty-power-of-love-mood-ii-swing-dub",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 125
+    },
+    {
+      "id": "89",
+      "title": "Good Days",
+      "source": "https://freerangerecords.bandcamp.com/track/good-days",
+      "tags": [
+        "london"
+      ],
+      "bpm": 126
+    },
+    {
+      "id": "152",
+      "title": "Essence Theme D D Curry Remix",
+      "source": "https://fortunesignal.bandcamp.com/track/essence-theme-d-d-curry-remix",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "new york city",
+        "new york house",
+        "piano house",
+        "leftfield house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "181",
+      "title": "Sprocket",
+      "source": "https://malingenie.bandcamp.com/track/sprocket",
+      "tags": [
+        "electronic",
+        "deep house",
+        "dub",
+        "house",
+        "malin genie",
+        "techno",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "12",
+      "title": "Ripples In The Timeline",
+      "source": "https://lookingfortroublemg.bandcamp.com/track/ripples-in-the-timeline",
+      "tags": [
+        "house",
+        "mall grab",
+        "real lies",
+        "techno",
+        "london"
+      ],
+      "bpm": 134
+    },
+    {
+      "id": "165",
+      "title": "Hedonic Setpoint 33",
+      "source": "https://malingenie.bandcamp.com/track/hedonic-setpoint-33",
+      "tags": [
+        "electronic",
+        "deep house",
+        "dub",
+        "house",
+        "malin genie",
+        "techno",
+        "amsterdam"
+      ],
+      "bpm": 137
+    },
+    {
+      "id": "109",
+      "title": "That Special Melody Club Mix",
+      "source": "https://zrecords.bandcamp.com/track/that-special-melody-club-mix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 123.1
+    },
+    {
+      "id": "163",
+      "title": "Handsup",
+      "source": "https://mura-masa.bandcamp.com/track/handsup",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": 140
+    },
+    {
+      "id": "114",
+      "title": "Bumper Thumper Medlar Remix",
+      "source": "https://toytonics.bandcamp.com/track/bumper-thumper-medlar-remix",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": 124
+    },
+    {
+      "id": "97",
+      "title": "Love Commandments Vocal Edit",
+      "source": "https://zrecords.bandcamp.com/track/love-commandments-vocal-edit",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 126.2
+    },
+    {
+      "id": "166",
+      "title": "Archetype 7",
+      "source": "https://footshooterbeats.bandcamp.com/track/archetype-7?action=download",
+      "tags": [
+        "electronic",
+        "broken beat",
+        "house",
+        "jazz",
+        "jazz-house",
+        "london"
+      ],
+      "bpm": 130
+    },
+    {
+      "id": "11",
+      "title": "Nostalgia",
+      "source": "https://coeo.bandcamp.com/track/nostalgia",
+      "tags": [
+        "electronic",
+        "progressive house",
+        "disco",
+        "house music",
+        "italo disco",
+        "world music",
+        "munich"
+      ],
+      "bpm": 128
+    },
+    {
+      "id": "111",
+      "title": "Tonight Todd Edwards Club Mix",
+      "source": "https://zrecords.bandcamp.com/track/tonight-todd-edwards-club-mix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 125
+    },
+    {
+      "id": "100",
+      "title": "Mighty Power Of Love Mood Ii Swing Vox Mix",
+      "source": "https://zrecords.bandcamp.com/track/mighty-power-of-love-mood-ii-swing-vox-mix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 122.9
+    },
+    {
+      "id": "124",
+      "title": "Once Again",
+      "source": "https://roamingdata.bandcamp.com/track/once-again",
+      "tags": [
+        "electronic",
+        "house",
+        "tech house",
+        "uk garage",
+        "ukg",
+        "breakbeat",
+        "deep house",
+        "garage",
+        "house",
+        "techno",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "154",
+      "title": "Cant Change Me Ron Trent Remix",
+      "source": "https://r2records.bandcamp.com/track/cant-change-me-ron-trent-remix?action=download",
+      "tags": [
+        "electronic",
+        "funk",
+        "house",
+        "jazz",
+        "soul",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "110",
+      "title": "Over Like A Fat Rat 95 Victor Simonelli Club Mix",
+      "source": "https://zrecords.bandcamp.com/track/over-like-a-fat-rat-95-victor-simonelli-club-mix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 122.1
+    },
+    {
+      "id": "168",
+      "title": "Ghost Dub",
+      "source": "https://kassiansound.bandcamp.com/track/ghost-dub",
+      "tags": [
+        "breakbeat",
+        "deep house",
+        "electronic",
+        "house",
+        "techno",
+        "ukg",
+        "breaks",
+        "electronic",
+        "garage",
+        "rave techno",
+        "london"
+      ],
+      "bpm": 145
+    },
+    {
+      "id": "494",
+      "title": "When We Kiss Feat Saxon",
+      "source": "https://daisybelledj.bandcamp.com/track/when-we-kiss-feat-saxon",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "balearic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "516",
+      "title": "Rock Music Erol Alkan Rework",
+      "source": "https://erolalkan.bandcamp.com/track/rock-music-erol-alkan-rework",
+      "tags": [
+        "alternative",
+        "electronic",
+        "techno",
+        "disco",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "547",
+      "title": "Come On",
+      "source": "https://wearerhythmsection.bandcamp.com/track/come-on",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "565",
+      "title": "Ten Options 2",
+      "source": "https://wearerhythmsection.bandcamp.com/track/ten-options-2",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "585",
+      "title": "Let U Go",
+      "source": "https://chinese-spy-balloon.bandcamp.com/track/let-u-go",
+      "tags": [
+        "electronic",
+        "bass",
+        "dubstep",
+        "grime",
+        "jersey club",
+        "uk garage",
+        "toronto"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "478",
+      "title": "Bruklynn",
+      "source": "https://soulquestrecords.bandcamp.com/track/bruklynn",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "441",
+      "title": "My Love",
+      "source": "https://timreaper.bandcamp.com/track/my-love",
+      "tags": [
+        "drum&bass",
+        "electronic",
+        "jungle",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "460",
+      "title": "Sub Periphery",
+      "source": "https://binaryalgorithms.bandcamp.com/track/sub-periphery",
+      "tags": [
+        "electronic",
+        "ambient",
+        "ambient electronic",
+        "breaks",
+        "dub-techno",
+        "techno",
+        "colombia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "467",
+      "title": "Sin Ad",
+      "source": "https://pleasurepatterns.bandcamp.com/track/sin-ad",
+      "tags": [
+        "electronic",
+        "progressive house",
+        "progressive trance",
+        "disco",
+        "genre-bending",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "317",
+      "title": "Peter Matson Stuart Bogie Bogies Acid Bet",
+      "source": "https://razor-n-tape.bandcamp.com/track/peter-matson-stuart-bogie-bogies-acid-bet",
+      "tags": [
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "300",
+      "title": "Bang The Rocks",
+      "source": "https://balkanvinyl.bandcamp.com/track/bang-the-rocks",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "301",
+      "title": "In Fa Me Feat Kurtis Lincoln",
+      "source": "https://balkanvinyl.bandcamp.com/track/in-fa-me-feat-kurtis-lincoln",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "304",
+      "title": "Heat",
+      "source": "https://klauslayer.bandcamp.com/track/heat",
+      "tags": [
+        "alternative",
+        "hip hop",
+        "house",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "321",
+      "title": "Soothing",
+      "source": "https://badumtish.bandcamp.com/track/soothing",
+      "tags": [
+        "electronic",
+        "house",
+        "uk garage",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "307",
+      "title": "U Can Dance 2 Jazz",
+      "source": "https://brunobar.bandcamp.com/track/u-can-dance-2-jazz",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "house",
+        "acid house",
+        "lofi house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "312",
+      "title": "Arnau Obiols Third Ear Dub",
+      "source": "https://razor-n-tape.bandcamp.com/track/arnau-obiols-third-ear-dub",
+      "tags": [
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "306",
+      "title": "Hidden Track",
+      "source": "https://klauslayer.bandcamp.com/track/hidden-track",
+      "tags": [
+        "alternative",
+        "hip hop",
+        "house",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "311",
+      "title": "Mike Misiu Hold Your Body",
+      "source": "https://razor-n-tape.bandcamp.com/track/mike-misiu-hold-your-body",
+      "tags": [
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "308",
+      "title": "Recloose Ft Hazmat Live Dance Girl",
+      "source": "https://razor-n-tape.bandcamp.com/track/recloose-ft-hazmat-live-dance-girl",
+      "tags": [
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "489",
+      "title": "Party All Night Long",
+      "source": "https://daisybelledj.bandcamp.com/track/party-all-night-long",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "balearic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "517",
+      "title": "Hang Peder Mannerfelt Remix",
+      "source": "https://caribouband.bandcamp.com/track/hang-peder-mannerfelt-remix",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "566",
+      "title": "Feels Like Heaven Original Mix",
+      "source": "https://steelcitydancediscs.bandcamp.com/track/feels-like-heaven-original-mix",
+      "tags": [],
+      "bpm": null
+    },
+    {
+      "id": "546",
+      "title": "Do It Like Dis 2",
+      "source": "https://wearerhythmsection.bandcamp.com/track/do-it-like-dis-2",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "586",
+      "title": "Meskel",
+      "source": "https://bareselection.bandcamp.com/track/meskel",
+      "tags": [
+        "rap",
+        "trap",
+        "uk garage",
+        "bare selection",
+        "bass",
+        "freeza chin",
+        "grime",
+        "instrumental",
+        "tre mission",
+        "uk drill",
+        "toronto"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "583",
+      "title": "Fold Instrumental 2",
+      "source": "https://bareselection.bandcamp.com/track/fold-instrumental-2",
+      "tags": [
+        "toronto"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "589",
+      "title": "Caterpillar 2",
+      "source": "https://caribouband.bandcamp.com/track/caterpillar-2",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "587",
+      "title": "The Fall Kaysoul 93 Remix 2",
+      "source": "https://feedasoulrecords.bandcamp.com/track/the-fall-kaysoul-93-remix-2",
+      "tags": [
+        "brokent beat",
+        "deep house",
+        "disco house",
+        "electronic",
+        "house",
+        "soulful house",
+        "byblos"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "607",
+      "title": "When I Come",
+      "source": "https://fauxpoly.bandcamp.com/track/when-i-come",
+      "tags": [
+        "dub",
+        "dubstep",
+        "electronic",
+        "garage",
+        "house",
+        "ukg",
+        "dub techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "605",
+      "title": "The Nothingness",
+      "source": "https://thebasementdiscos.bandcamp.com/track/the-nothingness",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "590",
+      "title": "Feel 2",
+      "source": "https://skylaxrecords.bandcamp.com/track/feel-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "house music",
+        "italo disco",
+        "paris"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "608",
+      "title": "Sad Piano House 4",
+      "source": "https://caribouband.bandcamp.com/track/sad-piano-house-4",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "606",
+      "title": "Labda",
+      "source": "https://peachdiscs.bandcamp.com/track/labda",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "642",
+      "title": "Joy Of Life",
+      "source": "https://cadenzarecords.bandcamp.com/track/joy-of-life",
+      "tags": [
+        "deep tech",
+        "electronic",
+        "house",
+        "minimal house",
+        "tech house",
+        "microhouse",
+        "minimal",
+        "techno",
+        "switzerland"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "314",
+      "title": "Tesfa Williams Breeze",
+      "source": "https://razor-n-tape.bandcamp.com/track/tesfa-williams-breeze",
+      "tags": [
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "299",
+      "title": "2 Coastal Drift",
+      "source": "https://klauslayer.bandcamp.com/track/2-coastal-drift",
+      "tags": [
+        "alternative",
+        "hip hop",
+        "house",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "313",
+      "title": "Le Chev Pan Man",
+      "source": "https://razor-n-tape.bandcamp.com/track/le-chev-pan-man",
+      "tags": [
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "310",
+      "title": "Medlar Daisybelle Body Ache",
+      "source": "https://razor-n-tape.bandcamp.com/track/medlar-daisybelle-body-ache",
+      "tags": [
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "315",
+      "title": "Saucy Lady Falling",
+      "source": "https://razor-n-tape.bandcamp.com/track/saucy-lady-falling",
+      "tags": [
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "303",
+      "title": "5 Velvet Circuit",
+      "source": "https://klauslayer.bandcamp.com/track/5-velvet-circuit",
+      "tags": [
+        "alternative",
+        "hip hop",
+        "house",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "302",
+      "title": "Movin Feat Marie Berson",
+      "source": "https://brunobar.bandcamp.com/track/movin-feat-marie-berson",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "house",
+        "acid house",
+        "lofi house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "305",
+      "title": "Beez Waxx",
+      "source": "https://balkanvinyl.bandcamp.com/track/beez-waxx",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "309",
+      "title": "Mpharanyana Disco Anoraak Edit",
+      "source": "https://razor-n-tape.bandcamp.com/track/mpharanyana-disco-anoraak-edit",
+      "tags": [
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "93",
+      "title": "Living In Ecstasy Fk Groove Mix Edit",
+      "source": "https://zrecords.bandcamp.com/track/living-in-ecstasy-fk-groove-mix-edit",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 123
+    },
+    {
+      "id": "95",
+      "title": "Gotta Work Final Take",
+      "source": "https://zrecords.bandcamp.com/track/gotta-work-final-take",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": 123.1
+    },
+    {
+      "id": "195",
+      "title": "L U C K Y",
+      "source": "https://fcukers.bandcamp.com/track/l-u-c-k-y?action=download",
+      "tags": [
+        "electronic",
+        "house",
+        "club music",
+        "indie dance",
+        "indie house",
+        "new york"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "480",
+      "title": "Rock Ya Soul Young Muscles Breaks Mix",
+      "source": "https://fortunesignal.bandcamp.com/track/rock-ya-soul-young-muscles-breaks-mix",
+      "tags": [
+        "electronic",
+        "house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "316",
+      "title": "Gus Pirelli Andre Espeut Step Inside The Music",
+      "source": "https://razor-n-tape.bandcamp.com/track/gus-pirelli-andre-espeut-step-inside-the-music",
+      "tags": [
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "442",
+      "title": "Wavebreak",
+      "source": "https://futureretrolondon.bandcamp.com/track/wavebreak",
+      "tags": [
+        "drum & bass",
+        "electronic",
+        "jungle",
+        "dnb",
+        "hardcore",
+        "old school",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "461",
+      "title": "Register 04",
+      "source": "https://binaryalgorithms.bandcamp.com/track/register-04",
+      "tags": [
+        "detroit techno",
+        "electronic",
+        "tunja",
+        "ambient",
+        "ambient electronic",
+        "breaks",
+        "dub",
+        "dub techno",
+        "dub-techno",
+        "dubtechno",
+        "techno",
+        "colombia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "471",
+      "title": "Nicki Invernos Acrylic Remix",
+      "source": "https://pleasurepatterns.bandcamp.com/track/nicki-invernos-acrylic-remix",
+      "tags": [
+        "electronic",
+        "progressive house",
+        "progressive trance",
+        "disco",
+        "genre-bending",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "192",
+      "title": "Dancing Times From House To Disco Remix",
+      "source": "https://thebasementdiscos.bandcamp.com/track/dancing-times-from-house-to-disco-remix?action=download",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "189",
+      "title": "Laurel Channels",
+      "source": "https://pacificrhythm.bandcamp.com/track/laurel-channels",
+      "tags": [
+        "vancouver"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "223",
+      "title": "Native Riddim 3",
+      "source": "https://toytonics.bandcamp.com/track/native-riddim-3",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "217",
+      "title": "Guapita 3",
+      "source": "https://toytonics.bandcamp.com/track/guapita-3",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "205",
+      "title": "Praia Yuksek Remix 4",
+      "source": "https://toytonics.bandcamp.com/track/praia-yuksek-remix-4",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "214",
+      "title": "Brasiliana 3",
+      "source": "https://toytonics.bandcamp.com/track/brasiliana-3",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "211",
+      "title": "Mediterranea Party Mix",
+      "source": "https://toytonics.bandcamp.com/track/mediterranea-party-mix",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "220",
+      "title": "Nostalgia 2",
+      "source": "https://toytonics.bandcamp.com/track/nostalgia-2",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "208",
+      "title": "The Fourth 2",
+      "source": "https://toytonics.bandcamp.com/track/the-fourth-2",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "202",
+      "title": "Blue Tv Screen 2",
+      "source": "https://toytonics.bandcamp.com/track/blue-tv-screen-2",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "266",
+      "title": "Similar Stories",
+      "source": "https://chaosinthecbd.bandcamp.com/track/similar-stories",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "jazz",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "265",
+      "title": "Fresh Air Acid Dub",
+      "source": "https://limousinedream.bandcamp.com/track/fresh-air-acid-dub",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "249",
+      "title": "Speaker Stack Burial",
+      "source": "https://melladee.bandcamp.com/track/speaker-stack-burial",
+      "tags": [
+        "electronic",
+        "warehouse techno",
+        "acid",
+        "bleeps",
+        "house",
+        "techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "241",
+      "title": "Higher Higher 2",
+      "source": "https://thebasementdiscos.bandcamp.com/track/higher-higher-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "253",
+      "title": "Off World Vehicles Vip",
+      "source": "https://kassiansound.bandcamp.com/track/off-world-vehicles-vip",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "techno",
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "229",
+      "title": "Your Love Is My Drug 2",
+      "source": "https://thebasementdiscos.bandcamp.com/track/your-love-is-my-drug-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "247",
+      "title": "Intangible",
+      "source": "https://limousinedream.bandcamp.com/track/intangible",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "261",
+      "title": "What Happens Now",
+      "source": "https://laurenceguy.bandcamp.com/track/what-happens-now",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "ambient",
+        "lo-fi house",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "271",
+      "title": "House Of Echoes",
+      "source": "https://pearlypearly.bandcamp.com/track/house-of-echoes",
+      "tags": [
+        "house",
+        "electronic",
+        "classic house",
+        "deep house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "235",
+      "title": "Up For It All 2",
+      "source": "https://thebasementdiscos.bandcamp.com/track/up-for-it-all-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "275",
+      "title": "Never Leave W Dj Planet Express",
+      "source": "https://beads1.bandcamp.com/track/never-leave-w-dj-planet-express",
+      "tags": [
+        "techno",
+        "electronic",
+        "hardgroove",
+        "hardgroove techno",
+        "rave",
+        "tribal techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "232",
+      "title": "Dont Let Me Down",
+      "source": "https://thebasementdiscos.bandcamp.com/track/dont-let-me-down",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "256",
+      "title": "Sleepless On The Third Floor",
+      "source": "https://pearlypearly.bandcamp.com/track/sleepless-on-the-third-floor",
+      "tags": [
+        "house",
+        "electronic",
+        "classic house",
+        "deep house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "259",
+      "title": "Room Service",
+      "source": "https://limousinedream.bandcamp.com/track/room-service",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "244",
+      "title": "Steel City Vibes",
+      "source": "https://canoe1.bandcamp.com/track/steel-city-vibes",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "255",
+      "title": "Hedonic Setpoint 94 3",
+      "source": "https://malingenie.bandcamp.com/track/hedonic-setpoint-94-3",
+      "tags": [
+        "electronic",
+        "deep house",
+        "dub",
+        "house",
+        "malin genie",
+        "techno",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "258",
+      "title": "All I Need Is You Tilmans Claim Mix",
+      "source": "https://tilmans.bandcamp.com/track/all-i-need-is-you-tilmans-claim-mix",
+      "tags": [
+        "deep house",
+        "electronic",
+        "experimental",
+        "house",
+        "nu disco",
+        "techno",
+        "proto-house",
+        "mainz"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "226",
+      "title": "Bumpnglide 3",
+      "source": "https://thebasementdiscos.bandcamp.com/track/bumpnglide-3",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "268",
+      "title": "Time 2 Get Funky",
+      "source": "https://woddauk.bandcamp.com/track/time-2-get-funky",
+      "tags": [
+        "electronic",
+        "breaks",
+        "garage",
+        "speed-garage",
+        "trance",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "277",
+      "title": "Realisation",
+      "source": "https://melladee.bandcamp.com/track/realisation",
+      "tags": [
+        "electronic",
+        "warehouse techno",
+        "acid",
+        "bleeps",
+        "house",
+        "techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "279",
+      "title": "Night Trip",
+      "source": "https://limousinedream.bandcamp.com/track/night-trip",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "273",
+      "title": "Perspective",
+      "source": "https://thebasementdiscos.bandcamp.com/track/perspective",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "240",
+      "title": "Brooklyn 2",
+      "source": "https://thebasementdiscos.bandcamp.com/track/brooklyn-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "225",
+      "title": "Supernova 3",
+      "source": "https://thebasementdiscos.bandcamp.com/track/supernova-3",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "518",
+      "title": "You Erol Alkan Rework",
+      "source": "https://erolalkan.bandcamp.com/track/you-erol-alkan-rework",
+      "tags": [
+        "alternative",
+        "electronic",
+        "techno",
+        "disco",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "491",
+      "title": "Did I Dream It",
+      "source": "https://daisybelledj.bandcamp.com/track/did-i-dream-it",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "balearic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "567",
+      "title": "Hav U A Sec",
+      "source": "https://caribouband.bandcamp.com/track/hav-u-a-sec",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "542",
+      "title": "A David Moralez Pt 3",
+      "source": "https://factorysetup.bandcamp.com/track/a-david-moralez-pt-3",
+      "tags": [
+        "electronic",
+        "house",
+        "mexico"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "609",
+      "title": "Hang 2",
+      "source": "https://caribouband.bandcamp.com/track/hang-2",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "479",
+      "title": "Slope Vip Ft Warrior Queen Killa P 2",
+      "source": "https://facta.bandcamp.com/track/slope-vip-ft-warrior-queen-killa-p-2",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "443",
+      "title": "Cant Let Go",
+      "source": "https://timreaper.bandcamp.com/track/cant-let-go",
+      "tags": [
+        "drum&bass",
+        "electronic",
+        "jungle",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "490",
+      "title": "Hey Daddy",
+      "source": "https://daisybelledj.bandcamp.com/track/hey-daddy",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "balearic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "519",
+      "title": "Heat Shield",
+      "source": "https://cloneroyaloak.bandcamp.com/track/heat-shield",
+      "tags": [
+        "electronic",
+        "netherlands"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "462",
+      "title": "G Nesis Cyborg",
+      "source": "https://binaryalgorithms.bandcamp.com/track/g-nesis-cyborg",
+      "tags": [
+        "electronic",
+        "ambient",
+        "ambient electronic",
+        "breaks",
+        "dub-techno",
+        "techno",
+        "colombia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "322",
+      "title": "All Night Party",
+      "source": "https://blackloops.bandcamp.com/track/all-night-party",
+      "tags": [
+        "electronic",
+        "deep house",
+        "house",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "318",
+      "title": "Dennis Liber Feat Ch M Myst Rieuse Rebelle",
+      "source": "https://razor-n-tape.bandcamp.com/track/dennis-liber-feat-ch-m-myst-rieuse-rebelle",
+      "tags": [
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "327",
+      "title": "Abentis Choreography",
+      "source": "https://wisdomteethuk.bandcamp.com/track/abentis-choreography",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "324",
+      "title": "Off Switch",
+      "source": "https://badumtish.bandcamp.com/track/off-switch",
+      "tags": [
+        "electronic",
+        "house",
+        "uk garage",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "326",
+      "title": "Unclosed",
+      "source": "https://badumtish.bandcamp.com/track/unclosed",
+      "tags": [
+        "electronic",
+        "house",
+        "uk garage",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "250",
+      "title": "Function Vip",
+      "source": "https://tomvr.bandcamp.com/track/function-vip",
+      "tags": [
+        "electronic",
+        "house",
+        "tech house",
+        "electronica",
+        "garage",
+        "house",
+        "other",
+        "speed garage",
+        "techno",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "262",
+      "title": "P J City Straight Forward Non Stop Dj Nature Re Edit",
+      "source": "https://mrbongo.bandcamp.com/track/p-j-city-straight-forward-non-stop-dj-nature-re-edit",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "347",
+      "title": "Doug Willis Mike Dunn Luv 2 Dance Extended Mix 2",
+      "source": "https://zrecords.bandcamp.com/track/doug-willis-mike-dunn-luv-2-dance-extended-mix-2",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "348",
+      "title": "Waiting So Long",
+      "source": "https://caribouband.bandcamp.com/track/waiting-so-long",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "374",
+      "title": "Carb Trance",
+      "source": "https://limousinedream.bandcamp.com/track/carb-trance",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "365",
+      "title": "Atlas",
+      "source": "https://juravlove.bandcamp.com/track/atlas",
+      "tags": [
+        "electronic",
+        "house",
+        "saint petersburg"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "319",
+      "title": "Marina Trench Icy",
+      "source": "https://razor-n-tape.bandcamp.com/track/marina-trench-icy",
+      "tags": [
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "298",
+      "title": "Make Em Go",
+      "source": "https://balkanvinyl.bandcamp.com/track/make-em-go",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "340",
+      "title": "In Love Again Instrumental",
+      "source": "https://runningbackrecords.bandcamp.com/track/in-love-again-instrumental",
+      "tags": [
+        "lorsch"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "352",
+      "title": "Z Factor You Gotta Give It Up Dave Lee S Extended Club Mix",
+      "source": "https://zrecords.bandcamp.com/track/z-factor-you-gotta-give-it-up-dave-lee-s-extended-club-mix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "325",
+      "title": "Folding Feat Allysha Joy Marla Kether Remix 2",
+      "source": "https://footshooterbeats.bandcamp.com/track/folding-feat-allysha-joy-marla-kether-remix-2",
+      "tags": [
+        "electronic",
+        "broken beat",
+        "house",
+        "jazz",
+        "jazz-house",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "286",
+      "title": "Dandelion Achoo",
+      "source": "https://igorgonya.bandcamp.com/track/dandelion-achoo",
+      "tags": [
+        "boogie",
+        "disco",
+        "disco house",
+        "edits",
+        "electronic",
+        "free download",
+        "funk",
+        "nu disco",
+        "deep funk",
+        "deep house",
+        "disco house",
+        "funk jam",
+        "nu disco",
+        "elista"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "353",
+      "title": "Destiny Ii Feat Aria Lyric Im Here For This Groove Assassin Vocal Dub Pressure",
+      "source": "https://zrecords.bandcamp.com/track/destiny-ii-feat-aria-lyric-im-here-for-this-groove-assassin-vocal-dub-pressure",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "351",
+      "title": "Josephine 2",
+      "source": "https://caribouband.bandcamp.com/track/josephine-2",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "290",
+      "title": "All Night Long Disco",
+      "source": "https://igorgonya.bandcamp.com/track/all-night-long-disco",
+      "tags": [
+        "boogie",
+        "disco",
+        "disco house",
+        "edits",
+        "electronic",
+        "free download",
+        "funk",
+        "nu disco",
+        "deep funk",
+        "deep house",
+        "disco house",
+        "funk jam",
+        "nu disco",
+        "elista"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "329",
+      "title": "Boomerang Last Nubian Remix Instrumental",
+      "source": "https://footshooterbeats.bandcamp.com/track/boomerang-last-nubian-remix-instrumental",
+      "tags": [
+        "electronic",
+        "broken beat",
+        "house",
+        "jazz",
+        "jazz-house",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "372",
+      "title": "Pack Down The System",
+      "source": "https://limousinedream.bandcamp.com/track/pack-down-the-system",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "335",
+      "title": "Output Input Feat Antonio Mclendon Every Time You Touch Me Dave Lee Boogiefied Mix",
+      "source": "https://zrecords.bandcamp.com/track/output-input-feat-antonio-mclendon-every-time-you-touch-me-dave-lee-boogiefied-mix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "363",
+      "title": "Loop 95",
+      "source": "https://pearlypearly.bandcamp.com/track/loop-95",
+      "tags": [
+        "house",
+        "electronic",
+        "classic house",
+        "deep house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "332",
+      "title": "Feel Everything All At Once",
+      "source": "https://kareemali19.bandcamp.com/track/feel-everything-all-at-once",
+      "tags": [
+        "electronic",
+        "tucson"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "366",
+      "title": "All This Time",
+      "source": "https://pearlypearly.bandcamp.com/track/all-this-time",
+      "tags": [
+        "house",
+        "electronic",
+        "classic house",
+        "deep house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "364",
+      "title": "Drop It Low",
+      "source": "https://toytonics.bandcamp.com/track/drop-it-low",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "355",
+      "title": "Easygoing Acid Express",
+      "source": "https://emotional-response.bandcamp.com/track/easygoing-acid-express",
+      "tags": [
+        "balearic",
+        "electronic",
+        "experimental",
+        "psychedelic",
+        "techno",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "338",
+      "title": "Eleven 2",
+      "source": "https://caribouband.bandcamp.com/track/eleven-2",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "293",
+      "title": "Movin Tour Maubourgs Dubbed Out Balearic Mix",
+      "source": "https://brunobar.bandcamp.com/track/movin-tour-maubourgs-dubbed-out-balearic-mix",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "house",
+        "acid house",
+        "lofi house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "288",
+      "title": "Draculito Mon Saigneur",
+      "source": "https://igorgonya.bandcamp.com/track/draculito-mon-saigneur",
+      "tags": [
+        "boogie",
+        "disco",
+        "disco house",
+        "edits",
+        "electronic",
+        "free download",
+        "funk",
+        "nu disco",
+        "deep funk",
+        "deep house",
+        "disco house",
+        "funk jam",
+        "nu disco",
+        "elista"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "354",
+      "title": "Sweet Acid",
+      "source": "https://emotional-response.bandcamp.com/track/sweet-acid",
+      "tags": [
+        "balearic",
+        "electronic",
+        "experimental",
+        "psychedelic",
+        "techno",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "368",
+      "title": "Floral Oceans",
+      "source": "https://hawscardiff.bandcamp.com/track/floral-oceans",
+      "tags": [
+        "cardiff"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "373",
+      "title": "Wont Stop",
+      "source": "https://limousinedream.bandcamp.com/track/wont-stop",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "545",
+      "title": "Lous Groove 3",
+      "source": "https://wearerhythmsection.bandcamp.com/track/lous-groove-3",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "568",
+      "title": "Am I In Ur Mind",
+      "source": "https://sebwildblood.bandcamp.com/track/am-i-in-ur-mind",
+      "tags": [
+        "electronic",
+        "beats",
+        "downtempo",
+        "electronica",
+        "garage",
+        "house",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "588",
+      "title": "Shifty 2",
+      "source": "https://caribouband.bandcamp.com/track/shifty-2",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "610",
+      "title": "Cyber Fields",
+      "source": "https://skylaxrecords.bandcamp.com/track/cyber-fields",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "house music",
+        "italo disco",
+        "paris"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "481",
+      "title": "Mood Swings",
+      "source": "https://soulquestrecords.bandcamp.com/track/mood-swings",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "444",
+      "title": "Take Me Up",
+      "source": "https://timreaper.bandcamp.com/track/take-me-up",
+      "tags": [
+        "drum&bass",
+        "electronic",
+        "jungle",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "463",
+      "title": "Repercusiones",
+      "source": "https://binaryalgorithms.bandcamp.com/track/repercusiones",
+      "tags": [
+        "electronic",
+        "ambient",
+        "ambient electronic",
+        "breaks",
+        "dub-techno",
+        "techno",
+        "colombia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "357",
+      "title": "Stress Tension Bass",
+      "source": "https://steelcitydancediscs.bandcamp.com/track/stress-tension-bass",
+      "tags": [],
+      "bpm": null
+    },
+    {
+      "id": "359",
+      "title": "De Moma",
+      "source": "https://steelcitydancediscs.bandcamp.com/track/de-moma",
+      "tags": [],
+      "bpm": null
+    },
+    {
+      "id": "370",
+      "title": "Nelumbo",
+      "source": "https://hawscardiff.bandcamp.com/track/nelumbo",
+      "tags": [
+        "cardiff"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "339",
+      "title": "Dave Maurissa You Decide Extended Mix",
+      "source": "https://zrecords.bandcamp.com/track/dave-maurissa-you-decide-extended-mix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "362",
+      "title": "Faith",
+      "source": "https://pearlypearly.bandcamp.com/track/faith",
+      "tags": [
+        "house",
+        "electronic",
+        "classic house",
+        "deep house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "343",
+      "title": "Sad Piano House 2",
+      "source": "https://caribouband.bandcamp.com/track/sad-piano-house-2",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "350",
+      "title": "Talk To Me",
+      "source": "https://caribouband.bandcamp.com/track/talk-to-me",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "367",
+      "title": "Stunnalina Hybrid Man Remix",
+      "source": "https://hawscardiff.bandcamp.com/track/stunnalina-hybrid-man-remix",
+      "tags": [
+        "cardiff"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "358",
+      "title": "I Wanna Dance",
+      "source": "https://toytonics.bandcamp.com/track/i-wanna-dance",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "323",
+      "title": "Happenings",
+      "source": "https://badumtish.bandcamp.com/track/happenings",
+      "tags": [
+        "electronic",
+        "house",
+        "uk garage",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "369",
+      "title": "Stunnalina",
+      "source": "https://hawscardiff.bandcamp.com/track/stunnalina",
+      "tags": [
+        "cardiff"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "330",
+      "title": "Lucky",
+      "source": "https://caribouband.bandcamp.com/track/lucky",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "375",
+      "title": "Huffle",
+      "source": "https://limousinedream.bandcamp.com/track/huffle",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "345",
+      "title": "Ac Soul Symphony Windy City Theme Opolopo Remix",
+      "source": "https://zrecords.bandcamp.com/track/ac-soul-symphony-windy-city-theme-opolopo-remix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "360",
+      "title": "Bliss",
+      "source": "https://juravlove.bandcamp.com/track/bliss",
+      "tags": [
+        "electronic",
+        "house",
+        "saint petersburg"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "341",
+      "title": "Clap Your Hands 2",
+      "source": "https://caribouband.bandcamp.com/track/clap-your-hands-2",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "356",
+      "title": "Gentle Acid",
+      "source": "https://emotional-response.bandcamp.com/track/gentle-acid",
+      "tags": [
+        "balearic",
+        "electronic",
+        "experimental",
+        "psychedelic",
+        "techno",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "331",
+      "title": "Ian From Florence Echoes Of Rimini 2",
+      "source": "https://zrecords.bandcamp.com/track/ian-from-florence-echoes-of-rimini-2",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "349",
+      "title": "Foremost Poets Ft Johnny Dangerous Beside Myself Dave Lee Cowbell Party Mix",
+      "source": "https://zrecords.bandcamp.com/track/foremost-poets-ft-johnny-dangerous-beside-myself-dave-lee-cowbell-party-mix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "283",
+      "title": "Ritmo Love 2",
+      "source": "https://skylaxrecords.bandcamp.com/track/ritmo-love-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "house music",
+        "italo disco",
+        "paris"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "282",
+      "title": "Gimme Some Love",
+      "source": "https://igorgonya.bandcamp.com/track/gimme-some-love",
+      "tags": [
+        "boogie",
+        "disco",
+        "disco house",
+        "edits",
+        "electronic",
+        "free download",
+        "funk",
+        "nu disco",
+        "deep funk",
+        "deep house",
+        "disco house",
+        "funk jam",
+        "nu disco",
+        "elista"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "337",
+      "title": "Dave Maurissa What About My Love Michael Gray Dub Mix",
+      "source": "https://zrecords.bandcamp.com/track/dave-maurissa-what-about-my-love-michael-gray-dub-mix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "333",
+      "title": "Ac Soul Symphony K Jee Ray Mang Remix",
+      "source": "https://zrecords.bandcamp.com/track/ac-soul-symphony-k-jee-ray-mang-remix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "344",
+      "title": "Disco Sparks Feat Christine Wiltshire The D S Orchestra Keep Your Eye On The Sparrow Extended Instrumental",
+      "source": "https://zrecords.bandcamp.com/track/disco-sparks-feat-christine-wiltshire-the-d-s-orchestra-keep-your-eye-on-the-sparrow-extended-instrumental",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "284",
+      "title": "Babystar Herberts Anything Dub 1",
+      "source": "https://matthewherbert.bandcamp.com/track/babystar-herberts-anything-dub-1",
+      "tags": [
+        "electronic",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "292",
+      "title": "Easy Flight 2",
+      "source": "https://skylaxrecords.bandcamp.com/track/easy-flight-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "house music",
+        "italo disco",
+        "paris"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "281",
+      "title": "Feel The Dub",
+      "source": "https://brunobar.bandcamp.com/track/feel-the-dub",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "house",
+        "acid house",
+        "lofi house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "361",
+      "title": "The City Never Sleeps",
+      "source": "https://pearlypearly.bandcamp.com/track/the-city-never-sleeps",
+      "tags": [
+        "house",
+        "electronic",
+        "classic house",
+        "deep house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "346",
+      "title": "Raw Essence Down Down Down Extended Mix",
+      "source": "https://zrecords.bandcamp.com/track/raw-essence-down-down-down-extended-mix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "342",
+      "title": "Good Night Baby",
+      "source": "https://caribouband.bandcamp.com/track/good-night-baby",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "287",
+      "title": "Forever In Memory 2",
+      "source": "https://skylaxrecords.bandcamp.com/track/forever-in-memory-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "house music",
+        "italo disco",
+        "paris"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "328",
+      "title": "Methodd Xylophonica",
+      "source": "https://wisdomteethuk.bandcamp.com/track/methodd-xylophonica",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "334",
+      "title": "Dave Maurissa By Loves Design",
+      "source": "https://zrecords.bandcamp.com/track/dave-maurissa-by-loves-design",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "381",
+      "title": "Livewire",
+      "source": "https://tomesselle.bandcamp.com/track/livewire",
+      "tags": [
+        "electronic",
+        "broken beat",
+        "house",
+        "techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "380",
+      "title": "Spaced Out",
+      "source": "https://tomesselle.bandcamp.com/track/spaced-out",
+      "tags": [
+        "electronic",
+        "broken beat",
+        "house",
+        "techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "383",
+      "title": "Make Up Yr Mind",
+      "source": "https://limousinedream.bandcamp.com/track/make-up-yr-mind",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "379",
+      "title": "Dont Have To Bandcamp Exclusive",
+      "source": "https://tomesselle.bandcamp.com/track/dont-have-to-bandcamp-exclusive",
+      "tags": [
+        "electronic",
+        "broken beat",
+        "house",
+        "techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "378",
+      "title": "Small Talk",
+      "source": "https://tomesselle.bandcamp.com/track/small-talk",
+      "tags": [
+        "electronic",
+        "broken beat",
+        "house",
+        "techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "497",
+      "title": "Hey Boy Hey Girl Jerry Margarita Edit",
+      "source": "https://jerrymargarita.bandcamp.com/track/hey-boy-hey-girl-jerry-margarita-edit",
+      "tags": [
+        "electronic",
+        "house",
+        "remixes",
+        "tech house",
+        "techno",
+        "remix",
+        "techno",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "520",
+      "title": "Mind State",
+      "source": "https://cloneroyaloak.bandcamp.com/track/mind-state",
+      "tags": [
+        "electronic",
+        "netherlands"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "539",
+      "title": "Teach You",
+      "source": "https://melladee.bandcamp.com/track/teach-you",
+      "tags": [
+        "electronic",
+        "warehouse techno",
+        "acid",
+        "bleeps",
+        "house",
+        "techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "569",
+      "title": "Biota",
+      "source": "https://timreaper.bandcamp.com/track/biota",
+      "tags": [
+        "drum&bass",
+        "electronic",
+        "jungle",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "482",
+      "title": "Can U Dig It",
+      "source": "https://fortunesignal.bandcamp.com/track/can-u-dig-it",
+      "tags": [
+        "electronic",
+        "house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "445",
+      "title": "Fluidity 2",
+      "source": "https://timreaper.bandcamp.com/track/fluidity-2",
+      "tags": [
+        "drum&bass",
+        "electronic",
+        "jungle",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "464",
+      "title": "Metr Polis Hundida",
+      "source": "https://binaryalgorithms.bandcamp.com/track/metr-polis-hundida",
+      "tags": [
+        "electronic",
+        "ambient",
+        "ambient electronic",
+        "breaks",
+        "dub-techno",
+        "techno",
+        "colombia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "320",
+      "title": "Going Numb",
+      "source": "https://timreaper.bandcamp.com/track/going-numb",
+      "tags": [
+        "drum&bass",
+        "electronic",
+        "jungle",
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "382",
+      "title": "Vamos A La Beach",
+      "source": "https://limousinedream.bandcamp.com/track/vamos-a-la-beach",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "377",
+      "title": "Should I",
+      "source": "https://limousinedream.bandcamp.com/track/should-i",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "376",
+      "title": "Feeling Nice",
+      "source": "https://limousinedream.bandcamp.com/track/feeling-nice",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "384",
+      "title": "Ngf",
+      "source": "https://freerangerecords.bandcamp.com/track/ngf?action=download",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "392",
+      "title": "I Just Wanna 2",
+      "source": "https://catlow2.bandcamp.com/track/i-just-wanna-2",
+      "tags": [
+        "electronic",
+        "house",
+        "nottingham",
+        "bristol"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "395",
+      "title": "Social 83",
+      "source": "https://eastenddubs.bandcamp.com/track/social-83",
+      "tags": [
+        "electronic",
+        "house",
+        "minimal",
+        "techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "396",
+      "title": "Social 101",
+      "source": "https://eastenddubs.bandcamp.com/track/social-101",
+      "tags": [
+        "electronic",
+        "house",
+        "minimal",
+        "techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "387",
+      "title": "Rupert Ellis Bubble Squeak Original Mix",
+      "source": "https://rupertellis.bandcamp.com/track/rupert-ellis-bubble-squeak-original-mix",
+      "tags": [
+        "deep house",
+        "electronic",
+        "minimal",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "386",
+      "title": "Rupert Ellis Girlfriend Funk Original Mix",
+      "source": "https://rupertellis.bandcamp.com/track/rupert-ellis-girlfriend-funk-original-mix",
+      "tags": [
+        "deep house",
+        "electronic",
+        "minimal",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "391",
+      "title": "El Puta Tool 128 Bpm",
+      "source": "https://factorysetup.bandcamp.com/track/el-puta-tool-128-bpm",
+      "tags": [
+        "electronic",
+        "house",
+        "tribal house",
+        "mexico"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "388",
+      "title": "Janet Nice",
+      "source": "https://freerangerecords.bandcamp.com/track/janet-nice?action=download",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "390",
+      "title": "Mixed Messages",
+      "source": "https://freerangerecords.bandcamp.com/track/mixed-messages?action=download",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "394",
+      "title": "A David Moralez Pt 3",
+      "source": "https://factorysetup.bandcamp.com/track/a-david-moralez-pt-3",
+      "tags": [
+        "electronic",
+        "house",
+        "mexico"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "385",
+      "title": "Everything Feat Brandon Markell Holmes",
+      "source": "https://freerangerecords.bandcamp.com/track/everything-feat-brandon-markell-holmes?action=download",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "389",
+      "title": "Shark Drunk",
+      "source": "https://freerangerecords.bandcamp.com/track/shark-drunk?action=download",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "393",
+      "title": "The Flying Fox",
+      "source": "https://freerangerecords.bandcamp.com/track/the-flying-fox?action=download",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "397",
+      "title": "Viciosa Factory Setup Cachondo Rework Free Download",
+      "source": "https://factorysetup.bandcamp.com/track/viciosa-factory-setup-cachondo-rework-free-download",
+      "tags": [
+        "electronic",
+        "house",
+        "free download",
+        "house",
+        "latino",
+        "tribal house",
+        "trippy",
+        "mexico"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "408",
+      "title": "Hedonic Setpoint 121",
+      "source": "https://malingenie.bandcamp.com/track/hedonic-setpoint-121",
+      "tags": [
+        "electronic",
+        "deep house",
+        "dub",
+        "house",
+        "malin genie",
+        "techno",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "404",
+      "title": "Clarity",
+      "source": "https://pearlypearly.bandcamp.com/track/clarity",
+      "tags": [
+        "house",
+        "electronic",
+        "classic house",
+        "deep house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "401",
+      "title": "Luv2Luvu",
+      "source": "https://mcec.bandcamp.com/track/luv2luvu",
+      "tags": [
+        "drum & bass",
+        "electro",
+        "electronic",
+        "ghettotech",
+        "house",
+        "techno",
+        "detroit"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "400",
+      "title": "Luxury Zip 2",
+      "source": "https://poshdefects.bandcamp.com/track/luxury-zip-2",
+      "tags": [
+        "2-step",
+        "electronic",
+        "uk garage",
+        "ukg",
+        "garage",
+        "house",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "425",
+      "title": "Https://Scruscru.Bandcamp.Com/Album/Guatx Latinghetto",
+      "source": "https://scruscru.bandcamp.com/album/guatx-latinghetto",
+      "tags": [
+        "electronic",
+        "house",
+        "deep-house",
+        "disco",
+        "edits",
+        "jazzy-house",
+        "armenia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "416",
+      "title": "Just A Groove 2",
+      "source": "https://pearlypearly.bandcamp.com/track/just-a-groove-2",
+      "tags": [
+        "house",
+        "electronic",
+        "classic house",
+        "deep house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "409",
+      "title": "Hedonic Setpoint 113",
+      "source": "https://malingenie.bandcamp.com/track/hedonic-setpoint-113",
+      "tags": [
+        "electronic",
+        "deep house",
+        "dub",
+        "house",
+        "malin genie",
+        "techno",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "419",
+      "title": "Held Note 2",
+      "source": "https://pearlypearly.bandcamp.com/track/held-note-2",
+      "tags": [
+        "house",
+        "electronic",
+        "classic house",
+        "deep house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "413",
+      "title": "Glish",
+      "source": "https://cadenzarecords.bandcamp.com/track/glish",
+      "tags": [
+        "deep tech",
+        "electronic",
+        "house",
+        "minimal house",
+        "tech house",
+        "microhouse",
+        "minimal",
+        "techno",
+        "switzerland"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "427",
+      "title": "Tunnel Vision",
+      "source": "https://limousinedream.bandcamp.com/track/tunnel-vision",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "428",
+      "title": "Hot Sauce",
+      "source": "https://retromigration.bandcamp.com/track/hot-sauce",
+      "tags": [
+        "deep house",
+        "electronic",
+        "hip hop",
+        "house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "407",
+      "title": "Minesweeper",
+      "source": "https://klassewrecks.bandcamp.com/track/minesweeper",
+      "tags": [
+        "electronic",
+        "house",
+        "klasse",
+        "techno",
+        "hong kong"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "398",
+      "title": "Buggin 2",
+      "source": "https://poshdefects.bandcamp.com/track/buggin-2",
+      "tags": [
+        "2-step",
+        "electronic",
+        "uk garage",
+        "ukg",
+        "garage",
+        "house",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "410",
+      "title": "Soleil",
+      "source": "https://cadenzarecords.bandcamp.com/track/soleil",
+      "tags": [
+        "deep tech",
+        "electronic",
+        "house",
+        "minimal house",
+        "tech house",
+        "microhouse",
+        "minimal",
+        "techno",
+        "switzerland"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "411",
+      "title": "Blue Shift",
+      "source": "https://cadenzarecords.bandcamp.com/track/blue-shift",
+      "tags": [
+        "deep tech",
+        "electronic",
+        "house",
+        "minimal house",
+        "tech house",
+        "microhouse",
+        "minimal",
+        "techno",
+        "switzerland"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "432",
+      "title": "3 Spooky Day Spooky Life Disk Cartel Ambien Baby Remix",
+      "source": "https://itsdelicaterecords.bandcamp.com/track/3-spooky-day-spooky-life-disk-cartel-ambien-baby-remix",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "426",
+      "title": "Gumo",
+      "source": "https://retromigration.bandcamp.com/track/gumo",
+      "tags": [
+        "deep house",
+        "electronic",
+        "hip hop",
+        "house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "431",
+      "title": "Choices",
+      "source": "https://retromigration.bandcamp.com/track/choices",
+      "tags": [
+        "deep house",
+        "electronic",
+        "hip hop",
+        "house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "429",
+      "title": "Navigate",
+      "source": "https://craigieknowes.bandcamp.com/track/navigate",
+      "tags": [
+        "acid",
+        "electro",
+        "electronic",
+        "house",
+        "leftfield",
+        "techno",
+        "perth"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "521",
+      "title": "What U Need",
+      "source": "https://balkanvinyl.bandcamp.com/track/what-u-need",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "498",
+      "title": "Marshall Jefferson Mushrooms Justin Martin Remix",
+      "source": "https://freakin909.bandcamp.com/track/marshall-jefferson-mushrooms-justin-martin-remix",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "nu disco",
+        "tech house",
+        "techno",
+        "florida"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "570",
+      "title": "The Two Houses Luke Solomon Cpen S Nrg Remix",
+      "source": "https://gideonuk.bandcamp.com/track/the-two-houses-luke-solomon-cpen-s-nrg-remix",
+      "tags": [
+        "ballroom house",
+        "deep house",
+        "electronic",
+        "house",
+        "northern soul",
+        "queer",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "549",
+      "title": "Listo Listo Listo",
+      "source": "https://wearerhythmsection.bandcamp.com/track/listo-listo-listo",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "483",
+      "title": "Ride Ft Faro",
+      "source": "https://soulquestrecords.bandcamp.com/track/ride-ft-faro",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "412",
+      "title": "Do Or Donut",
+      "source": "https://cadenzarecords.bandcamp.com/track/do-or-donut",
+      "tags": [
+        "deep tech",
+        "electronic",
+        "house",
+        "minimal house",
+        "tech house",
+        "microhouse",
+        "minimal",
+        "techno",
+        "switzerland"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "446",
+      "title": "Globex Corp Black Label Track 3",
+      "source": "https://globexcorp.bandcamp.com/track/globex-corp-black-label-track-3",
+      "tags": [
+        "electronic",
+        "hardcore",
+        "jungle",
+        "oldskool",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "465",
+      "title": "X Ploration",
+      "source": "https://binaryalgorithms.bandcamp.com/track/x-ploration",
+      "tags": [
+        "electronic",
+        "ambient",
+        "ambient electronic",
+        "breaks",
+        "dub-techno",
+        "techno",
+        "colombia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "499",
+      "title": "Rayo De Luz Dance Dub",
+      "source": "https://rhodeandbrown.bandcamp.com/track/rayo-de-luz-dance-dub",
+      "tags": [
+        "electronic",
+        "deep house",
+        "disco",
+        "house",
+        "techno",
+        "munich"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "522",
+      "title": "Slip Stream",
+      "source": "https://cloneroyaloak.bandcamp.com/track/slip-stream",
+      "tags": [
+        "electronic",
+        "netherlands"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "550",
+      "title": "Euan 92 2",
+      "source": "https://wearerhythmsection.bandcamp.com/track/euan-92-2",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "571",
+      "title": "Let Me Tell You Power Mix",
+      "source": "https://wolfmusicrecords.bandcamp.com/track/let-me-tell-you-power-mix",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "591",
+      "title": "Rodeo",
+      "source": "https://peachdiscs.bandcamp.com/track/rodeo",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "611",
+      "title": "Miles Smiles 2",
+      "source": "https://caribouband.bandcamp.com/track/miles-smiles-2",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "625",
+      "title": "Brain Music",
+      "source": "https://joshludlow.bandcamp.com/track/brain-music",
+      "tags": [
+        "electronic",
+        "disco",
+        "ebm",
+        "italo",
+        "techno",
+        "wave",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "641",
+      "title": "Side Quest",
+      "source": "https://cadenzarecords.bandcamp.com/track/side-quest",
+      "tags": [
+        "deep tech",
+        "electronic",
+        "house",
+        "minimal house",
+        "tech house",
+        "microhouse",
+        "minimal",
+        "techno",
+        "switzerland"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "643",
+      "title": "A Mysterious Waves",
+      "source": "https://skylaxrecords.bandcamp.com/track/a-mysterious-waves",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "house music",
+        "italo disco",
+        "paris"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "636",
+      "title": "Messin With A Culture",
+      "source": "https://feedasoulrecords.bandcamp.com/track/messin-with-a-culture",
+      "tags": [
+        "brokent beat",
+        "deep house",
+        "disco house",
+        "electronic",
+        "house",
+        "soulful house",
+        "byblos"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "632",
+      "title": "Zipper",
+      "source": "https://thebasementdiscos.bandcamp.com/track/zipper",
+      "tags": [
+        "deep house",
+        "electronic",
+        "garage house",
+        "disco",
+        "house",
+        "nu-disco",
+        "valencia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "644",
+      "title": "Give It To Me",
+      "source": "https://cadenzarecords.bandcamp.com/track/give-it-to-me",
+      "tags": [
+        "deep tech",
+        "electronic",
+        "house",
+        "minimal house",
+        "tech house",
+        "microhouse",
+        "minimal",
+        "techno",
+        "switzerland"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "640",
+      "title": "Discosizer",
+      "source": "https://fritswentink.bandcamp.com/track/discosizer",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "484",
+      "title": "Witness",
+      "source": "https://facta.bandcamp.com/track/witness",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "417",
+      "title": "Real Smiles 2",
+      "source": "https://pearlypearly.bandcamp.com/track/real-smiles-2",
+      "tags": [
+        "house",
+        "electronic",
+        "classic house",
+        "deep house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "447",
+      "title": "Globex Corp Black Label Track 1",
+      "source": "https://globexcorp.bandcamp.com/track/globex-corp-black-label-track-1",
+      "tags": [
+        "electronic",
+        "hardcore",
+        "jungle",
+        "oldskool",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "453",
+      "title": "Register 01",
+      "source": "https://binaryalgorithms.bandcamp.com/track/register-01",
+      "tags": [
+        "detroit techno",
+        "electronic",
+        "tunja",
+        "ambient",
+        "ambient electronic",
+        "breaks",
+        "dub",
+        "dub techno",
+        "dub-techno",
+        "dubtechno",
+        "techno",
+        "colombia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "452",
+      "title": "Register 02",
+      "source": "https://binaryalgorithms.bandcamp.com/track/register-02",
+      "tags": [
+        "detroit techno",
+        "electronic",
+        "tunja",
+        "ambient",
+        "ambient electronic",
+        "breaks",
+        "dub",
+        "dub techno",
+        "dub-techno",
+        "dubtechno",
+        "techno",
+        "colombia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "454",
+      "title": "Redline 4",
+      "source": "https://binaryalgorithms.bandcamp.com/track/redline-4",
+      "tags": [
+        "electronic",
+        "ambient",
+        "ambient electronic",
+        "breaks",
+        "dub-techno",
+        "techno",
+        "colombia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "500",
+      "title": "Axis Hard Mix",
+      "source": "https://slowlife.bandcamp.com/track/axis-hard-mix",
+      "tags": [
+        "electronic",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "523",
+      "title": "Burned",
+      "source": "https://cloneroyaloak.bandcamp.com/track/burned",
+      "tags": [
+        "electronic",
+        "netherlands"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "548",
+      "title": "Yeah",
+      "source": "https://wearerhythmsection.bandcamp.com/track/yeah",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "572",
+      "title": "4Luv 2",
+      "source": "https://sebwildblood.bandcamp.com/track/4luv-2",
+      "tags": [
+        "electronic",
+        "beats",
+        "downtempo",
+        "electronica",
+        "garage",
+        "house",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "592",
+      "title": "Josephine 3",
+      "source": "https://caribouband.bandcamp.com/track/josephine-3",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "612",
+      "title": "Starflight Command",
+      "source": "https://skylaxrecords.bandcamp.com/track/starflight-command",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "house music",
+        "italo disco",
+        "paris"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "630",
+      "title": "Space Babe",
+      "source": "https://fritswentink.bandcamp.com/track/space-babe",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "485",
+      "title": "A Bit Mad",
+      "source": "https://soulquestrecords.bandcamp.com/track/a-bit-mad",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "415",
+      "title": "Que Queres",
+      "source": "https://toytonics.bandcamp.com/track/que-queres",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "448",
+      "title": "Sunspots",
+      "source": "https://futureretrolondon.bandcamp.com/track/sunspots",
+      "tags": [
+        "drum & bass",
+        "electronic",
+        "jungle",
+        "dnb",
+        "hardcore",
+        "old school",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "501",
+      "title": "The Chant",
+      "source": "https://slowlife.bandcamp.com/track/the-chant",
+      "tags": [
+        "electronic",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "524",
+      "title": "Ive Been Waiting",
+      "source": "https://clivefromaccounts.bandcamp.com/track/ive-been-waiting",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "disco",
+        "techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "551",
+      "title": "Tastes Like Freedom Tornado Wallace Red Face Mix",
+      "source": "https://wearerhythmsection.bandcamp.com/track/tastes-like-freedom-tornado-wallace-red-face-mix",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "573",
+      "title": "I Cant Understand",
+      "source": "https://toytonics.bandcamp.com/track/i-cant-understand",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "613",
+      "title": "Waiting So Long 2",
+      "source": "https://caribouband.bandcamp.com/track/waiting-so-long-2",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "593",
+      "title": "Ascension",
+      "source": "https://samalfred1.bandcamp.com/track/ascension",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "melbourne"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "635",
+      "title": "Stealth",
+      "source": "https://fritswentink.bandcamp.com/track/stealth",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "486",
+      "title": "The Grove Scotia Remix",
+      "source": "https://fortunesignal.bandcamp.com/track/the-grove-scotia-remix",
+      "tags": [
+        "electronic",
+        "house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "414",
+      "title": "No S",
+      "source": "https://cadenzarecords.bandcamp.com/track/no-s",
+      "tags": [
+        "deep tech",
+        "electronic",
+        "house",
+        "minimal house",
+        "tech house",
+        "microhouse",
+        "minimal",
+        "techno",
+        "switzerland"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "449",
+      "title": "Globex Corp Black Label Track 2",
+      "source": "https://globexcorp.bandcamp.com/track/globex-corp-black-label-track-2",
+      "tags": [
+        "electronic",
+        "hardcore",
+        "jungle",
+        "oldskool",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "502",
+      "title": "Axis Space Mix",
+      "source": "https://slowlife.bandcamp.com/track/axis-space-mix",
+      "tags": [
+        "electronic",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "525",
+      "title": "Superfine",
+      "source": "https://clivefromaccounts.bandcamp.com/track/superfine",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "disco",
+        "techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "574",
+      "title": "Ride",
+      "source": "https://sebwildblood.bandcamp.com/track/ride",
+      "tags": [
+        "electronic",
+        "beats",
+        "downtempo",
+        "electronica",
+        "garage",
+        "house",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "552",
+      "title": "Could This Be Love",
+      "source": "https://wearerhythmsection.bandcamp.com/track/could-this-be-love",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "614",
+      "title": "Solar Feat Mtsjungles",
+      "source": "https://medlar.bandcamp.com/track/solar-feat-mtsjungles",
+      "tags": [
+        "electronic",
+        "house",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "594",
+      "title": "Double Man Kink Remix",
+      "source": "https://cloneroyaloak.bandcamp.com/track/double-man-kink-remix",
+      "tags": [
+        "electronic",
+        "netherlands"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "631",
+      "title": "Mind State",
+      "source": "https://fritswentink.bandcamp.com/track/mind-state",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "451",
+      "title": "Cycle A",
+      "source": "https://binaryalgorithms.bandcamp.com/track/cycle-a",
+      "tags": [
+        "electronic",
+        "ambient",
+        "ambient electronic",
+        "breaks",
+        "dub-techno",
+        "techno",
+        "colombia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "194",
+      "title": "Are U Still Smiling Dam Swindle Remix",
+      "source": "https://heistrecordings.bandcamp.com/track/are-u-still-smiling-dam-swindle-remix",
+      "tags": [
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "187",
+      "title": "Freedom Were Needing Aroop Roy Remix",
+      "source": "https://closecounters.bandcamp.com/track/freedom-were-needing-aroop-roy-remix?action=download",
+      "tags": [
+        "broken beat",
+        "dance",
+        "electronic",
+        "house",
+        "soul",
+        "melbourne"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "200",
+      "title": "Ottagone 013 2",
+      "source": "https://ottagone.bandcamp.com/track/ottagone-013-2",
+      "tags": [
+        "electronic",
+        "techno",
+        "industrial",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "190",
+      "title": "1000",
+      "source": "https://kalaharioystercult.bandcamp.com/track/1000",
+      "tags": [
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "199",
+      "title": "Look Into The Light",
+      "source": "https://limousinedream.bandcamp.com/track/look-into-the-light",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "423",
+      "title": "Rock Ya Soul",
+      "source": "https://fortunesignal.bandcamp.com/track/rock-ya-soul",
+      "tags": [
+        "electronic",
+        "house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "418",
+      "title": "Guatx Nunca Un Boton",
+      "source": "https://scruscru.bandcamp.com/track/guatx-nunca-un-boton",
+      "tags": [
+        "electronic",
+        "house",
+        "deep-house",
+        "disco",
+        "edits",
+        "jazzy-house",
+        "armenia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "430",
+      "title": "Steppin Out",
+      "source": "https://rhodeandbrown.bandcamp.com/track/steppin-out",
+      "tags": [
+        "electronic",
+        "deep house",
+        "disco",
+        "house",
+        "techno",
+        "munich"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "434",
+      "title": "Survival Vocal Mix",
+      "source": "https://wearerhythmsection.bandcamp.com/track/survival-vocal-mix",
+      "tags": [
+        "dance",
+        "electronic",
+        "house",
+        "washington d.c.",
+        "bass",
+        "club",
+        "deconstructed club",
+        "underground",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "405",
+      "title": "Natural High",
+      "source": "https://moxiemox.bandcamp.com/track/natural-high",
+      "tags": [
+        "berlin",
+        "deep house",
+        "electronic",
+        "garage",
+        "house",
+        "ibiza",
+        "london",
+        "on loop",
+        "techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "422",
+      "title": "Panorama",
+      "source": "https://cloneroyaloak.bandcamp.com/track/panorama",
+      "tags": [
+        "electronic",
+        "netherlands"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "424",
+      "title": "Loop Of Trust",
+      "source": "https://edenburns.bandcamp.com/track/loop-of-trust",
+      "tags": [
+        "electronic",
+        "melbourne"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "406",
+      "title": "Dirty Channels Guilty Original Mix",
+      "source": "https://razor-n-tape.bandcamp.com/track/dirty-channels-guilty-original-mix",
+      "tags": [
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "421",
+      "title": "Guatx Karioca Man",
+      "source": "https://scruscru.bandcamp.com/track/guatx-karioca-man",
+      "tags": [
+        "electronic",
+        "house",
+        "deep-house",
+        "disco",
+        "edits",
+        "jazzy-house",
+        "armenia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "487",
+      "title": "Lead The Way Ft Legzdina",
+      "source": "https://soulquestrecords.bandcamp.com/track/lead-the-way-ft-legzdina",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "526",
+      "title": "Test 14",
+      "source": "https://balkanvinyl.bandcamp.com/track/test-14",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "503",
+      "title": "Escape",
+      "source": "https://slowlife.bandcamp.com/track/escape",
+      "tags": [
+        "electronic",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "575",
+      "title": "Megatronic In Our Soul Ft Fawziyya Heart Jamiie Remix",
+      "source": "https://razor-n-tape.bandcamp.com/track/megatronic-in-our-soul-ft-fawziyya-heart-jamiie-remix",
+      "tags": [
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "553",
+      "title": "Breaking Up 2",
+      "source": "https://wearerhythmsection.bandcamp.com/track/breaking-up-2",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "615",
+      "title": "Bring It Back",
+      "source": "https://peachdiscs.bandcamp.com/track/bring-it-back",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "595",
+      "title": "Trouble Man Malin Genie Remix",
+      "source": "https://cloneroyaloak.bandcamp.com/track/trouble-man-malin-genie-remix",
+      "tags": [
+        "electronic",
+        "netherlands"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "633",
+      "title": "Tiki Tiki Tiki",
+      "source": "https://toytonics.bandcamp.com/track/tiki-tiki-tiki",
+      "tags": [
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "488",
+      "title": "Chanel Beads Police Scanner K Lone Edit",
+      "source": "https://k-lone.bandcamp.com/track/chanel-beads-police-scanner-k-lone-edit",
+      "tags": [
+        "electronic",
+        "brighton"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "504",
+      "title": "Dema Deluxe Remaster",
+      "source": "https://octaveone.bandcamp.com/track/dema-deluxe-remaster",
+      "tags": [
+        "detroit house",
+        "detroit techno",
+        "electronic",
+        "house",
+        "techno",
+        "detroit"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "527",
+      "title": "Every Time",
+      "source": "https://clivefromaccounts.bandcamp.com/track/every-time",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "disco",
+        "techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "554",
+      "title": "Junglizer 4",
+      "source": "https://wearerhythmsection.bandcamp.com/track/junglizer-4",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "576",
+      "title": "Who",
+      "source": "https://machinedrum.bandcamp.com/track/who",
+      "tags": [
+        "140",
+        "drum & bass",
+        "electronic",
+        "breakbeat",
+        "dubstep",
+        "grime",
+        "house",
+        "jungle",
+        "rap",
+        "north carolina"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "616",
+      "title": "Love Love",
+      "source": "https://peachdiscs.bandcamp.com/track/love-love",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "596",
+      "title": "Muv",
+      "source": "https://peachdiscs.bandcamp.com/track/muv",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "626",
+      "title": "Https://Fullcirclesounds.Bandcamp.Com/Album/When You Love Someone Club Mix",
+      "source": "https://fullcirclesounds.bandcamp.com/album/when-you-love-someone-club-mix",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "505",
+      "title": "It Was You Bernardo Mota Remix",
+      "source": "https://workingrhythms.bandcamp.com/track/it-was-you-bernardo-mota-remix",
+      "tags": [
+        "electronic",
+        "bedroom pop",
+        "chillout",
+        "deep house",
+        "house",
+        "leftfield",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "528",
+      "title": "Reps",
+      "source": "https://balkanvinyl.bandcamp.com/track/reps",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "577",
+      "title": "It Was You Bernardo Mota Remix",
+      "source": "https://workingrhythms.bandcamp.com/track/it-was-you-bernardo-mota-remix",
+      "tags": [
+        "electronic",
+        "bedroom pop",
+        "chillout",
+        "deep house",
+        "house",
+        "leftfield",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "555",
+      "title": "Deep Dark Grimey Dancefloor Moment 2",
+      "source": "https://wearerhythmsection.bandcamp.com/track/deep-dark-grimey-dancefloor-moment-2",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "617",
+      "title": "Pluq",
+      "source": "https://peachdiscs.bandcamp.com/track/pluq",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "597",
+      "title": "No More 2",
+      "source": "https://samalfred1.bandcamp.com/track/no-more-2",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "melbourne"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "629",
+      "title": "Sad Piano House Kelbin Remix",
+      "source": "https://caribouband.bandcamp.com/track/sad-piano-house-kelbin-remix",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "506",
+      "title": "Down Sml Club Version Feat Senpolya",
+      "source": "https://cinthie803.bandcamp.com/track/down-sml-club-version-feat-senpolya",
+      "tags": [
+        "electronic",
+        "house",
+        "nu disco",
+        "techno",
+        "disco",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "529",
+      "title": "Facts Not Opinions",
+      "source": "https://balkanvinyl.bandcamp.com/track/facts-not-opinions",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "578",
+      "title": "Late Night Dub",
+      "source": "https://fauxpoly.bandcamp.com/track/late-night-dub",
+      "tags": [
+        "uk bass",
+        "bass music",
+        "breaks",
+        "dub",
+        "dubstep",
+        "electronic",
+        "grime",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "556",
+      "title": "Slingshot 3",
+      "source": "https://wearerhythmsection.bandcamp.com/track/slingshot-3",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "598",
+      "title": "Serotonin",
+      "source": "https://fjaak.bandcamp.com/track/serotonin",
+      "tags": [
+        "breakbeat",
+        "club",
+        "electronic",
+        "fjaak",
+        "groove",
+        "house",
+        "power",
+        "rave",
+        "spandau",
+        "techno",
+        "big room",
+        "breakbeat",
+        "rave",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "618",
+      "title": "Dont Need",
+      "source": "https://fortunesignal.bandcamp.com/track/dont-need",
+      "tags": [
+        "electronic",
+        "house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "627",
+      "title": "Filthboi69",
+      "source": "https://fritswentink.bandcamp.com/track/filthboi69",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "530",
+      "title": "X Mod",
+      "source": "https://kassiansound.bandcamp.com/track/x-mod",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "techno",
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "507",
+      "title": "Daystar Rising Deluxe Remaster",
+      "source": "https://octaveone.bandcamp.com/track/daystar-rising-deluxe-remaster",
+      "tags": [
+        "detroit house",
+        "detroit techno",
+        "electronic",
+        "house",
+        "techno",
+        "detroit"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "558",
+      "title": "Feel Me Twisted Dub 2",
+      "source": "https://wearerhythmsection.bandcamp.com/track/feel-me-twisted-dub-2",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "579",
+      "title": "It Was You",
+      "source": "https://workingrhythms.bandcamp.com/track/it-was-you",
+      "tags": [
+        "electronic",
+        "bedroom pop",
+        "chillout",
+        "deep house",
+        "house",
+        "leftfield",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "599",
+      "title": "Lifecore",
+      "source": "https://skylaxrecords.bandcamp.com/track/lifecore",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "house music",
+        "italo disco",
+        "paris"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "619",
+      "title": "The World Is On Fire 2",
+      "source": "https://fauxpoly.bandcamp.com/track/the-world-is-on-fire-2",
+      "tags": [
+        "dub",
+        "dubstep",
+        "electronic",
+        "garage",
+        "house",
+        "ukg",
+        "dub techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "628",
+      "title": "Blush",
+      "source": "https://kassiansound.bandcamp.com/track/blush",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "techno",
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "531",
+      "title": "Break Cycle",
+      "source": "https://kassiansound.bandcamp.com/track/break-cycle",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "techno",
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "508",
+      "title": "It Was You",
+      "source": "https://workingrhythms.bandcamp.com/track/it-was-you",
+      "tags": [
+        "electronic",
+        "bedroom pop",
+        "chillout",
+        "deep house",
+        "house",
+        "leftfield",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "559",
+      "title": "Gc 2",
+      "source": "https://wearerhythmsection.bandcamp.com/track/gc-2",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "580",
+      "title": "Resolve Feat Fine Farmer",
+      "source": "https://workingrhythms.bandcamp.com/track/resolve-feat-fine-farmer",
+      "tags": [
+        "electronic",
+        "bedroom pop",
+        "chillout",
+        "deep house",
+        "house",
+        "leftfield",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "600",
+      "title": "Meet Me In The Dance",
+      "source": "https://fortunesignal.bandcamp.com/track/meet-me-in-the-dance",
+      "tags": [
+        "electronic",
+        "house",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "620",
+      "title": "Groove It",
+      "source": "https://peachdiscs.bandcamp.com/track/groove-it",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "634",
+      "title": "Island Of Love Extended Mix",
+      "source": "https://zrecords.bandcamp.com/track/island-of-love-extended-mix",
+      "tags": [
+        "deep house",
+        "disco",
+        "electronic",
+        "house",
+        "soul",
+        "soulful house",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "509",
+      "title": "Beauty Thug Sml Club Edit",
+      "source": "https://cinthie803.bandcamp.com/track/beauty-thug-sml-club-edit",
+      "tags": [
+        "electronic",
+        "house",
+        "nu disco",
+        "techno",
+        "disco",
+        "berlin"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "532",
+      "title": "Berry Baby Cheeto Mor Elian S Velvet Crush Remix",
+      "source": "https://breakamusic.bandcamp.com/track/berry-baby-cheeto-mor-elian-s-velvet-crush-remix",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "581",
+      "title": "Holdup",
+      "source": "https://k-lone.bandcamp.com/track/holdup",
+      "tags": [
+        "electronic",
+        "brighton"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "557",
+      "title": "Level 7 2",
+      "source": "https://wearerhythmsection.bandcamp.com/track/level-7-2",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "601",
+      "title": "Hav U A Sec 3",
+      "source": "https://caribouband.bandcamp.com/track/hav-u-a-sec-3",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "621",
+      "title": "Sleigh",
+      "source": "https://fauxpoly.bandcamp.com/track/sleigh",
+      "tags": [
+        "dub",
+        "dubstep",
+        "electronic",
+        "garage",
+        "house",
+        "ukg",
+        "dub techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "638",
+      "title": "Read My Mind",
+      "source": "https://saoirsemusic.bandcamp.com/track/read-my-mind",
+      "tags": [
+        "electronic",
+        "house",
+        "tech house",
+        "techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "371",
+      "title": "Closer It Gets",
+      "source": "https://canoe1.bandcamp.com/track/closer-it-gets",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "533",
+      "title": "Torus Dreams",
+      "source": "https://balkanvinyl.bandcamp.com/track/torus-dreams",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "510",
+      "title": "Resolve Feat Fine Farmer",
+      "source": "https://workingrhythms.bandcamp.com/track/resolve-feat-fine-farmer",
+      "tags": [
+        "electronic",
+        "bedroom pop",
+        "chillout",
+        "deep house",
+        "house",
+        "leftfield",
+        "brooklyn"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "560",
+      "title": "Smooth And Faithful 2",
+      "source": "https://wearerhythmsection.bandcamp.com/track/smooth-and-faithful-2",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "564",
+      "title": "Fast Feast Repeat 1",
+      "source": "https://fauxpoly.bandcamp.com/track/fast-feast-repeat-1",
+      "tags": [
+        "uk bass",
+        "bass music",
+        "breaks",
+        "dub",
+        "dubstep",
+        "electronic",
+        "grime",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "543",
+      "title": "Cluster Funk 2",
+      "source": "https://wearerhythmsection.bandcamp.com/track/cluster-funk-2",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "541",
+      "title": "Sunday Service 2",
+      "source": "https://melladee.bandcamp.com/track/sunday-service-2",
+      "tags": [
+        "electronic",
+        "warehouse techno",
+        "acid",
+        "bleeps",
+        "house",
+        "techno",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "622",
+      "title": "Clap Your Hands 3",
+      "source": "https://caribouband.bandcamp.com/track/clap-your-hands-3",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "602",
+      "title": "Pull Up Al After",
+      "source": "https://peachdiscs.bandcamp.com/track/pull-up-al-after",
+      "tags": [
+        "united kingdom"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "637",
+      "title": "Heat Shield",
+      "source": "https://fritswentink.bandcamp.com/track/heat-shield",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "420",
+      "title": "Do What You Like 2",
+      "source": "https://pearlypearly.bandcamp.com/track/do-what-you-like-2",
+      "tags": [
+        "house",
+        "electronic",
+        "classic house",
+        "deep house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "433",
+      "title": "Flu",
+      "source": "https://retromigration.bandcamp.com/track/flu",
+      "tags": [
+        "deep house",
+        "electronic",
+        "hip hop",
+        "house",
+        "amsterdam"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "402",
+      "title": "Sayonara Boys Digi Bonus",
+      "source": "https://hawscardiff.bandcamp.com/track/sayonara-boys-digi-bonus",
+      "tags": [
+        "cardiff"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "403",
+      "title": "Spaghetti Junction Midland Remix",
+      "source": "https://gideonuk.bandcamp.com/track/spaghetti-junction-midland-remix",
+      "tags": [
+        "ballroom house",
+        "deep house",
+        "electronic",
+        "house",
+        "northern soul",
+        "queer",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "435",
+      "title": "A Gozar Con Mi Combo",
+      "source": "https://papitutmirleid.bandcamp.com/track/a-gozar-con-mi-combo",
+      "tags": [
+        "latin",
+        "latin tech house",
+        "munich"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "450",
+      "title": "Something To Fight For",
+      "source": "https://binaryalgorithms.bandcamp.com/track/something-to-fight-for",
+      "tags": [
+        "electronic",
+        "ambient",
+        "ambient electronic",
+        "breaks",
+        "dub-techno",
+        "techno",
+        "colombia"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "511",
+      "title": "4Luv",
+      "source": "https://sebwildblood.bandcamp.com/track/4luv",
+      "tags": [
+        "electronic",
+        "beats",
+        "dance",
+        "downtempo",
+        "electronica",
+        "garage",
+        "house",
+        "percussive",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "534",
+      "title": "Ritz",
+      "source": "https://kassiansound.bandcamp.com/track/ritz",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "techno",
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "561",
+      "title": "Parents And God",
+      "source": "https://wearerhythmsection.bandcamp.com/track/parents-and-god",
+      "tags": [
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "582",
+      "title": "Rema Charm Kwamzy 3 Step Remix",
+      "source": "https://kwamzy.bandcamp.com/track/rema-charm-kwamzy-3-step-remix",
+      "tags": [
+        "3 step",
+        "amapiano",
+        "dance",
+        "electronic",
+        "house",
+        "edits",
+        "remix",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "584",
+      "title": "38 Bus",
+      "source": "https://chinese-spy-balloon.bandcamp.com/track/38-bus",
+      "tags": [
+        "electronic",
+        "bass",
+        "dubstep",
+        "grime",
+        "jersey club",
+        "uk garage",
+        "toronto"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "623",
+      "title": "Good Night Baby 2",
+      "source": "https://caribouband.bandcamp.com/track/good-night-baby-2",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "603",
+      "title": "Talk To Me 2",
+      "source": "https://caribouband.bandcamp.com/track/talk-to-me-2",
+      "tags": [
+        "electronic",
+        "london"
+      ],
+      "bpm": null
+    },
+    {
+      "id": "639",
+      "title": "Slip Stream",
+      "source": "https://fritswentink.bandcamp.com/track/slip-stream",
+      "tags": [
+        "deep house",
+        "electronic",
+        "house",
+        "tech house",
+        "amsterdam"
+      ],
+      "bpm": null
+    }
+  ],
+  "referenceTracksNote": "Original Beatmatch PRO catalog links. Audio remains on artists\u2019 Bandcamp pages; local import supports downloaded tracks. No redistribution license was supplied by Beatmatch PRO."
+}

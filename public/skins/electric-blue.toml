@@ -1,0 +1,21 @@
+# Bit Cheer skin v1 — save this file, edit its colors, and import in Skin studio.
+version = 1
+name = "Electric Blue 2001"
+
+[colors]
+background = "#0b1220"
+panel = "#263a52"
+panelLight = "#55728c"
+text = "#f0f7ff"
+muted = "#b4c5d6"
+accent = "#93dfff"
+secondary = "#ffc279"
+screen = "#061225"
+border = "#718ba3"
+
+# To add your own images, zip this file as skin.toml together with the images.
+# Then uncomment this section and import the ZIP.
+# [assets]
+# panel = "panel.png"
+# titlebar = "titlebar.png"
+# background = "background.png"

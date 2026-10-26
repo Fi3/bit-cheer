@@ -1,0 +1,34 @@
+[
+  {
+    "id": "classic",
+    "name": "Classic 2.91",
+    "md5": "5e4f10275dcb1fb211d4a8b4f1bda236",
+    "preview": "/skins/classic.png",
+    "archive": "/skins/classic.wsz",
+    "source": "https://skins.webamp.org/skin/5e4f10275dcb1fb211d4a8b4f1bda236/"
+  },
+  {
+    "id": "classified3",
+    "name": "Winamp 3 Classified",
+    "md5": "cd251187a5e6ff54ce938d26f1f2de02",
+    "preview": "/skins/classified3.png",
+    "archive": "/skins/classified3.wsz",
+    "source": "https://skins.webamp.org/skin/cd251187a5e6ff54ce938d26f1f2de02/"
+  },
+  {
+    "id": "classified5",
+    "name": "Winamp 5 Classified",
+    "md5": "b0fb83cc20af3abe264291bb17fb2a13",
+    "preview": "/skins/classified5.png",
+    "archive": "/skins/classified5.wsz",
+    "source": "https://skins.webamp.org/skin/b0fb83cc20af3abe264291bb17fb2a13/"
+  },
+  {
+    "id": "bento",
+    "name": "Bento Classified",
+    "md5": "d6010aa35bed659bc1311820daa4b341",
+    "preview": "/skins/bento.png",
+    "archive": "/skins/bento.wsz",
+    "source": "https://skins.webamp.org/skin/d6010aa35bed659bc1311820daa4b341/"
+  }
+]

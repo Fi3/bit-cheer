@@ -1,0 +1,9 @@
+node_modules/
+dist/
+elm-stuff/
+engine/target/
+test-results/
+playwright-report/
+public/elm.js
+public/engine.wasm
+.DS_Store
