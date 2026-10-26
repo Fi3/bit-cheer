@@ -1,79 +1,189 @@
 import { parse } from 'smol-toml';
 import { unzipSync, strFromU8, zipSync, strToU8 } from 'fflate';
-const COLORS = ['background','panel','panelLight','text','muted','accent','secondary','screen','border'];
+
+const COLORS = ['background', 'panel', 'panelLight', 'text', 'muted', 'accent', 'secondary', 'screen', 'border'];
+export const SKIN_BASES = ['classic', 'classified3', 'classified5', 'bento', 'alien'];
+export const SKIN_ASSETS = ['panel', 'titlebar', 'background', 'frame', 'buttons', 'numbers', 'platter', 'pitch'];
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+const HEX_COLOR = /^#[a-f0-9]{6}$/i;
+const IMAGE_PATH = /^(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_.-]+\.(png|jpg|jpeg|webp|bmp)$/i;
+const IMAGE_DATA = /^data:image\/(?:png|jpeg|bmp|webp);base64,[a-zA-Z0-9+/=]+$/;
+
+// Colors complement the real archive bitmaps: navy/lime, gray/gold,
+// chrome/blue, charcoal/teal, and Headspace's green/purple respectively.
 export const themes = {
-  classic: { name:'base-2.91', background:'#151719',panel:'#292c32',panelLight:'#41464f',text:'#e4e6e3',muted:'#969c9c',accent:'#b8ee75',secondary:'#e3aa60',screen:'#10160f',border:'#555a62' },
-  classified3: { name:'Winamp3_Classified_v5.5',background:'#242624',panel:'#5d625b',panelLight:'#a5ad9c',text:'#f3f3e4',muted:'#ced1bc',accent:'#b9ffd4',secondary:'#ffcf88',screen:'#151e19',border:'#c0c3ad' },
-  classified5: { name:'Winamp5_Classified_v5.5',background:'#1b2029',panel:'#69747f',panelLight:'#a6b1ba',text:'#ffffff',muted:'#e0e6eb',accent:'#a4d7ff',secondary:'#f6d98a',screen:'#101b31',border:'#cad3df' },
-  bento: { name:'Bento_Classified',background:'#10151b',panel:'#252f39',panelLight:'#3c4d5e',text:'#e3eef6',muted:'#a3b7c7',accent:'#9bc7ee',secondary:'#d4a8eb',screen:'#111c29',border:'#59738b' },
-  alien: { name:'Headspace · Alien Lime',background:'#10170c',panel:'#29551b',panelLight:'#6c9f27',text:'#f1ffdb',muted:'#bed49a',accent:'#aeef29',secondary:'#ce9aef',screen:'#081204',border:'#7fa53a' }
+  classic: { name: 'base-2.91', background: '#15151e', panel: '#2c2d46', panelLight: '#595a73', text: '#e4e4f0', muted: '#b1b3ca', accent: '#44ff55', secondary: '#d8bb63', screen: '#050608', border: '#77788d' },
+  classified3: { name: 'Winamp3_Classified_v5.5', background: '#222221', panel: '#62625e', panelLight: '#c8c7b8', text: '#fffef1', muted: '#deddd0', accent: '#f0d16d', secondary: '#d9ddc3', screen: '#060706', border: '#b9b8ab' },
+  classified5: { name: 'Winamp5_Classified_v5.5', background: '#192332', panel: '#48627d', panelLight: '#d8dfe7', text: '#f2f8ff', muted: '#d3e1ed', accent: '#d9edff', secondary: '#f5ca67', screen: '#164884', border: '#c4d0e0' },
+  bento: { name: 'Bento_Classified', background: '#151819', panel: '#272d2f', panelLight: '#6c7476', text: '#e2e9e9', muted: '#a7b9ba', accent: '#b8dbdc', secondary: '#e8aa61', screen: '#070c0e', border: '#687577' },
+  alien: { name: 'Headspace · Alien Lime', background: '#10170c', panel: '#29551b', panelLight: '#6c9f27', text: '#f1ffdb', muted: '#bed49a', accent: '#aeef29', secondary: '#ce9aef', screen: '#081204', border: '#7fa53a' }
 };
+
+const builtinAssets = base => ({
+  titlebar: base === 'alien' ? null : `/skins/${base}-titlebar.png`,
+  frame: base === 'alien' ? '/skins/alien-bg_drawer_left.png' : `/skins/${base}/main.png`,
+  buttons: base === 'alien' ? '/skins/classic/cbuttons.png' : `/skins/${base}/cbuttons.png`,
+  numbers: base === 'alien' ? '/skins/classic/numbers.png' : `/skins/${base}/${base === 'bento' ? 'nums_ex' : 'numbers'}.png`,
+  platter: null,
+  pitch: null
+});
+
 export function validateSkin(parsed) {
-  if (parsed.version !== 1) throw new Error('skin.toml needs version = 1.');
+  if (!parsed || parsed.version !== 1) throw new Error('skin.toml needs version = 1.');
   if (typeof parsed.name !== 'string' || !parsed.name.trim() || parsed.name.length > 60) throw new Error('Choose a skin name from 1 to 60 characters.');
-  const colors = parsed.colors || {}, clean = {name:parsed.name.trim()};
-  for(const key of COLORS) {
-    if (colors[key] !== undefined && !/^#[a-f0-9]{6}$/i.test(colors[key])) throw new Error(`Color ${key} must be a six-digit hex color, such as #b8ee75.`);
-    clean[key] = colors[key] || themes.classic[key];
+  const base = parsed.base === undefined ? 'classic' : parsed.base;
+  if (!SKIN_BASES.includes(base)) throw new Error(`Skin base must be one of: ${SKIN_BASES.join(', ')}.`);
+  const colors = parsed.colors || {}, clean = { name: parsed.name.trim() };
+  for (const key of COLORS) {
+    if (colors[key] !== undefined && (typeof colors[key] !== 'string' || !HEX_COLOR.test(colors[key]))) throw new Error(`Color ${key} must be a six-digit hex color, such as #b8ee75.`);
+    clean[key] = colors[key] || themes[base][key];
   }
   const assets = {};
-  for (const key of ['panel','titlebar','background']) {
-    const value=parsed.assets?.[key];
-    if (value !== undefined) {
-      if(typeof value!=='string'||! /^(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_.-]+\.(png|jpg|jpeg|webp|bmp)$/i.test(value)||value.includes('..')) throw new Error(`Asset ${key} must be a relative image path inside the ZIP.`);
-      assets[key]=value;
-    }
+  for (const key of Object.keys(parsed.assets || {})) {
+    if (!SKIN_ASSETS.includes(key)) throw new Error(`Unknown skin asset ${key}. Supported assets: ${SKIN_ASSETS.join(', ')}.`);
+    const value = parsed.assets[key];
+    if (typeof value !== 'string' || !IMAGE_PATH.test(value) || value.includes('..')) throw new Error(`Asset ${key} must be a relative image path inside the ZIP.`);
+    assets[key] = value;
   }
-  return {theme:clean,assets};
+  return { base, theme: clean, assets };
 }
+
 export function readArchive(bytes) {
   let expanded = 0, count = 0;
   return unzipSync(bytes, { filter: entry => {
     expanded += entry.originalSize; count++;
-    if(expanded>24*1024*1024||count>120) throw new Error('Skin archive is too large (24 MB expanded, 120 files maximum).');
+    if (expanded > 24 * 1024 * 1024 || count > 120) throw new Error('Skin archive is too large (24 MB expanded, 120 files maximum).');
+    if (/^(?:\/|[A-Za-z]:)|(?:^|\/)\.\.(?:\/|$)|\\/.test(entry.name)) throw new Error('Skin archive contains an unsafe file path.');
     return true;
-  }});
+  } });
 }
-const dataUrl=(bytes,path)=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(new Blob([bytes],{type:/\.bmp$/i.test(path)?'image/bmp':/\.jpe?g$/i.test(path)?'image/jpeg':/\.webp$/i.test(path)?'image/webp':'image/png'}));});
-async function fromWsz(files,filename) {
-  const paths=Object.keys(files), main=paths.find(p=>/(^|\/)main.bmp$/i.test(p));
-  if(!main) throw new Error('This WSZ is missing main.bmp. Only classic Winamp 2 skins are supported.');
-  const source=await dataUrl(files[main],main), bitmap=await createImageBitmap(new Blob([files[main]],{type:'image/bmp'}));
-  const canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;
-  const ctx=canvas.getContext('2d');ctx.drawImage(bitmap,0,0);bitmap.close();
-  const rgb=ctx.getImageData(0,0,canvas.width,canvas.height).data;
-  let r=0,g=0,b=0,n=0;
-  for(let i=0;i<rgb.length;i+=16) {const lum=(rgb[i]+rgb[i+1]+rgb[i+2])/3;if(lum>25&&lum<200){r+=rgb[i];g+=rgb[i+1];b+=rgb[i+2];n++;}}
-  const hex=(r,g,b)=>'#'+[r,g,b].map(v=>Math.round(Math.min(255,v)).toString(16).padStart(2,'0')).join('');
-  const color=n?hex(r/n,g/n,b/n):themes.classic.panel;
-  const title=document.createElement('canvas');title.width=Math.min(275,canvas.width);title.height=14;title.getContext('2d').drawImage(canvas,0,0,title.width,14,0,0,title.width,14);
-  const theme={...themes.classic,name:filename.replace(/\.wsz$/i,''),panel:color,panelLight:n?hex(r/n*1.3,g/n*1.3,b/n*1.3):themes.classic.panelLight};
-  const vis=paths.find(p=>/(^|\/)viscolor.txt$/i.test(p));
-  if(vis){const matches=strFromU8(files[vis]).split(/\r?\n/).map(l=>l.match(/^\s*(\d+),\s*(\d+),\s*(\d+)/)).filter(Boolean);if(matches.length>2)theme.accent=hex(+matches[2][1],+matches[2][2],+matches[2][3]);}
-  return {theme,images:{titlebar:title.toDataURL()},preview:source};
+
+function mimeType(path) {
+  return /\.bmp$/i.test(path) ? 'image/bmp' : /\.jpe?g$/i.test(path) ? 'image/jpeg' : /\.webp$/i.test(path) ? 'image/webp' : 'image/png';
 }
+function dataUrl(bytes, path) {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 32768) binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
+  return `data:${mimeType(path)};base64,${btoa(binary)}`;
+}
+function checkImageSize(bytes) {
+  if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new Error('Each skin image must contain data and be smaller than 2 MB.');
+}
+async function imageBitmap(bytes, path) {
+  checkImageSize(bytes);
+  let bitmap;
+  try { bitmap = await createImageBitmap(new Blob([bytes], { type: mimeType(path) })); }
+  catch { throw new Error(`Cannot decode skin image: ${path}`); }
+  if (!bitmap.width || !bitmap.height || bitmap.width > 4096 || bitmap.height > 4096 || bitmap.width * bitmap.height > 16_777_216) {
+    bitmap.close(); throw new Error('Skin images must be no larger than 4096 × 4096 pixels.');
+  }
+  return bitmap;
+}
+function numberWidth(bitmap) {
+  if (![99, 108].includes(bitmap.width) || bitmap.height !== 13) throw new Error('Number sheets must use the Winamp layout: 99 × 13 or 108 × 13 pixels.');
+  return bitmap.width * 3;
+}
+
+async function fromWsz(files, filename) {
+  const paths = Object.keys(files);
+  const find = name => paths.find(path => path.split('/').at(-1).toLowerCase() === name.toLowerCase());
+  const main = find('main.bmp');
+  if (!main) throw new Error('This WSZ is missing main.bmp. Only classic Winamp 2 skins are supported.');
+  const bitmap = await imageBitmap(files[main], main);
+  const canvas = document.createElement('canvas'); canvas.width = bitmap.width; canvas.height = bitmap.height;
+  const ctx = canvas.getContext('2d'); ctx.drawImage(bitmap, 0, 0); bitmap.close();
+  const rgb = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  let r = 0, g = 0, b = 0, n = 0;
+  for (let i = 0; i < rgb.length; i += 16) {
+    const luminance = (rgb[i] + rgb[i + 1] + rgb[i + 2]) / 3;
+    if (luminance > 25 && luminance < 200) { r += rgb[i]; g += rgb[i + 1]; b += rgb[i + 2]; n++; }
+  }
+  const hex = (red, green, blue) => '#' + [red, green, blue].map(value => Math.round(Math.max(0, Math.min(255, value))).toString(16).padStart(2, '0')).join('');
+  const theme = { ...themes.classic, name: filename.replace(/\.(wsz|zip)$/i, '').slice(0, 60) || 'Imported Winamp skin',
+    panel: n ? hex(r / n, g / n, b / n) : themes.classic.panel,
+    panelLight: n ? hex(r / n * 1.3, g / n * 1.3, b / n * 1.3) : themes.classic.panelLight };
+  const images = { frame: dataUrl(files[main], main) }, originals = { main: images.frame };
+  let numbersWidth = 297;
+  for (const [key, name] of [['buttons', 'cbuttons.bmp'], ['numbers', 'numbers.bmp'], ['pitch', 'posbar.bmp']]) {
+    const path = find(name) || (key === 'numbers' ? find('nums_ex.bmp') : null);
+    if (!path) continue;
+    const image = await imageBitmap(files[path], path);
+    try { if (key === 'numbers') numbersWidth = numberWidth(image); } finally { image.close(); }
+    images[key] = dataUrl(files[path], path); originals[key] = images[key];
+  }
+  const titlePath = find('titlebar.bmp');
+  const titleBitmap = titlePath ? await imageBitmap(files[titlePath], titlePath) : null;
+  if (titlePath) originals.titlebar = dataUrl(files[titlePath], titlePath);
+  const titleSource = titleBitmap || canvas;
+  const title = document.createElement('canvas');
+  const x = titleBitmap && titleBitmap.width >= 302 ? 27 : 0;
+  title.width = Math.min(275, titleSource.width - x); title.height = Math.min(14, titleSource.height);
+  title.getContext('2d').drawImage(titleSource, x, 0, title.width, title.height, 0, 0, title.width, title.height);
+  titleBitmap?.close(); images.titlebar = title.toDataURL('image/png');
+  const vis = find('viscolor.txt');
+  if (vis) {
+    const colors = strFromU8(files[vis]).split(/\r?\n/).map(line => line.match(/^\s*(\d+),\s*(\d+),\s*(\d+)/)).filter(Boolean);
+    if (colors.length > 2) theme.accent = hex(+colors[2][1], +colors[2][2], +colors[2][3]);
+  }
+  return { base: 'classic', theme, assets: {}, images, originals, numbersWidth, preview: images.frame };
+}
+
 export async function importSkin(file) {
-  if(file.size>10*1024*1024)throw new Error('Skins must be smaller than 10 MB.');
-  if(/\.toml$/i.test(file.name)){const result=validateSkin(parse(await file.text()));if(Object.keys(result.assets).length)throw new Error('This skin includes images. Put skin.toml and its images together in a ZIP.');return{...result,images:{}};}
-  if(!/\.(zip|wsz)$/i.test(file.name))throw new Error('Choose a .toml, .zip, or classic Winamp .wsz file.');
-  const files=readArchive(new Uint8Array(await file.arrayBuffer()));
-  const path=Object.keys(files).find(p=>/(^|\/)skin.toml$/i.test(p));
-  if(!path) return fromWsz(files,file.name);
-  const root=path.slice(0,-'skin.toml'.length),result=validateSkin(parse(strFromU8(files[path]))),images={};
-  for(const [key,path] of Object.entries(result.assets)){const data=files[root+path];if(!data)throw new Error(`Missing skin asset: ${path}`);if(data.length>2*1024*1024)throw new Error('Each skin image must be smaller than 2 MB.');images[key]=await dataUrl(data,path);}
-  return{...result,images};
+  if (file.size > 10 * 1024 * 1024) throw new Error('Skins must be smaller than 10 MB.');
+  if (/\.toml$/i.test(file.name)) {
+    const result = validateSkin(parse(await file.text()));
+    if (Object.keys(result.assets).length) throw new Error('This skin includes images. Put skin.toml and its images together in a ZIP.');
+    return { ...result, images: {} };
+  }
+  if (!/\.(zip|wsz)$/i.test(file.name)) throw new Error('Choose a .toml, .zip, or classic Winamp .wsz file.');
+  const files = readArchive(new Uint8Array(await file.arrayBuffer()));
+  const path = Object.keys(files).find(name => /(^|\/)skin.toml$/i.test(name));
+  if (!path) return fromWsz(files, file.name);
+  const root = path.slice(0, -'skin.toml'.length), result = validateSkin(parse(strFromU8(files[path]))), images = {};
+  let numbersWidth = result.base === 'bento' ? 324 : 297;
+  for (const [key, path] of Object.entries(result.assets)) {
+    const data = files[root + path];
+    if (!data) throw new Error(`Missing skin asset: ${path}`);
+    const bitmap = await imageBitmap(data, path);
+    try { if (key === 'numbers') numbersWidth = numberWidth(bitmap); } finally { bitmap.close(); }
+    images[key] = dataUrl(data, path);
+  }
+  return { ...result, images, numbersWidth };
 }
-export function applySkin(id, custom=null) {
-  const theme=custom?.theme || themes[id] || themes.classic;
-  document.documentElement.dataset.skin=custom?'custom':id;
-  for(const key of COLORS)document.documentElement.style.setProperty(`--${key.replace(/[A-Z]/g,m=>'-'+m.toLowerCase())}`,theme[key]);
-  for(const key of ['panel','titlebar','background'])document.documentElement.style.setProperty(`--skin-${key}`,custom?.images?.[key]?`url("${custom.images[key]}")`:(!custom && key==='titlebar' && id!=='alien'?`url("/skins/${themes[id]?id:'classic'}-titlebar.png")`:'none'));
+
+export function applySkin(id, custom = null) {
+  const builtin = Object.hasOwn(themes, id) ? id : 'classic';
+  const base = custom ? (SKIN_BASES.includes(custom.base) ? custom.base : 'classic') : builtin;
+  const theme = { ...themes[base], name: custom?.theme?.name || themes[base].name };
+  for (const key of COLORS) if (custom?.theme?.[key] && HEX_COLOR.test(custom.theme[key])) theme[key] = custom.theme[key];
+  const root = document.documentElement;
+  root.dataset.skin = custom ? 'custom' : builtin;
+  root.dataset.layout = base;
+  for (const key of COLORS) root.style.setProperty(`--${key.replace(/[A-Z]/g, match => '-' + match.toLowerCase())}`, theme[key]);
+  const inherited = builtinAssets(base), urls = {}, artwork = [];
+  for (const key of SKIN_ASSETS) {
+    const supplied = custom?.images?.[key];
+    const valid = typeof supplied === 'string' && IMAGE_DATA.test(supplied);
+    if (valid) artwork.push(key);
+    const asset = valid ? supplied : inherited[key];
+    urls[key] = asset ? `url("${asset}")` : 'none';
+    root.style.setProperty(`--skin-${key}`, urls[key]);
+  }
+  root.dataset.artwork = artwork.join(' ');
+  root.style.setProperty('--number-sheet', urls.numbers);
+  root.style.setProperty('--transport-sheet', urls.buttons);
+  const width = custom?.numbersWidth === 297 || custom?.numbersWidth === 324 ? custom.numbersWidth : base === 'bento' ? 324 : 297;
+  root.style.setProperty('--numbers-width', `${width}px`);
   return theme.name;
 }
+
 export function skinTemplate() {
-  return `# Bit Cheer skin v1\n# Zip this file with optional PNG/JPG/WebP/BMP assets.\nversion = 1\nname = "My midnight session"\n\n[colors]\n${COLORS.map(key=>`${key} = "${themes.classic[key]}"`).join('\n')}\n\n# [assets]\n# panel = "panel.png"\n# titlebar = "titlebar.png"\n# background = "background.png"\n`;
+  return `# Bit Cheer skin v1\n# Keep skin.toml and optional raster assets together inside a ZIP.\nversion = 1\nname = "My midnight session"\n# Structural layout: classic, classified3, classified5, bento, or alien.\nbase = "classic"\n\n# Omitted colors and assets inherit your chosen base.\n[colors]\n${COLORS.map(key => `${key} = "${themes.classic[key]}"`).join('\n')}\n\n# Raster formats: PNG, JPG, WebP, BMP. Relative paths only.\n# [assets]\n# panel = "graphics/panel.png"          # Repeating panel texture\n# titlebar = "graphics/titlebar.png"    # Active title strip, ideally 275x14\n# background = "graphics/background.jpg" # Page background\n# frame = "graphics/main.png"          # Main player frame, traditionally 275x116\n# buttons = "graphics/cbuttons.png"    # Original transport sprite, 136x36\n# numbers = "graphics/numbers.png"     # 99x13 (NUMBERS) or 108x13 (NUMS_EX)\n# platter = "graphics/platter.png"     # Jog-wheel artwork\n# pitch = "graphics/pitch.png"         # Pitch panel texture or artwork\n`;
 }
+
 export function downloadTemplate() {
-  const bytes=zipSync({'skin.toml':strToU8(skinTemplate()),'README.txt':strToU8('Edit skin.toml. All nine colors accept #rrggbb. Optional assets use relative paths inside this ZIP. Import the ZIP in Skin studio. Classic Winamp 2 .wsz files are also supported: Bit Cheer adapts their palette and titlebar to the two-deck layout. No scripts or remote URLs are allowed.')});
-  const url=URL.createObjectURL(new Blob([bytes],{type:'application/zip'})),a=document.createElement('a');a.href=url;a.download='bit-cheer-skin-template.zip';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  const readme = `BIT CHEER SKIN FORMAT v1\n\nEdit skin.toml; import it alone for a color/layout skin, or zip it with images.\nbase selects the actual structural layout: classic, classified3, classified5, bento, alien.\nOmitting base keeps legacy skins on classic. Missing colors and artwork inherit that base.\nAll nine colors use #rrggbb. Artwork can replace the panel, titlebar, page background,\nframe, transport buttons, number glyphs, platter, and pitch fader. Paths are relative\nto skin.toml. PNG/JPG/WebP/BMP only; no scripts, SVG, remote URLs, or parent paths.\n\nSprite conventions: buttons uses the classic Winamp 136x36 CBUTTONS sheet.\nNumber sheets are 99x13 NUMBERS or 108x13 NUMS_EX; the UI scales glyphs 3x.\nTitle strips are normally 275x14; frame artwork is normally MAIN 275x116.\nOther raster artwork may use different dimensions, up to 4096x4096 pixels.\nEach image must be below 2MB; archive below 10MB compressed and 24MB expanded;\n120 files maximum.\n\nClassic Winamp 2 .wsz archives can be imported directly. Bit Cheer preserves MAIN,\nCBUTTONS, NUMBERS/NUMS_EX, POSBAR, and TITLEBAR artwork. The active title strip is\ncropped from the original TITLEBAR at x27,y0,275x14 when the full sheet is present.\nThese archives use the classic structural layout; use a TOML base to choose another.\nModern .wal/.wms skin scripts are not executed.\n`;
+  const bytes = zipSync({ 'skin.toml': strToU8(skinTemplate()), 'README.txt': strToU8(readme) });
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'application/zip' })), a = document.createElement('a');
+  a.href = url; a.download = 'bit-cheer-skin-template.zip'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

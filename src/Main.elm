@@ -1,5 +1,6 @@
 port module Main exposing (main)
 
+import Bitwise
 import Browser
 import Browser.Dom
 import Browser.Events
@@ -25,6 +26,20 @@ type Page
     | Skins
 
 
+type alias Voice =
+    { gain : Float, pan : Float, pattern : Int, preview : Int }
+
+
+voiceNames : List String
+voiceNames =
+    [ "Kick", "Closed hat", "Snare", "Clap", "Bass", "Perc", "Synth", "Open hat", "Shaker", "Ride", "Crash", "Rim", "Low tom", "High tom", "Cowbell", "Conga", "Acid", "Chord", "Noise", "Zap" ]
+
+
+defaultVoice : Voice
+defaultVoice =
+    { gain = 1, pan = 0, pattern = -1, preview = -1 }
+
+
 type alias Deck =
     { name : String
     , bpm : Float
@@ -41,6 +56,9 @@ type alias Deck =
     , high : Float
     , range : Float
     , loop : Bool
+    , source : String
+    , voices : List Voice
+    , solo : Int
     }
 
 
@@ -104,6 +122,7 @@ type alias Model =
     , referencePage : Int
     , genre : String
     , help : Bool
+    , focused : Maybe Int
     }
 
 
@@ -123,8 +142,18 @@ type Msg
     | Loop Int Bool
     | Zoom Int Float
     | Element Int Int
-    | AddElement
-    | Randomize
+    | AddElement Int
+    | AddBothElements
+    | RandomizeTempo Int
+    | ChangeTrack Int
+    | NewChallenge
+    | AddInstrument Int String
+    | VoiceValue Int Int String String
+    | VoiceStep Int Int Int
+    | ResetVoicePattern Int Int
+    | SoloVoice Int Int
+    | Chaos Int
+    | FocusDeck Int
     | DeckValue Int String String
     | Mixer String String
     | SplitCue Bool
@@ -164,7 +193,7 @@ main =
 
 initialDeck : String -> Float -> Deck
 initialDeck name bpm =
-    { name = name, bpm = bpm, pitch = 0, playing = False, position = 0, duration = 32 * 60 / bpm, beat = 0, peak = 0, elements = [ 0 ], volume = 0.8, low = 0, mid = 0, high = 0, range = 8, loop = True }
+    { name = name, bpm = bpm, pitch = 0, playing = False, position = 0, duration = 32 * 60 / bpm, beat = 0, peak = 0, elements = [ 0 ], volume = 0.8, low = 0, mid = 0, high = 0, range = 8, loop = True, source = "generated", voices = List.repeat 20 defaultVoice, solo = -1 }
 
 
 init : () -> ( Model, Cmd Msg )
@@ -200,6 +229,7 @@ init _ =
       , referencePage = 0
       , genre = "All genres"
       , help = False
+      , focused = Nothing
       }
     , send "init" []
     )
@@ -255,7 +285,7 @@ modeElements mode =
             [ 0 ]
 
         "builder" ->
-            [ 0, 1, 2 ]
+            [ 0, 1 ]
 
         _ ->
             [ 0, 1, 2, 4 ]
@@ -272,8 +302,19 @@ update msg model =
                 elements =
                     modeElements mode
 
+                prepare deck =
+                    let
+                        nextDeck =
+                            resetDeck elements deck
+                    in
+                    if mode == "foundation" then
+                        { nextDeck | low = 0, mid = 0, high = 0 }
+
+                    else
+                        nextDeck
+
                 next =
-                    { model | mode = mode, a = resetDeck elements model.a, b = resetDeck elements model.b, hideBpm = mode == "blind", result = Nothing, drill = "", currentLesson = Nothing, page = Practice }
+                    { model | mode = mode, a = prepare model.a, b = prepare model.b, hideBpm = mode == "blind", advanced = mode /= "foundation" && model.advanced, result = Nothing, drill = "", currentLesson = Nothing, page = Practice }
             in
             ( next, send "mode" [ ( "mode", E.string mode ), ( "elements", E.int (mask elements) ) ] )
 
@@ -350,26 +391,134 @@ update msg model =
 
                     else
                         current ++ [ element ]
+
+                removingSolo =
+                    (getDeck deck model).solo == element && List.member element current
             in
-            ( mapDeck deck (\d -> { d | elements = elements }) model, set deck "elements" (toFloat (mask elements)) )
+            ( mapDeck deck
+                (\d ->
+                    { d
+                        | elements = elements
+                        , solo =
+                            if removingSolo then
+                                -1
 
-        AddElement ->
+                            else
+                                d.solo
+                    }
+                )
+                model
+            , Cmd.batch
+                [ set deck "elements" (toFloat (mask elements))
+                , if removingSolo then
+                    send "solo" [ ( "deck", E.int deck ), ( "voice", E.int -1 ) ]
+
+                  else
+                    Cmd.none
+                ]
+            )
+
+        AddElement deck ->
             let
-                add d =
-                    case List.head (List.filter (\n -> not (List.member n d.elements)) (List.range 0 6)) of
-                        Just n ->
-                            { d | elements = d.elements ++ [ n ] }
+                nextDeck =
+                    addNextElement (getDeck deck model)
+            in
+            ( mapDeck deck (\_ -> nextDeck) model, set deck "elements" (toFloat (mask nextDeck.elements)) )
 
-                        Nothing ->
-                            d
-
+        AddBothElements ->
+            let
                 next =
-                    { model | a = add model.a, b = add model.b }
+                    { model | a = addNextElement model.a, b = addNextElement model.b }
             in
             ( next, Cmd.batch [ set 0 "elements" (toFloat (mask next.a.elements)), set 1 "elements" (toFloat (mask next.b.elements)) ] )
 
-        Randomize ->
-            ( { model | result = Nothing, a = resetPitch model.a, b = resetPitch model.b }, send "randomize" [ ( "mode", E.string model.mode ), ( "elements", E.int (mask model.a.elements) ), ( "genre", E.string model.genre ) ] )
+        RandomizeTempo deck ->
+            ( model, send "randomizeTempo" [ ( "deck", E.int deck ), ( "mode", E.string model.mode ) ] )
+
+        ChangeTrack deck ->
+            ( model, send "changeTrack" [ ( "deck", E.int deck ), ( "mode", E.string model.mode ), ( "genre", E.string model.genre ) ] )
+
+        NewChallenge ->
+            ( { model | result = Nothing }, send "newChallenge" [ ( "mode", E.string model.mode ), ( "elements", E.int (mask model.a.elements) ), ( "drill", E.string model.drill ) ] )
+
+        AddInstrument deck raw ->
+            case String.toInt raw of
+                Just voice ->
+                    if voice >= 0 && voice < 20 && not (List.member voice (getDeck deck model).elements) then
+                        update (Element deck voice) model
+
+                    else
+                        ( model, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        VoiceValue deck voice param raw ->
+            let
+                val =
+                    asFloat
+                        (if param == "gain" then
+                            1
+
+                         else
+                            0
+                        )
+                        raw
+
+                change old =
+                    if param == "gain" then
+                        { old | gain = clamp 0 1.5 val }
+
+                    else
+                        { old | pan = clamp -1 1 val }
+            in
+            ( mapVoice deck voice change model, sendVoice deck voice param val )
+
+        VoiceStep deck voice stepIndex ->
+            let
+                current =
+                    getVoice voice (getDeck deck model)
+
+                base =
+                    if current.pattern >= 0 then
+                        current.pattern
+
+                    else
+                        Basics.max 0 current.preview
+
+                pattern =
+                    Bitwise.xor base (Bitwise.shiftLeftBy stepIndex 1)
+            in
+            ( mapVoice deck voice (\old -> { old | pattern = pattern, preview = pattern }) model, sendVoice deck voice "pattern" (toFloat pattern) )
+
+        ResetVoicePattern deck voice ->
+            ( mapVoice deck voice (\old -> { old | pattern = -1, preview = -1 }) model, sendVoice deck voice "reset" 0 )
+
+        SoloVoice deck voice ->
+            let
+                solo =
+                    if (getDeck deck model).solo == voice then
+                        -1
+
+                    else
+                        voice
+            in
+            ( mapDeck deck (\old -> { old | solo = solo }) model, send "solo" [ ( "deck", E.int deck ), ( "voice", E.int solo ) ] )
+
+        Chaos deck ->
+            ( model, send "chaos" [ ( "deck", E.int deck ) ] )
+
+        FocusDeck deck ->
+            ( { model
+                | focused =
+                    if deck == 0 || deck == 1 then
+                        Just deck
+
+                    else
+                        Nothing
+              }
+            , send "focusDeck" [ ( "deck", E.int deck ) ]
+            )
 
         DeckValue deck param raw ->
             let
@@ -559,16 +708,22 @@ update msg model =
         Key key ->
             case String.toLower key of
                 "escape" ->
-                    ( { model | help = False }, Task.attempt (\_ -> NoOp) (Browser.Dom.focus "help-open") )
+                    if model.focused /= Nothing then
+                        update (FocusDeck -1) model
+
+                    else
+                        ( { model | help = False }, Task.attempt (\_ -> NoOp) (Browser.Dom.focus "help-open") )
 
                 " " ->
-                    update PlayBoth model
+                    case model.focused of
+                        Just deck ->
+                            update (Play deck) model
+
+                        Nothing ->
+                            update PlayBoth model
 
                 "t" ->
                     update Tap model
-
-                "r" ->
-                    update Randomize model
 
                 "a" ->
                     update (Play 0) model
@@ -577,10 +732,10 @@ update msg model =
                     update (Play 1) model
 
                 "arrowleft" ->
-                    update (Nudge 1 -0.04) model
+                    update (Nudge (Maybe.withDefault 1 model.focused) -0.04) model
 
                 "arrowright" ->
-                    update (Nudge 1 0.04) model
+                    update (Nudge (Maybe.withDefault 1 model.focused) 0.04) model
 
                 _ ->
                     ( model, Cmd.none )
@@ -597,14 +752,74 @@ requestRouting routeMode channelA channelB =
     send "routing" [ ( "mode", E.string routeMode ), ( "a", E.int channelA ), ( "b", E.int channelB ) ]
 
 
+addNextElement : Deck -> Deck
+addNextElement deck =
+    case List.head (List.filter (\n -> not (List.member n deck.elements)) (List.range 0 19)) of
+        Just element ->
+            { deck | elements = deck.elements ++ [ element ] }
+
+        Nothing ->
+            deck
+
+
+elementsFromMask : Int -> List Int
+elementsFromMask bits =
+    List.filter (\n -> modBy 2 (bits // (2 ^ n)) == 1) (List.range 0 19)
+
+
+getVoice : Int -> Deck -> Voice
+getVoice voice deck =
+    List.head (List.drop voice deck.voices) |> Maybe.withDefault defaultVoice
+
+
+mapVoice : Int -> Int -> (Voice -> Voice) -> Model -> Model
+mapVoice deck voice change model =
+    mapDeck deck
+        (\old ->
+            { old
+                | voices =
+                    List.indexedMap
+                        (\index item ->
+                            if index == voice then
+                                change item
+
+                            else
+                                item
+                        )
+                        old.voices
+            }
+        )
+        model
+
+
+sendVoice : Int -> Int -> String -> Float -> Cmd Msg
+sendVoice deck voice param val =
+    send "voice" [ ( "deck", E.int deck ), ( "voice", E.int voice ), ( "param", E.string param ), ( "value", E.float val ) ]
+
+
+voiceDecoder : D.Decoder Voice
+voiceDecoder =
+    D.map4 Voice
+        (D.oneOf [ D.field "gain" D.float, D.succeed 1 ])
+        (D.oneOf [ D.field "pan" D.float, D.succeed 0 ])
+        (D.oneOf [ D.field "pattern" D.int, D.succeed -1 ])
+        (D.oneOf [ D.field "preview" D.int, D.succeed -1 ])
+
+
 resetDeck : List Int -> Deck -> Deck
 resetDeck elements deck =
-    { deck | elements = elements, pitch = 0, playing = False, position = 0, beat = 0, loop = True }
+    { deck | elements = elements, pitch = 0, playing = False, position = 0, beat = 0, loop = True, solo = -1 }
 
 
-resetPitch : Deck -> Deck
-resetPitch deck =
-    { deck | pitch = 0, position = 0, beat = 0 }
+fitPitchRange : Float -> Float -> Float
+fitPitchRange current pitch =
+    if abs pitch <= current then
+        current
+
+    else
+        List.filter (\range -> range >= abs pitch) [ 2, 4, 8, 16, 32, 50 ]
+            |> List.head
+            |> Maybe.withDefault 50
 
 
 withPlaying : Bool -> Deck -> Deck
@@ -677,6 +892,79 @@ receive data model =
             in
             ( { model | a = apply 0 model.a, b = apply 1 model.b }, Cmd.none )
 
+        "focus" ->
+            let
+                deck =
+                    field "deck" D.int -1 data
+            in
+            ( { model
+                | focused =
+                    if deck == 0 || deck == 1 then
+                        Just deck
+
+                    else
+                        Nothing
+              }
+            , Cmd.none
+            )
+
+        "pitchChanged" ->
+            let
+                deck =
+                    field "deck" D.int 0 data
+            in
+            ( mapDeck deck
+                (\current ->
+                    let
+                        pitch =
+                            field "pitch" D.float current.pitch data
+                    in
+                    { current | pitch = pitch, range = fitPitchRange current.range pitch }
+                )
+                model
+            , Cmd.none
+            )
+
+        "voices" ->
+            let
+                deck =
+                    field "deck" D.int 0 data
+            in
+            ( mapDeck deck (\current -> { current | voices = field "voices" (D.list voiceDecoder) current.voices data, solo = field "solo" D.int current.solo data }) model, Cmd.none )
+
+        "solo" ->
+            let
+                deck =
+                    field "deck" D.int 0 data
+            in
+            ( mapDeck deck (\current -> { current | solo = field "voice" D.int current.solo data }) model, Cmd.none )
+
+        "deckChanged" ->
+            let
+                deck =
+                    field "deck" D.int 0 data
+
+                change current =
+                    let
+                        pitch =
+                            field "pitch" D.float current.pitch data
+                    in
+                    { current
+                        | name = field "name" D.string current.name data
+                        , bpm = field "bpm" D.float current.bpm data
+                        , pitch = pitch
+                        , range = fitPitchRange current.range pitch
+                        , elements = field "elements" D.int (mask current.elements) data |> elementsFromMask
+                        , duration = field "duration" D.float current.duration data
+                        , source = field "source" D.string current.source data
+                        , position = field "position" D.float current.position data
+                        , playing = field "playing" D.bool current.playing data
+                        , voices = field "voices" (D.list voiceDecoder) current.voices data
+                        , solo = field "solo" D.int current.solo data
+                    }
+            in
+            ( mapDeck deck change { model | result = Nothing }, Cmd.none )
+
         "track" ->
             let
                 deck =
@@ -685,7 +973,7 @@ receive data model =
                 bpm =
                     field "bpm" D.float 120 data
             in
-            ( mapDeck deck (\d -> { d | name = field "name" D.string d.name data, bpm = bpm, duration = field "duration" D.float (32 * 60 / bpm) data, pitch = 0, position = 0, playing = False }) model, Cmd.none )
+            ( mapDeck deck (\d -> { d | name = field "name" D.string d.name data, bpm = bpm, duration = field "duration" D.float (32 * 60 / bpm) data, pitch = 0, position = 0, playing = False, source = "pcm" }) model, Cmd.none )
 
         "randomized" ->
             let
@@ -700,7 +988,7 @@ receive data model =
                         bpm =
                             List.head (List.drop index bpms) |> Maybe.withDefault d.bpm
                     in
-                    { d | bpm = bpm, name = List.head (List.drop index names) |> Maybe.withDefault d.name, pitch = 0, position = 0, duration = 32 * 60 / bpm }
+                    { d | bpm = bpm, name = List.head (List.drop index names) |> Maybe.withDefault d.name, pitch = 0, position = 0, duration = 32 * 60 / bpm, source = "generated" }
             in
             ( { model | a = apply 0 model.a, b = apply 1 model.b }, Cmd.none )
 
@@ -799,14 +1087,22 @@ subscriptions model =
                                     )
 
                         else
-                            D.field "target" (D.map2 Tuple.pair (D.field "tagName" D.string) (D.oneOf [ D.field "role" D.string, D.succeed "" ]))
+                            D.field "key" D.string
                                 |> D.andThen
-                                    (\( tag, role ) ->
-                                        if List.member tag [ "INPUT", "SELECT", "TEXTAREA", "BUTTON" ] || role == "slider" then
-                                            D.fail "Native control handles keyboard"
+                                    (\key ->
+                                        if key == "Escape" && model.focused /= Nothing then
+                                            D.succeed (Key key)
 
                                         else
-                                            D.field "key" D.string |> D.map Key
+                                            D.field "target" (D.map2 Tuple.pair (D.field "tagName" D.string) (D.oneOf [ D.field "role" D.string, D.succeed "" ]))
+                                                |> D.andThen
+                                                    (\( tag, role ) ->
+                                                        if List.member tag [ "INPUT", "SELECT", "TEXTAREA", "BUTTON" ] || role == "slider" then
+                                                            D.fail "Native control handles keyboard"
+
+                                                        else
+                                                            D.field "key" D.string |> D.map Key
+                                                    )
                                     )
                     )
             )
@@ -815,6 +1111,41 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
+    case model.focused of
+        Just deck ->
+            focusView model deck
+
+        Nothing ->
+            normalView model
+
+
+focusView : Model -> Int -> Html Msg
+focusView model deck =
+    let
+        letter =
+            if deck == 0 then
+                "A"
+
+            else
+                "B"
+    in
+    div [ class "app-shell deck-focus-view", attribute "data-mode" model.mode, attribute "data-focused" (String.fromInt deck) ]
+        [ header [ class "focus-toolbar" ]
+            [ h1 [] [ text ("BIT.CHEER // DECK " ++ letter) ]
+            , small [] [ text "SPACE TO PLAY · ESC TO EXIT" ]
+            , button [ class "exit-focus-button", onClick (FocusDeck -1), attribute "aria-label" "Exit deck focus" ] [ text "Exit focus ✕" ]
+            ]
+        , if model.error && not (String.isEmpty model.notice) then
+            noticeView model
+
+          else
+            text ""
+        , main_ [ class "focused-deck", id "main-content" ] [ deckView model deck (getDeck deck model) ]
+        ]
+
+
+normalView : Model -> Html Msg
+normalView model =
     div [ class "app-shell", attribute "data-mode" model.mode ]
         [ topbar model
         , div [ class "workspace" ]
@@ -968,7 +1299,7 @@ modeDescription mode =
             "Pick a genre or bring your own tracks. This is where practice meets the dance floor."
 
         _ ->
-            "Two decks. Two tempos. Train your ears to bring them together."
+            "Two clean kick drums. Learn to match their speed, then bring each hit together."
 
 
 practiceView : Model -> Html Msg
@@ -986,8 +1317,14 @@ practiceView model =
             [ div [ class "toolbar-left" ]
                 [ span [ class "mode-pill" ]
                     [ text
-                        (if model.mode == "pro" then
+                        (if model.a.source == "pcm" && model.b.source == "pcm" then
                             "REAL TRACKS"
+
+                         else if model.a.source /= model.b.source then
+                            "MIXED SOURCES"
+
+                         else if model.mode == "foundation" then
+                            "KICK-ONLY EXERCISE"
 
                          else
                             "GENERATED LOOPS"
@@ -1005,10 +1342,23 @@ practiceView model =
                 ]
             , div [ class "toolbar-actions" ]
                 [ toggle "Hide BPM" model.hideBpm HideBpm
-                , toggle "Show EQ" model.advanced Advanced
-                , button [ class "small-button", onClick Randomize, title "Change both tempos and patterns (R)" ] [ text "⤨ Randomize" ]
+                , if model.mode /= "foundation" then
+                    toggle "Show EQ" model.advanced Advanced
+
+                  else
+                    text ""
+                , if not (String.isEmpty model.drill) then
+                    button [ class "small-button", onClick NewChallenge, title "Start a new drill with both decks reset" ] [ text "New challenge" ]
+
+                  else
+                    text ""
                 ]
             ]
+        , if model.mode == "foundation" then
+            foundationGuide
+
+          else
+            text ""
         , div [ class "deck-rack" ]
             [ div [ class "rack-title" ] [ span [] [ text "BIT.CHEER / DUAL DECK SYSTEM" ], span [ class "rack-grip" ] [ text "▥ ▥ ▥ ▥ ▥ ▥ ▥" ], span [] [ text "STEREO · 32-BIT FLOAT" ] ]
             , div [ class "decks" ] [ deckView model 0 model.a, deckView model 1 model.b ]
@@ -1027,8 +1377,11 @@ practiceView model =
                     )
                 , small [] [ text "SPACE" ]
                 ]
-            , if model.mode /= "pro" then
-                button [ class "add-element-button", onClick AddElement, disabled (List.length model.a.elements == 7 && List.length model.b.elements == 7) ] [ text "+ Add an element to both decks" ]
+            , if model.mode == "foundation" then
+                button [ class "builder-invitation", onClick (SetMode "builder") ] [ text "Ready for more? Build a layered loop →" ]
+
+              else if model.mode /= "pro" && model.a.source == "generated" && model.b.source == "generated" then
+                button [ class "add-element-button", onClick AddBothElements, disabled (List.length model.a.elements == 20 && List.length model.b.elements == 20) ] [ text "+ Add an element to both decks" ]
 
               else
                 span [ class "muted" ] [ text "Drag the waveforms to seek. Scroll to zoom." ]
@@ -1040,6 +1393,15 @@ practiceView model =
             text ""
         , div [ class "lower-grid" ] [ coachView model, tapView model ]
         , div [ class "practice-tip" ] [ span [] [ text "A LITTLE POINTER" ], text "Match the speed first. Then use nudge to bring the kicks into the same moment." ]
+        ]
+
+
+foundationGuide : Html Msg
+foundationGuide =
+    div [ class "foundation-guide", attribute "aria-label" "Foundation practice steps" ]
+        [ div [ class "foundation-step" ] [ span [] [ text "01" ], div [] [ strong [] [ text "Listen" ], small [] [ text "Play both kick drums. Hear which one drifts ahead." ] ] ]
+        , div [ class "foundation-step" ] [ span [] [ text "02" ], div [] [ strong [] [ text "Match tempo" ], small [] [ text "Adjust one pitch fader until the drift stops." ] ] ]
+        , div [ class "foundation-step" ] [ span [] [ text "03" ], div [] [ strong [] [ text "Nudge & check" ], small [] [ text "Line up the kicks, then check your match." ] ] ]
         ]
 
 
@@ -1085,31 +1447,107 @@ deckView model number deck =
                     )
                 ]
             ]
+        , if model.focused == Nothing then
+            button [ class "deck-focus-button", onClick (FocusDeck number), attribute "aria-label" ("Focus deck " ++ letter) ] [ text ("Focus deck " ++ letter ++ " ⛶") ]
+
+          else
+            text ""
         , div [ class "deck-screen" ]
-            [ div [ class "track-title" ]
+            [ div [ class "headspace-transport" ]
+                [ button [ onClick (Cue number), attribute "aria-label" ("Previous cue deck " ++ letter), title "Return to the saved cue point" ] [ text "◀" ]
+                , button
+                    [ onClick (Play number)
+                    , attribute "aria-label" ("Headspace play/pause deck " ++ letter)
+                    , attribute "aria-pressed"
+                        (if deck.playing then
+                            "true"
+
+                         else
+                            "false"
+                        )
+                    , title
+                        (if deck.playing then
+                            "Pause this deck"
+
+                         else
+                            "Play this deck"
+                        )
+                    ]
+                    [ text
+                        (if deck.playing then
+                            "Ⅱ"
+
+                         else
+                            "▶"
+                        )
+                    ]
+                , button [ onClick (Cue number), attribute "aria-label" ("Stop to cue deck " ++ letter), title "Stop and return to the cue point" ] [ text "■" ]
+                , button [ onClick (Nudge number 0.04), attribute "aria-label" ("Headspace nudge forward deck " ++ letter), title "Nudge forward 0.04 beats" ] [ text "▶│" ]
+                , button
+                    [ onClick
+                        (FocusDeck
+                            (if model.focused == Just number then
+                                -1
+
+                             else
+                                number
+                            )
+                        )
+                    , attribute "aria-label"
+                        (if model.focused == Just number then
+                            "Headspace exit focus"
+
+                         else
+                            "Headspace focus deck " ++ letter
+                        )
+                    , title
+                        (if model.focused == Just number then
+                            "Exit deck focus"
+
+                         else
+                            "Focus this deck"
+                        )
+                    ]
+                    [ text "☼" ]
+                ]
+            , div [ class "track-title" ]
                 [ span [] [ text "♫" ]
                 , strong [] [ text deck.name ]
                 , span [ class "loop-badge" ]
                     [ text
-                        (if model.mode == "pro" then
+                        (if model.mode == "foundation" then
+                            "KICK-ONLY"
+
+                         else if deck.source == "pcm" then
                             "TRACK"
 
                          else
-                            "LOOP"
+                            "LAYERED LOOP"
                         )
                     ]
                 ]
             , div [ class "lcd-row" ]
                 [ div [ class "lcd bpm-display" ]
-                    [ span [ class "lcd-number", attribute "data-testid" ("bpm-" ++ String.toLower letter) ]
-                        [ text
+                    [ span
+                        [ class "lcd-number"
+                        , attribute "data-testid" ("bpm-" ++ String.toLower letter)
+                        , attribute "role" "img"
+                        , attribute "aria-label"
+                            (if visible then
+                                fixed 2 effective ++ " BPM"
+
+                             else
+                                "BPM hidden"
+                            )
+                        ]
+                        (lcdDigits
                             (if visible then
                                 fixed 2 effective
 
                              else
                                 "---.--"
                             )
-                        ]
+                        )
                     , small [] [ text "BPM" ]
                     ]
                 , div [ class "time-display" ]
@@ -1130,7 +1568,7 @@ deckView model number deck =
                 , div [ class "waveform-playhead" ] []
                 , span [ class "waveform-label" ]
                     [ text
-                        (if model.mode == "pro" then
+                        (if deck.source == "pcm" then
                             "SEEK / SCROLL TO ZOOM"
 
                          else
@@ -1152,6 +1590,22 @@ deckView model number deck =
                         )
                     ]
                 ]
+            ]
+        , div [ class "deck-actions" ]
+            [ button [ class "deck-action tempo-action", onClick (RandomizeTempo number), disabled (model.drill == "phase" || model.drill == "phrase"), attribute "aria-label" ("Randomize tempo deck " ++ letter) ] [ text "Randomize tempo" ]
+            , button [ class "deck-action track-action", onClick (ChangeTrack number), attribute "aria-label" ("Change track deck " ++ letter) ] [ text "Change track" ]
+            ]
+        , small [ class "deck-action-hint" ]
+            [ text
+                (if model.drill == "phase" || model.drill == "phrase" then
+                    "Tempo is fixed for this drill. New challenge resets both decks."
+
+                 else if model.mode == "foundation" then
+                    "Tempo changes the speed. Track changes the kick voice."
+
+                 else
+                    "Change the tempo or choose a new track independently."
+                )
             ]
         , div [ class "deck-controls" ]
             [ div [ class "deck-main-controls" ]
@@ -1191,33 +1645,42 @@ deckView model number deck =
                         , button [ onClick (Nudge number 0.04), attribute "aria-label" ("Nudge deck " ++ letter ++ " forward"), title "Nudge forward 0.04 beats" ] [ text "+" ]
                         ]
                     ]
-                , if model.mode /= "pro" then
-                    div [ class "element-panel" ]
-                        [ div [ class "control-label" ] [ span [] [ text "BUILD THE LOOP" ], small [] [ text (String.fromInt (List.length deck.elements) ++ " / 7") ] ]
-                        , div [ class "elements" ]
-                            (List.indexedMap
-                                (\index name ->
-                                    button
-                                        [ classList [ ( "element", True ), ( "enabled", List.member index deck.elements ) ]
-                                        , onClick (Element number index)
-                                        , attribute "aria-pressed"
-                                            (if List.member index deck.elements then
-                                                "true"
+                , if model.mode == "foundation" then
+                    div [ class "foundation-deck-note" ]
+                        [ strong [] [ text "KICK-ONLY" ]
+                        , small [] [ text "One clean hit on every beat. Focus on speed and timing." ]
+                        ]
 
-                                             else
-                                                "false"
-                                            )
-                                        , attribute "aria-label" ("Deck " ++ letter ++ " " ++ name)
-                                        ]
-                                        [ span [ class "element-light" ] [], text name ]
+                  else if deck.source == "generated" && model.mode /= "pro" then
+                    div [ class "element-panel" ]
+                        [ div [ class "control-label" ] [ span [] [ text "COMPOSER / 20-VOICE BANK" ], small [] [ text (String.fromInt (List.length deck.elements) ++ " / 20 ACTIVE") ] ]
+                        , div [ class "composer-actions" ]
+                            [ confirmedSelect (mask deck.elements)
+                                [ class "instrument-selector", onInput (AddInstrument number), disabled (List.length deck.elements == 20), attribute "aria-label" ("Add instrument to deck " ++ letter) ]
+                                (option [ attribute "value" "", selected True, disabled True ] [ text "+ Add instrument…" ]
+                                    :: (List.indexedMap Tuple.pair voiceNames
+                                            |> List.filter (\( index, _ ) -> not (List.member index deck.elements))
+                                            |> List.map (\( index, name ) -> option [ value (String.fromInt index) ] [ text name ])
+                                       )
                                 )
-                                [ "Kick", "Hi-hat", "Snare", "Clap", "Bass", "Perc", "Synth" ]
+                            , button [ class "deck-add-element", onClick (AddElement number), disabled (List.length deck.elements == 20), attribute "aria-label" ("Add an element to deck " ++ letter) ] [ text "+ Add next" ]
+                            , button [ class "chaos-button", onClick (Chaos number), attribute "aria-label" ("Chaos deck " ++ letter), title "Create a dense, unpredictable arrangement on this deck only" ] [ text "CHAOS!" ]
+                            ]
+                        , div [ class "elements composer-rack" ]
+                            (List.indexedMap Tuple.pair voiceNames
+                                |> List.filter (\( index, _ ) -> List.member index deck.elements)
+                                |> List.map (\( index, name ) -> voiceView number deck index name)
                             )
+                        , if List.isEmpty deck.elements then
+                            p [ class "composer-empty" ] [ text "Your canvas is quiet. Add an instrument to build a rhythm." ]
+
+                          else
+                            small [ class "composer-help" ] [ text "16 steps = one bar. Click to write a pattern; Generate pattern returns it to AUTO. Solo auditions one voice." ]
                         ]
 
                   else
                     div [ class "track-import" ] [ button [ class "small-button", onClick (ImportTrack number) ] [ text ("↥ Load a track into " ++ letter) ], small [] [ text "MP3, WAV, OGG, FLAC* · stays on your device" ] ]
-                , if model.advanced then
+                , if model.advanced && model.mode /= "foundation" then
                     div [ class "eq-controls" ]
                         (List.map (\( param, val ) -> label [ class "eq-control" ] [ span [] [ text (String.toUpper param) ], input [ type_ "range", A.min "-24", A.max "12", step "0.5", value (String.fromFloat val), onInput (DeckValue number param), attribute "aria-label" ("Deck " ++ letter ++ " " ++ param ++ " EQ") ] [], small [] [ text (signed 1 val ++ " dB") ] ]) [ ( "low", deck.low ), ( "mid", deck.mid ), ( "high", deck.high ) ])
 
@@ -1225,7 +1688,7 @@ deckView model number deck =
                     text ""
                 , div [ class "deck-options" ]
                     [ toggle "Loop" deck.loop (Loop number)
-                    , if model.mode == "pro" then
+                    , if deck.source == "pcm" then
                         div [ class "source-settings" ]
                             [ if visible then
                                 label [ class "source-bpm" ] [ span [] [ text "SOURCE BPM" ], input [ type_ "number", A.min "40", A.max "300", step "0.01", value (fixed 2 deck.bpm), on "change" (D.map (SourceBpm number) targetValue), attribute "aria-label" ("Deck " ++ letter ++ " source BPM") ] [] ]
@@ -1249,10 +1712,133 @@ deckView model number deck =
                     [ div [ class "pitch-ticks" ] [ span [] [ text ("+" ++ String.fromFloat deck.range) ], span [] [ text "0" ], span [] [ text ("−" ++ String.fromFloat deck.range) ] ]
                     , input [ class "vertical-fader", type_ "range", A.min (String.fromFloat -deck.range), A.max (String.fromFloat deck.range), step "0.01", value (String.fromFloat deck.pitch), onInput (Pitch number), attribute "aria-label" ("Deck " ++ letter ++ " pitch"), attribute "orient" "vertical" ] []
                     ]
+                , small [ class "pitch-wheel-hint" ] [ text "Wheel to adjust · Shift for fine" ]
                 , div [ class "pitch-value" ] [ text (signed 2 deck.pitch ++ "%") ]
                 , div [ class "pitch-fine" ] [ button [ onClick (PitchStep number -0.01), attribute "aria-label" ("Fine decrease deck " ++ letter ++ " pitch") ] [ text "−" ], button [ onClick (Pitch number "0"), title "Reset pitch" ] [ text "0" ], button [ onClick (PitchStep number 0.01), attribute "aria-label" ("Fine increase deck " ++ letter ++ " pitch") ] [ text "+" ] ]
-                , select [ class "pitch-range", onInput (Range number), attribute "aria-label" ("Deck " ++ letter ++ " pitch range") ] (List.map (\r -> option [ value (String.fromInt r), selected (toFloat r == deck.range) ] [ text ("±" ++ String.fromInt r ++ "%") ]) [ 2, 4, 8, 16 ])
+                , select [ class "pitch-range", onInput (Range number), attribute "aria-label" ("Deck " ++ letter ++ " pitch range") ] (List.map (\r -> option [ value (String.fromInt r), selected (toFloat r == deck.range) ] [ text ("±" ++ String.fromInt r ++ "%") ]) [ 2, 4, 8, 16, 32, 50 ])
                 ]
+            ]
+        ]
+
+
+lcdDigits : String -> List (Html Msg)
+lcdDigits number =
+    String.toList number
+        |> List.map
+            (\character ->
+                let
+                    digit =
+                        String.fromChar character
+
+                    digitClass =
+                        if character == '.' then
+                            "lcd-dot"
+
+                        else if character == '-' || character == '−' then
+                            "lcd-dash"
+
+                        else
+                            "lcd-digit"
+                in
+                span [ class digitClass, attribute "data-digit" digit, attribute "aria-hidden" "true" ] [ text digit ]
+            )
+
+
+voiceView : Int -> Deck -> Int -> String -> Html Msg
+voiceView deckNumber deck voiceIndex name =
+    let
+        voice =
+            getVoice voiceIndex deck
+
+        letter =
+            if deckNumber == 0 then
+                "A"
+
+            else
+                "B"
+
+        bits =
+            if voice.pattern >= 0 then
+                voice.pattern
+
+            else
+                Basics.max 0 voice.preview
+
+        automatic =
+            voice.pattern < 0
+
+        panLabel =
+            if abs voice.pan < 0.01 then
+                "C"
+
+            else
+                (if voice.pan < 0 then
+                    "L "
+
+                 else
+                    "R "
+                )
+                    ++ fixed 0 (abs voice.pan * 100)
+    in
+    div [ classList [ ( "voice-row", True ), ( "soloed", deck.solo == voiceIndex ), ( "muted-by-solo", deck.solo /= -1 && deck.solo /= voiceIndex ) ], attribute "data-voice" (String.fromInt voiceIndex) ]
+        [ div [ class "voice-strip" ]
+            [ button [ class "element enabled voice-name", onClick (Element deckNumber voiceIndex), attribute "aria-pressed" "true", attribute "aria-label" ("Deck " ++ letter ++ " " ++ name), title ("Remove " ++ name ++ " from this deck") ] [ span [ class "element-light" ] [], text name, span [ class "voice-remove" ] [ text " ×" ] ]
+            , label [ class "voice-gain" ]
+                [ span [] [ text ("LEVEL " ++ fixed 0 (voice.gain * 100) ++ "%") ]
+                , input [ type_ "range", A.min "0", A.max "1.5", step "0.01", value (String.fromFloat voice.gain), onInput (VoiceValue deckNumber voiceIndex "gain"), attribute "aria-label" ("Deck " ++ letter ++ " " ++ name ++ " level") ] []
+                ]
+            , label [ class "voice-pan" ]
+                [ span [] [ text ("PAN " ++ panLabel) ]
+                , input [ type_ "range", A.min "-1", A.max "1", step "0.01", value (String.fromFloat voice.pan), onInput (VoiceValue deckNumber voiceIndex "pan"), attribute "aria-label" ("Deck " ++ letter ++ " " ++ name ++ " pan") ] []
+                ]
+            , button
+                [ classList [ ( "voice-solo", True ), ( "active", deck.solo == voiceIndex ) ]
+                , onClick (SoloVoice deckNumber voiceIndex)
+                , attribute "aria-label" ("Solo " ++ name ++ " deck " ++ letter)
+                , attribute "aria-pressed"
+                    (if deck.solo == voiceIndex then
+                        "true"
+
+                     else
+                        "false"
+                    )
+                ]
+                [ text "SOLO" ]
+            ]
+        , div [ class "voice-pattern" ]
+            [ span [ class "pattern-mode" ]
+                [ text
+                    (if automatic then
+                        "AUTO"
+
+                     else
+                        "MANUAL"
+                    )
+                ]
+            , div [ class "step-grid", attribute "aria-label" ("Deck " ++ letter ++ " " ++ name ++ " sixteen-step pattern") ]
+                (List.range 0 15
+                    |> List.map
+                        (\stepIndex ->
+                            let
+                                active =
+                                    Bitwise.and bits (Bitwise.shiftLeftBy stepIndex 1) /= 0
+                            in
+                            button
+                                [ classList [ ( "step-button", True ), ( "on", active ), ( "beat-start", modBy 4 stepIndex == 0 ), ( "current", deck.playing && modBy 16 (floor (deck.beat * 4)) == stepIndex ) ]
+                                , onClick (VoiceStep deckNumber voiceIndex stepIndex)
+                                , attribute "aria-label" ("Deck " ++ letter ++ " " ++ name ++ " step " ++ String.fromInt (stepIndex + 1))
+                                , attribute "aria-pressed"
+                                    (if active then
+                                        "true"
+
+                                     else
+                                        "false"
+                                    )
+                                ]
+                                [ text (String.fromInt (stepIndex + 1)) ]
+                        )
+                )
+            , button [ class "generate-pattern", onClick (ResetVoicePattern deckNumber voiceIndex), attribute "aria-label" ("Generate pattern for " ++ name ++ " deck " ++ letter), title "Restore this voice's learned automatic pattern" ] [ text "Generate pattern" ]
             ]
         ]
 
@@ -1523,6 +2109,15 @@ coachView model =
                     )
                 ]
             ]
+        , case model.currentLesson |> Maybe.andThen (\number -> List.head (List.filter (\lesson -> lesson.number == number) lessons)) of
+            Just lesson ->
+                div [ class "lesson-instruction" ]
+                    [ strong [] [ text ("LESSON " ++ String.fromInt lesson.number ++ " · " ++ lesson.name) ]
+                    , p [] [ text lesson.instruction ]
+                    ]
+
+            Nothing ->
+                text ""
         , case model.result of
             Just result ->
                 div [ class "match-result", attribute "role" "status" ]
@@ -1710,13 +2305,13 @@ type alias Lesson =
 lessons : List Lesson
 lessons =
     [ { number = 1, name = "Meet the beat", label = "FOUNDATION", description = "Hear the pulse. Start with two clean kick drums.", instruction = "Lesson 1: Play both decks. Match the BPM with pitch, then nudge the kicks together. Score 85+ to complete.", mode = "foundation", elements = [ 0 ] }
-    , { number = 2, name = "Catch the drift", label = "TEMPO", description = "Learn which deck is faster and close the gap.", instruction = "Lesson 2: Randomize, listen for drift, and move the pitch in tiny steps. Score 85+ to complete.", mode = "foundation", elements = [ 0 ] }
+    , { number = 2, name = "Catch the drift", label = "TEMPO", description = "Learn which deck is faster and close the gap.", instruction = "Lesson 2: Use Randomize tempo on one deck, listen for drift, and move its pitch in tiny steps. Score 85+ to complete.", mode = "foundation", elements = [ 0 ] }
     , { number = 3, name = "Find the pocket", label = "PHASE", description = "Use a gentle nudge to align each transient.", instruction = "Lesson 3: Get the tempos close, then tap the nudge controls until the two kicks sound like one.", mode = "builder", elements = [ 0, 1 ] }
     , { number = 4, name = "Build the groove", label = "RHYTHM", description = "Add hats, snares, and percussion without losing the beat.", instruction = "Lesson 4: Match the groove with hats and snares. Add more elements as your ears settle in.", mode = "builder", elements = [ 0, 1, 2, 5 ] }
     , { number = 5, name = "Under the surface", label = "FOCUS", description = "Keep the kick in focus through bass and melody.", instruction = "Lesson 5: Use the EQ to isolate the rhythm inside a full loop. Match both decks and score 85+.", mode = "builder", elements = [ 0, 1, 2, 3, 4, 5, 6 ] }
     , { number = 6, name = "Eyes closed, ears open", label = "BY EAR", description = "Let go of the BPM display. Trust your hearing.", instruction = "Lesson 6: BPM is hidden. Listen for the direction of drift, adjust the pitch, then nudge.", mode = "blind", elements = [ 0, 1, 2, 4 ] }
     , { number = 7, name = "Into the real world", label = "PRO DECKS", description = "Bring two real tracks together with cue points and EQ.", instruction = "Lesson 7: Load two tracks, find their first kicks, save cue points, then match by ear. Check to finish.", mode = "pro", elements = [ 0, 1, 2, 4 ] }
-    , { number = 8, name = "Own the transition", label = "EXPERT", description = "Balance two tracks and make a confident handover.", instruction = "Lesson 8: Load two tracks, hide the BPM, match their tempo and phase, then practice a smooth crossfade.", mode = "pro", elements = [ 0, 1, 2, 4 ] }
+    , { number = 8, name = "Own the transition", label = "EXPERT", description = "Balance two tracks and make a confident handover.", instruction = "Lesson 8: Load two tracks, hide the BPM, and match their tempo and phase. Move the crossfader from one end to the other over at least 3 seconds while matched, then check.", mode = "pro", elements = [ 0, 1, 2, 4 ] }
     ]
 
 
@@ -1863,8 +2458,8 @@ skinsView model =
                             ]
                         ]
                 )
-                [ ( "classic", "Classic 2.91", "The original brushed graphite and phosphor-green classic." )
-                , ( "classified3", "Winamp 3 Classified", "Champagne metal and mint-green displays." )
+                [ ( "classic", "Classic 2.91", "Violet panels, gold rails, and original green bitmap digits." )
+                , ( "classified3", "Winamp 3 Classified", "Champagne metal, gold trim, and a black LCD." )
                 , ( "classified5", "Winamp 5 Classified", "A polished silver shell with cobalt-blue displays." )
                 , ( "bento", "Bento Classified", "Charcoal panels and cool steel-blue details." )
                 , ( "alien", "Headspace · Alien Lime", "Acid-lime curves, alien energy, and purple transport buttons." )
@@ -1872,7 +2467,7 @@ skinsView model =
             )
         , section [ class "skin-import-panel" ]
             [ div [ class "skin-import-icon" ] [ text "{ / }" ]
-            , div [] [ div [ class "eyebrow" ] [ text "BUILT TO BE YOURS" ], h2 [] [ text "Make a skin of your own." ], p [] [ text "Start with a TOML theme. Change the colors, add your graphics, then import it. Your skin stays on this device." ], small [] [ text "TOML theme or ZIP skin pack · validated before applying" ] ]
+            , div [] [ div [ class "eyebrow" ] [ text "BUILT TO BE YOURS" ], h2 [] [ text "Make a skin of your own." ], p [] [ text "Choose a base layout in skin.toml, change its colors, and replace the frame, buttons, digits, or platter artwork. Import your ZIP to use it on this device." ], small [] [ text "TOML, ZIP skin pack, or classic Winamp WSZ · validated before applying" ] ]
             , div [ class "skin-import-actions" ] [ button [ class "primary-button", onClick ImportSkin ] [ text "↥ Import a skin" ], button [ class "secondary-button", onClick ExportSkin ] [ text "↓ Download template" ] ]
             ]
         , p [ class "skin-attribution" ] [ text "The early web had personality. Explore the originals at the ", a [ href "https://skins.webamp.org/", target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Winamp Skin Museum ↗" ], text ". These are native Bit Cheer adaptations of the original skins. ", a [ href "/credits.html", target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Skin credits ↗" ] ]
@@ -1885,7 +2480,7 @@ helpView =
         [ section [ class "help-modal", attribute "role" "dialog", attribute "aria-modal" "true", attribute "aria-labelledby" "help-title", custom "keydown" helpKeyDecoder ]
             [ div [ class "section-heading" ] [ h2 [ id "help-title" ] [ text "Hands on. Ears open." ], button [ id "help-close", class "help-button", onClick ToggleHelp, attribute "aria-label" "Close help" ] [ text "×" ] ]
             , p [] [ text "Match the tempo with pitch, then align the beats with nudge. Cue returns a deck to its saved starting point." ]
-            , ul [ class "shortcut-list" ] (List.map (\( key, action ) -> li [] [ strong [] [ text key ], span [] [ text action ] ]) [ ( "SPACE", "Play / pause both decks" ), ( "A / B", "Play / pause one deck" ), ( "← / →", "Nudge deck B" ), ( "T", "Tap tempo" ), ( "R", "Randomize the challenge" ) ])
+            , ul [ class "shortcut-list" ] (List.map (\( key, action ) -> li [] [ strong [] [ text key ], span [] [ text action ] ]) [ ( "SPACE", "Play / pause both decks; only the selected deck in focus view" ), ( "A / B", "Play / pause one deck" ), ( "← / →", "Nudge deck B" ), ( "T", "Tap tempo" ) ])
             , p [] [ text "Pitch changes playback speed and musical pitch, just like a classic turntable. Split cue sends deck A left and deck B right. Waveforms support dragging and wheel zoom." ]
             , button [ id "help-return", class "primary-button", onClick ToggleHelp ] [ text "Back to the groove" ]
             ]

@@ -40,12 +40,20 @@ class BitCheerProcessor extends AudioWorkletProcessor {
         e.engine_init(sampleRate);
         this.refreshViews();
         this.peaks[0] = this.peaks[1] = 0;
+      } else if (message.type === 'voice' && (deck === 0 || deck === 1)) {
+        const voice = Number(message.voice);
+        const param = { gain: 0, pan: 1, pattern: 2, reset: 3 }[message.param];
+        if (Number.isInteger(voice) && voice >= 0 && voice < e.engine_voice_count() && param !== undefined && Number.isFinite(Number(message.value))) {
+          e.engine_voice(deck, voice, param, Number(message.value));
+          if (param >= 2) this.patterns(deck);
+        }
       } else if (message.type === 'set' && (deck === 0 || deck === 1)) {
         const param = PARAMS[message.param];
         const value = Number(message.value);
         if (param !== undefined && Number.isFinite(value)) e.engine_set(deck, param, value);
       } else if (message.type === 'randomize' && (deck === 0 || deck === 1)) {
         e.engine_randomize(deck, Number(message.seed) >>> 0, Number(message.bpm));
+        this.patterns(deck);
       } else if (message.type === 'load' && (deck === 0 || deck === 1)) {
         const left = message.left instanceof Float32Array ? message.left : new Float32Array(message.left);
         const right = message.right ? (message.right instanceof Float32Array ? message.right : new Float32Array(message.right)) : left;
@@ -68,6 +76,11 @@ class BitCheerProcessor extends AudioWorkletProcessor {
     } catch (error) {
       this.port.postMessage({ type: 'error', deck, message: error.message, id: message.id });
     }
+  }
+
+  patterns(deck) {
+    const count = this.engine.engine_voice_count();
+    this.port.postMessage({ type: 'patterns', deck, patterns: Array.from({ length: count }, (_, voice) => this.engine.engine_voice_pattern(deck, voice)) });
   }
 
   process(_inputs, outputs) {

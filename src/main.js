@@ -1,10 +1,12 @@
 import './style.css';
+import './winamp.css';
+import './skin-variants.css';
 import { AudioEngine } from './audio.js';
 import { clamp, tapTempo, matchScore, estimateTempo } from './training.js';
 import { applySkin, importSkin, downloadTemplate } from './skins.js';
 
 const app = Elm.Main.init({ node: document.getElementById('app') });
-let telemetry = [], recent = [], lastStart = performance.now(), mode = 'foundation', catalog = {tracks:[]}, taps = [], zoom = [1,1], mic = null, drill = '', configVersion = 0, trackSelections = [0,0], micEpoch = 0, micPending = false;
+let telemetry = [], recent = [], lastStart = performance.now(), mode = 'foundation', catalog = {tracks:[]}, taps = [], zoom = [1,1], mic = null, drill = '', configVersion = 0, trackSelections = [0,0], micEpoch = 0, micPending = false, focusedDeck = -1, wasFullscreen = false, activeLesson = 1, transition = null;
 const send = event => {
   if(event.type==='telemetry') {
     telemetry=event.decks;
@@ -23,14 +25,18 @@ function chooseFile(accept,handle) {
 }
 function store(key,value) {try{localStorage.setItem(key,JSON.stringify(value));}catch{notice('Browser storage is full or unavailable. This session still works; progress cannot be saved.');}}
 function restore(key) {try{return JSON.parse(localStorage.getItem(key));}catch{return null;}}
-async function loadTrack(deck,id) {
+async function loadTrack(deck,id,keepTempo=false) {
+  const previous={...engine.state[deck]},effective=previous.bpm*(1+previous.pitch/100);
   const config=configVersion, selection=++trackSelections[deck];
   const track=catalog.tracks.find(x=>x.id===id);if(!track)throw new Error('Track not found in your library.');
   notice(`Loading ${track.title || track.name}…`);
   const response=await fetch(track.url);if(!response.ok)throw new Error('Track download failed. Please try again.');
   const bytes=await response.arrayBuffer();
   if(config!==configVersion||selection!==trackSelections[deck])return;
-  await engine.load(deck,bytes,`${track.title || track.name} — ${track.artist}`,track.bpm);
+  const loaded=await engine.load(deck,bytes,`${track.title || track.name} — ${track.artist}`,track.bpm);
+  if(!loaded||config!==configVersion||selection!==trackSelections[deck])return;
+  engine.state[deck].trackId=track.id;
+  if(keepTempo){await engine.set(deck,'pitch',(effective/track.bpm-1)*100);await engine.set(deck,'play',+previous.playing);engine.emitDeckChanged(deck);}
   recent=[];lastStart=performance.now();
 }
 function primaryGenre(tags) {
@@ -56,13 +62,13 @@ async function configure(command) {
   const requestedMode=command.mode||'foundation';mode=requestedMode;recent=[];lastStart=performance.now();zoom=[1,1];
   await engine.ensure();
   if(version!==configVersion)return;
-  for(let i=0;i<2;i++){await engine.set(i,'play',0);await engine.set(i,'pitch',0);await engine.set(i,'loop',1);await engine.set(i,'bend',0);}
+  for(let i=0;i<2;i++){await engine.set(i,'play',0);await engine.set(i,'pitch',0);await engine.set(i,'loop',1);await engine.set(i,'bend',0);if(requestedMode==='foundation'){for(const band of ['low','mid','high'])await engine.set(i,band,0);await engine.setVoice(i,0,'gain',1);await engine.setVoice(i,0,'pan',0);}}
   if(version!==configVersion)return;
   if(requestedMode==='pro') {
     if(catalog.tracks.length>=2){await loadTrack(0,catalog.tracks[0].id);if(version!==configVersion)return;await loadTrack(1,catalog.tracks[1].id);}
     else notice('Import a track into each deck to start real-track practice.');
   } else {
-    await engine.randomize(requestedMode,command.elements??1);
+    await engine.randomize(requestedMode,requestedMode==='foundation'?1:command.elements??3);
     await constrainDrill();
   }
   recent=[];lastStart=performance.now();
@@ -70,8 +76,8 @@ async function configure(command) {
 async function handle(command) {
   const {type,deck,param,value}=command;
   switch(type) {
-    case 'set': await engine.set(deck,param,value); if(['bpm','pitch','elements'].includes(param)){recent=[];lastStart=performance.now();} break;
-    case 'mixer': await engine.mixer(param,value); break;
+    case 'set': await engine.set(deck,param,param==='elements'&&mode==='foundation'?1:value); if(['bpm','pitch','elements'].includes(param)){recent=[];lastStart=performance.now();} break;
+    case 'mixer': await engine.mixer(param,value);if(activeLesson===8&&param==='crossfade'&&telemetry.every(d=>d.playing)){if(value<=.1||value>=.9){const edge=value<=.1?0:1;if(!transition)transition={edge,time:performance.now(),done:false};else if(edge!==transition.edge&&performance.now()-transition.time>=3000)transition.done=true;}}break;
     case 'routing': await engine.setRouting({mode:command.mode,a:command.a,b:command.b});break;
     case 'refreshOutputs': await engine.refreshOutputs();break;
     case 'audioOutput': await engine.chooseOutput(command.deviceId);break;
@@ -82,20 +88,35 @@ async function handle(command) {
     case 'seek': await engine.set(deck,'seek',clamp(value,0,1)*engine.state[deck].duration);recent=[];lastStart=performance.now();break;
     case 'zoom': zoom[deck]=clamp(zoom[deck] * value,1,16);break;
     case 'grid': await engine.set(deck,'beatOffset',engine.state[deck].position);recent=[];lastStart=performance.now();notice('Current position marked as beat one. Grid checks now use this downbeat.');break;
-    case 'randomize':
-      recent=[];lastStart=performance.now();
-      if(command.mode==='pro'&&catalog.tracks.length) {const version=configVersion;const genre=command.genre||'All genres';const pool=genre==='All genres'?catalog.tracks:catalog.tracks.filter(x=>x.genre===genre);if(pool.length<2){notice('This genre has discovery links. Import two tracks, or choose House or Techno for bundled practice recordings.');break;}const index=Math.floor(Math.random()*pool.length);await loadTrack(0,pool[index].id);if(version!==configVersion)break;await loadTrack(1,pool[(index+1)%pool.length].id);}
-      else {trackSelections=trackSelections.map(v=>v+1);const elementsB=engine.state[1].elements;await engine.randomize(command.mode,command.elements ?? 1);await engine.set(1,'elements',elementsB);await constrainDrill();}
-      break;
-    case 'mode': drill='';await configure(command);break;
-    case 'lesson': drill='';await configure(command);break;
-    case 'drill': drill=command.drill;await configure(command);break;
+    case 'randomizeTempo':
+      if(drill==='phase'||drill==='phrase'){notice('This drill keeps tempos equal. Use New challenge for a fresh offset.');break;}
+      await engine.randomizeTempo(deck,mode);recent=[];lastStart=performance.now();break;
+    case 'changeTrack': {
+      ++trackSelections[deck];
+      if(mode==='pro'){
+        const current=engine.state[deck],effective=current.bpm*(1+current.pitch/100),genre=command.genre||'All genres';
+        const pool=catalog.tracks.filter(t=>(genre==='All genres'||t.genre===genre)&&t.id!==current.trackId&&Math.abs((effective/t.bpm-1)*100)<=50);
+        if(!pool.length){notice('No other compatible track in this genre. Import your own track or select another genre.');break;}
+        await loadTrack(deck,pool[Math.floor(Math.random()*pool.length)].id,true);
+      }else await engine.changeGeneratedTrack(deck,mode);
+      recent=[];lastStart=performance.now();break;
+    }
+    case 'voice': if(mode!=='foundation')await engine.setVoice(deck,command.voice,param,value);break;
+    case 'solo': if(mode!=='foundation')await engine.setSolo(deck,command.voice);break;
+    case 'chaos': if(mode!=='foundation'){++trackSelections[deck];await engine.chaos(deck);recent=[];lastStart=performance.now();}break;
+    case 'focusDeck': focusDeck(command.deck);break;
+    case 'newChallenge': await configure(command);break;
+    case 'mode': activeLesson=null;transition=null;drill='';await configure(command);break;
+    case 'lesson': activeLesson=command.lesson;transition=null;drill='';await configure(command);break;
+    case 'drill': activeLesson=null;transition=null;drill=command.drill;await configure(command);break;
     case 'check': {
       if(!telemetry.length||!telemetry.every(d=>d.playing)) {notice('Play both decks, match the pitch, then check your mix.');break;}
       if(performance.now()-lastStart<3000||recent.length<20){notice('Let both decks run together for at least 3 seconds before checking. Listen for drift.');break;}
       if(mode==='pro' && !engine.state.every(d=>d.source==='pcm')){notice('Load a real track into both decks before checking a Pro mix.');break;}
       if(engine.state.some(d=>d.source==='generated'&&d.elements===0)){notice('Add an instrument to both decks so you can hear the match.');break;}
-      send(matchScore(telemetry,recent.map(x=>x.decks),command.drill||drill));break;
+      const result=matchScore(telemetry,recent.map(x=>x.decks),command.drill||drill);
+      if(activeLesson===8&&result.score>=85&&!transition?.done){notice('Complete the handover: while both decks play, move the crossfader from one end to the other over at least 3 seconds, then check your match.');break;}
+      send(result);break;
     }
     case 'tap': {const result=tapTempo(taps,performance.now());taps=result.times;send({type:'tap',bpm:result.bpm,taps:result.taps});break;}
     case 'importTrack': {const config=configVersion, selection=++trackSelections[deck];chooseFile('audio/*,.mp3,.wav,.ogg,.flac,.m4a',async file=>{if(file.size>100*1024*1024)throw new Error('Choose an audio file smaller than 100 MB.');notice(`Decoding ${file.name}…`);const bytes=await file.arrayBuffer();if(config!==configVersion||selection!==trackSelections[deck])return;await engine.load(deck,bytes,file.name);recent=[];lastStart=performance.now();});break;}
@@ -110,6 +131,12 @@ async function handle(command) {
 }
 app.ports.command.subscribe(command=>handle(command).catch(fail));
 
+function focusDeck(deck){
+  focusedDeck=deck;
+  if(deck<0){if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});return;}
+  if(!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().then(()=>{wasFullscreen=true;}).catch(()=>{});
+}
+document.addEventListener('fullscreenchange',()=>{if(document.fullscreenElement){wasFullscreen=true;}else if(wasFullscreen){wasFullscreen=false;focusedDeck=-1;send({type:'focus',deck:-1});}});
 async function toggleMic() {
   const epoch=++micEpoch;
   if(micPending){micPending=false;send({type:'mic',active:false,bpm:0});notice('Microphone request cancelled.');return;}
@@ -138,7 +165,9 @@ const bendTimers=[null,null];let drag=null;
 const jogDeck=target=>{const jog=target.closest?.('.jog-wheel');return jog?{element:jog,deck:jog.id==='jog-b'?1:0}:null;};
 document.addEventListener('wheel',event=>{
   const jog=jogDeck(event.target);
-  if(!jog){const canvas=event.target.closest?.('canvas[id^=\"waveform-\"]');if(canvas){event.preventDefault();const deck=canvas.id==='waveform-b'?1:0;zoom[deck]=clamp(zoom[deck]*(event.deltaY<0?1.25:.8),1,16);}return;}event.preventDefault();
+  if(!jog){const pitch=event.target.closest?.('.vertical-fader')||document.activeElement?.matches?.('.vertical-fader')&&document.activeElement;
+    if(pitch){event.preventDefault();const index=pitch.getAttribute('aria-label').includes(' B ')?1:0;const step=event.shiftKey?.01:.05;const units=event.deltaMode===1?event.deltaY/3:event.deltaY/100;const change=clamp(-units,-4,4)*step;const next=clamp(engine.state[index].pitch+change,Number(pitch.min),Number(pitch.max));engine.set(index,'pitch',Math.round(next*100)/100).then(()=>send({type:'pitchChanged',deck:index,pitch:engine.state[index].pitch})).catch(fail);recent=[];lastStart=performance.now();return;}
+    const canvas=event.target.closest?.('canvas[id^=\"waveform-\"]');if(canvas){event.preventDefault();const deck=canvas.id==='waveform-b'?1:0;zoom[deck]=clamp(zoom[deck]*(event.deltaY<0?1.25:.8),1,16);}return;}event.preventDefault();
   const amount=clamp(-event.deltaY*(event.deltaMode===1?1:.06),-16,16);
   clearTimeout(bendTimers[jog.deck]);engine.set(jog.deck,'bend',amount).catch(fail);
   jog.element.classList.add('jogging');
@@ -172,8 +201,8 @@ function draw(now) {
       const rect=canvas.getBoundingClientRect(),ratio=window.devicePixelRatio||1;
       const w=Math.round(rect.width*ratio),h=Math.round(rect.height*ratio);if(!w||!h)continue;
       if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
-      const ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);ctx.fillStyle='#090e0c';ctx.fillRect(0,0,w,h);
-      ctx.strokeStyle='#243025';ctx.lineWidth=ratio;
+      const ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);ctx.fillStyle=style.getPropertyValue('--screen').trim()||'#080b08';ctx.fillRect(0,0,w,h);
+      ctx.strokeStyle=color+'25';ctx.lineWidth=ratio;
       for(let i=0;i<=16;i++){ctx.beginPath();ctx.moveTo(i*w/16,0);ctx.lineTo(i*w/16,h);ctx.stroke();}
       ctx.beginPath();ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();
       const peaks=engine.waveforms[deck],state=engine.state[deck],duration=Math.max(1,state.duration),visibleDuration=duration/zoom[deck],start=zoom[deck]>1?clamp(state.position-visibleDuration/2,0,duration-visibleDuration):0;

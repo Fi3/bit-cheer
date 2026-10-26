@@ -61,10 +61,10 @@ test('invalid track reports a recoverable error', () => {
   assert.ok(outputs[0][0].some(v => v !== 0));
 });
 
-test('rendering benchmark: both decks, all seven voices, real WASM', t => {
+test('rendering benchmark: both decks, all twenty voices, real WASM', t => {
   const { processor, outputs } = create();
   for (const deck of [0, 1]) {
-    processor.message({ type: 'set', deck, param: 'elements', value: 127 });
+    processor.message({ type: 'set', deck, param: 'elements', value: 1048575 });
     processor.message({ type: 'set', deck, param: 'play', value: 1 });
   }
   const blocks = 3750; // Ten seconds at 48 kHz.
@@ -75,4 +75,22 @@ test('rendering benchmark: both decks, all seven voices, real WASM', t => {
   assert.equal(processor.failed, false);
   for (const output of outputs) for (const channel of output) assert.ok(channel.every(v => Number.isFinite(v) && Math.abs(v) <= 1));
   assert.ok(elapsed < 10000, 'WASM rendering must sustain real time on this host');
+});
+
+test('twenty-voice worklet supports actual manual pattern playback, panning and preview', () => {
+  const { processor, outputs } = create();
+  assert.equal(processor.engine.engine_voice_count(), 20);
+  processor.message({ type: 'set', deck: 0, param: 'elements', value: 1 << 19 });
+  processor.message({ type: 'voice', deck: 0, voice: 19, param: 'pattern', value: 1 });
+  processor.message({ type: 'voice', deck: 0, voice: 19, param: 'pan', value: 1 });
+  processor.message({ type: 'set', deck: 0, param: 'play', value: 1 });
+  processor.process([], outputs);
+  assert.ok(outputs[0][1].some(value => Math.abs(value) > .01));
+  assert.ok(outputs[0][0].every(value => Math.abs(value) < 1e-7));
+  const preview = processor.port.messages.filter(message => message.type === 'patterns').at(-1);
+  assert.equal(preview.patterns.length, 20); assert.equal(preview.patterns[19], 1);
+  processor.message({ type: 'voice', deck: 0, voice: 19, param: 'pattern', value: 0 });
+  processor.message({ type: 'set', deck: 0, param: 'seek', value: 0 });
+  processor.process([], outputs);
+  assert.ok(outputs[0][1].every(value => value === 0));
 });

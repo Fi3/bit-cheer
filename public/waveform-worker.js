@@ -8,10 +8,13 @@ const pending = new Map();
 const latest = new Map();
 
 async function render(request) {
-  const { deck, version, bpm, seed, elements } = request;
+  const { deck, version, bpm, seed, elements, voices } = request;
   engine.engine_init(RATE);
   engine.engine_randomize(0, seed, bpm);
   engine.engine_set(0, 3, elements);
+  if (Array.isArray(voices)) voices.slice(0, engine.engine_voice_count()).forEach((voice, index) => {
+    for (const [param, key] of ['gain', 'pan', 'pattern'].entries()) if (Number.isFinite(voice[key])) engine.engine_voice(0, index, param, voice[key]);
+  });
   engine.engine_set(0, 0, 1);
   const frames = Math.ceil(engine.engine_duration(0) * RATE);
   const peaks = new Float32Array(POINTS);
@@ -59,7 +62,7 @@ globalThis.onmessage = ({ data }) => {
   } else if (data?.type === 'render') {
     const { deck, version, bpm, seed, elements } = data;
     if ((deck !== 0 && deck !== 1) || !Number.isInteger(version) || !Number.isFinite(bpm) || bpm < 30 || bpm > 300) return;
-    const request = { deck, version, bpm, seed: Number(seed) >>> 0, elements: Number(elements) & 127 };
+    const request = { deck, version, bpm, seed: Number(seed) >>> 0, elements: Number(elements) & 1048575, voices: data.voices };
     latest.set(deck, version);
     pending.set(deck, request);
     void drain();

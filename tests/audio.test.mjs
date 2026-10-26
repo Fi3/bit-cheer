@@ -65,6 +65,7 @@ test('dragging coalesces seeks, while bend release executes without waiting for 
 
 test('track is announced only after matching WASM acknowledgement', async () => {
   const { engine, events, worklet } = await create();
+  engine.state[0].trackId = 'previous-catalog-track';
   const loading = engine.load(0, new ArrayBuffer(8), 'Stereo study', 128);
   await settle();
   const command = worklet.messages.find(message => message.type === 'load');
@@ -73,6 +74,7 @@ test('track is announced only after matching WASM acknowledgement', async () => 
   worklet.receive({ type: 'loaded', deck: 0, id: command.id, duration: 1, bpm: 128 });
   assert.equal(await loading, true);
   assert.equal(engine.state[0].source, 'pcm');
+  assert.equal(engine.state[0].trackId, null, 'a personal import must clear the previous catalog identity');
   assert.equal(events.find(event => event.type === 'track').name, 'Stereo study');
 });
 
@@ -147,4 +149,112 @@ test('generated overview requests coalesce and stale or PCM-source results are i
   } finally {
     if (previousWorker === undefined) delete globalThis.Worker; else globalThis.Worker = previousWorker;
   }
+});
+
+test('randomizing one generated tempo preserves material, musical position, and the other deck', async () => {
+  const { engine, worklet, events } = await create();
+  engine.state[0].playing = true; engine.state[0].position = 4; engine.state[0].beat = 8;
+  engine.state[1].playing = true; engine.state[1].pitch = 1;
+  const selected = structuredClone(engine.state[0]), other = structuredClone(engine.state[1]);
+  worklet.messages.length = 0;
+  await engine.randomizeTempo(0, 'foundation');
+  const changed = engine.state[0], reference = other.bpm * (1 + other.pitch / 100);
+  assert.deepEqual(engine.state[1], other);
+  assert.equal(changed.name, selected.name); assert.equal(changed.seed, selected.seed); assert.equal(changed.elements, selected.elements);
+  assert.equal(changed.source, selected.source); assert.equal(changed.playing, true);
+  assert.ok(Math.abs(changed.bpm - selected.bpm) >= 1 - 1e-8);
+  assert.ok(Math.abs(reference / changed.bpm - 1) <= .08);
+  assert.ok(Math.abs(changed.position * changed.bpm - selected.position * selected.bpm) < 1e-8);
+  assert.ok(worklet.messages.every(message => message.deck === 0 && message.type === 'set'));
+  assert.equal(events.at(-1).type, 'deckChanged'); assert.equal(events.at(-1).deck, 0);
+});
+
+test('randomizing a PCM tempo only changes playback rate and rejects impossible ranges unchanged', async () => {
+  const { engine, worklet } = await create();
+  Object.assign(engine.state[1], { source: 'pcm', name: 'Imported track', position: 17, playing: true, duration: 120 });
+  const before = structuredClone(engine.state[1]), other = structuredClone(engine.state[0]);
+  worklet.messages.length = 0;
+  await engine.randomizeTempo(1, 'pro');
+  const changed = engine.state[1];
+  assert.deepEqual(engine.state[0], other);
+  for (const property of ['source','name','bpm','seed','elements','position','duration','playing']) assert.equal(changed[property], before[property]);
+  assert.ok(Math.abs(changed.pitch) <= 8 + 1e-8);
+  assert.ok(Math.abs(changed.bpm * (1 + changed.pitch / 100) - before.bpm) >= 1 - 1e-8);
+  assert.ok(worklet.messages.every(message => message.deck === 1 && ['pitch', 'bend'].includes(message.param)));
+  engine.state[1].bpm = 220; engine.state[1].pitch = 0;
+  const impossible = structuredClone(engine.state); worklet.messages.length = 0;
+  await assert.rejects(engine.randomizeTempo(1, 'pro'), /too far apart/);
+  assert.deepEqual(engine.state, impossible); assert.equal(worklet.messages.length, 0);
+});
+
+test('changing only one foundation track changes its kick palette but preserves effective tempo and playback', async () => {
+  const { engine, worklet } = await create();
+  engine.state[0].pitch = 5; engine.state[0].playing = true; engine.state[0].position = 3;
+  engine.state[0].voices[0] = { gain: .7, pan: -.4, pattern: 5, preview: 5 };
+  const before = structuredClone(engine.state[0]), other = structuredClone(engine.state[1]);
+  worklet.messages.length = 0;
+  await engine.changeGeneratedTrack(0, 'foundation');
+  const changed = engine.state[0];
+  assert.deepEqual(engine.state[1], other);
+  assert.notEqual(changed.seed, before.seed); assert.notEqual(changed.seed & 7, before.seed & 7);
+  assert.equal(changed.elements, 1); assert.equal(changed.playing, true); assert.equal(changed.position, 0);
+  assert.ok(Math.abs(changed.bpm * (1 + changed.pitch / 100) - 126) < 1e-8);
+  assert.equal(changed.voices[0].gain, .7); assert.equal(changed.voices[0].pan, -.4); assert.equal(changed.voices[0].pattern, -1);
+  assert.ok(worklet.messages.every(message => message.deck === 0));
+});
+
+test('builder track changes choose a different enabled combination without touching the reference deck', async () => {
+  const { engine, worklet } = await create();
+  engine.state[1].elements = 7;
+  const other = structuredClone(engine.state[0]);
+  for (let i = 0; i < 8; i++) {
+    const previous = engine.state[1].elements; worklet.messages.length = 0;
+    await engine.changeGeneratedTrack(1, 'builder');
+    const mask = engine.state[1].elements, count = mask.toString(2).replaceAll('0', '').length;
+    assert.notEqual(mask, previous); assert.equal(mask & 1, 1); assert.ok(count >= 3 && count <= 6);
+    assert.deepEqual(engine.state[0], other); assert.ok(worklet.messages.every(message => message.deck === 1));
+  }
+});
+
+test('all twenty voice controls and solo preserve the enabled mask and other deck', async () => {
+  const { engine, worklet } = await create();
+  engine.state[0].elements = 3;
+  const other = structuredClone(engine.state[1]); worklet.messages.length = 0;
+  await engine.setVoice(0, 19, 'gain', .45); await engine.setVoice(0, 19, 'pan', -.8); await engine.setVoice(0, 19, 'pattern', 0x8421);
+  assert.deepEqual(engine.state[0].voices[19], { gain: .45, pan: -.8, pattern: 0x8421, preview: 0x8421 });
+  await engine.setSolo(0, 19);
+  assert.equal(worklet.messages.at(-1).value, 1 << 19); assert.equal(engine.state[0].elements, 3);
+  await engine.set(0, 'elements', 7);
+  assert.equal(worklet.messages.at(-1).value, 1 << 19); assert.equal(engine.state[0].elements, 7);
+  await engine.setSolo(0, -1);
+  assert.equal(worklet.messages.at(-1).value, 7);
+  assert.deepEqual(engine.state[1], other);
+  assert.ok(worklet.messages.every(message => message.deck === 0));
+});
+
+test('CHAOS creates a bounded dense composition on only the chosen deck at the same tempo', async () => {
+  const { engine, worklet, events } = await create();
+  engine.state[1].pitch = -3; engine.state[1].playing = true; engine.state[1].solo = 2;
+  const tempo = engine.state[1].bpm * .97, other = structuredClone(engine.state[0]);
+  worklet.messages.length = 0;
+  await engine.chaos(1);
+  const state = engine.state[1], count = state.elements.toString(2).replaceAll('0', '').length;
+  assert.ok(count >= 12 && count <= 20); assert.equal(state.voices.length, 20); assert.equal(state.solo, -1);
+  assert.ok(state.voices.every(voice => voice.pattern > 0 && voice.pattern <= 65535 && voice.gain >= .2 && voice.gain <= .7 && Math.abs(voice.pan) <= .8));
+  assert.ok(Math.abs(state.bpm * (1 + state.pitch / 100) - tempo) < 1e-8); assert.equal(state.playing, true);
+  assert.deepEqual(engine.state[0], other); assert.ok(worklet.messages.every(message => message.deck === 1));
+  assert.equal(events.at(-1).type, 'deckChanged'); assert.equal(events.at(-1).voices.length, 20);
+});
+
+test('new mode or drill resets voice mixes so a muted builder kick cannot silence foundation', async () => {
+  const { engine, worklet } = await create();
+  engine.state[0].voices[0] = { gain: 0, pan: -1, pattern: 0, preview: 0 };
+  engine.state[0].solo = 19;
+  worklet.messages.length = 0;
+  await engine.randomize('foundation', 1);
+  for (const state of engine.state) {
+    assert.equal(state.solo, -1); assert.equal(state.elements, 1);
+    assert.ok(state.voices.every(voice => voice.gain === 1 && voice.pan === 0 && voice.pattern === -1));
+  }
+  assert.ok(worklet.messages.some(message => message.type === 'voice' && message.deck === 0 && message.voice === 0 && message.param === 'gain' && message.value === 1));
 });

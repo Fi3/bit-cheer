@@ -2,13 +2,19 @@ import { clamp, estimateTempo, generatedWaveform, waveformPeaks } from './traini
 import { availableChannelCount, validateRouting, buildHardwareGraph } from './output-routing.js';
 
 const MAX_PCM_FRAMES = 28_800_000;
+export const VOICE_COUNT = 20;
+export const MAX_ELEMENT_MASK = (1 << VOICE_COUNT) - 1;
+const newVoices = () => Array.from({ length: VOICE_COUNT }, (_, voice) => ({ gain: 1, pan: 0, pattern: -1, preview: voice === 0 ? 0x1111 : 0 }));
+const randomWord = () => crypto.getRandomValues(new Uint32Array(1))[0];
+function seededRandom(seed) { let state = seed || 1; return () => { state ^= state << 13; state ^= state >>> 17; state ^= state << 5; return (state >>> 0) / 4294967296; }; }
+function freshSeed(previous) { let seed = randomWord() || 1; if ((seed & 7) === (previous & 7)) seed = (seed ^ 1) >>> 0; return seed || 8; }
 const COALESCED_CONTROLS = new Set(['seek', 'bend']);
 const scheduleFrame = callback => typeof requestAnimationFrame === 'function' ? requestAnimationFrame(callback) : setTimeout(callback, 16);
 
 export class AudioEngine {
   constructor(send) {
     this.send = send; this.context = null; this.node = null; this.pending = null;
-    this.state = [0, 1].map(i => ({ bpm: i ? 124 : 120, pitch: 0, playing: false, position: 0, beat: 0, peak: 0, duration: 32 * 60 / (i ? 124 : 120), elements: 1, seed: i + 1, source: 'generated', name: i ? 'KICK STUDY · 02' : 'KICK STUDY · 01' }));
+    this.state = [0, 1].map(i => ({ bpm: i ? 124 : 120, pitch: 0, playing: false, position: 0, beat: 0, peak: 0, duration: 32 * 60 / (i ? 124 : 120), elements: 1, seed: i + 1, source: 'generated', voices: newVoices(), solo: -1, name: i ? 'KICK STUDY · 02' : 'KICK STUDY · 01' }));
     this.waveforms = [generatedWaveform(1, 1), generatedWaveform(1, 2)];
     this.crossfade = .5; this.masterVolume = .75; this.volumes = [.8, .8]; this.splitCue = false;
     this.routing = { mode: 'mix', a: 0, b: 1 }; this.hardwareGraph = null;
@@ -47,8 +53,9 @@ export class AudioEngine {
   queueWaveform(deck) {
     if (!this.waveformWorker || this.state[deck].source !== 'generated') return;
     const version = ++this.waveformVersions[deck];
-    const { bpm, seed, elements } = this.state[deck];
-    this.waveformPending.set(deck, { type: 'render', deck, version, bpm, seed, elements });
+    const { bpm, seed, voices } = this.state[deck];
+    const elements = this.activeElements(deck);
+    this.waveformPending.set(deck, { type: 'render', deck, version, bpm, seed, elements, voices: voices.map(voice => ({ ...voice })) });
     if (this.waveformReady && this.waveformFrame === null) this.waveformFrame = scheduleFrame(() => {
       this.waveformFrame = null;
       if (!this.waveformWorker || !this.waveformReady) return;
@@ -90,6 +97,12 @@ export class AudioEngine {
           if (waiting) { clearTimeout(waiting.timer); this.pendingLoads.delete(data.id); waiting.reject(new Error(data.message)); return; }
           readyReject(new Error(data.message));
           this.send(data); return;
+        }
+        if (data.type === 'patterns' && (data.deck === 0 || data.deck === 1)) {
+          const state = this.state[data.deck];
+          state.voices = state.voices.map((voice, index) => ({ ...voice, preview: voice.pattern >= 0 ? voice.pattern : data.patterns[index] || 0 }));
+          this.send({ type: 'voices', deck: data.deck, voices: state.voices, solo: state.solo });
+          return;
         }
         if (data.type === 'telemetry') {
           const decks = this.state.map((s, i) => {
@@ -144,10 +157,9 @@ export class AudioEngine {
 
   post(data, transfers = []) { this.node.port.postMessage(data, transfers); }
 
-  flushControls() {
+  flushControls(deck) {
     if (!this.node) return;
-    for (const command of this.controls.values()) this.post(command);
-    this.controls.clear();
+    for (const [key, command] of this.controls) if (deck === undefined || command.deck === deck) { this.post(command); this.controls.delete(key); }
   }
 
   async set(deck, param, value) {
@@ -163,7 +175,7 @@ export class AudioEngine {
     if (param === 'volume') { this.volumes[deck] = clamp(Number(value), 0, 1); this.mix(); return; }
     if (param === 'pitch') value = clamp(Number(value), -50, 50);
     if (param === 'bpm') value = clamp(Number(value), 30, 300);
-    if (param === 'elements') value = Number(value) & 127;
+    if (param === 'elements') value = Number(value) & MAX_ELEMENT_MASK;
     if (['pitch', 'bpm', 'elements'].includes(param)) this.state[deck][param] = value;
     if (param === 'play') this.state[deck].playing = !!value;
     if (param === 'source' && Number(value) === 0) this.state[deck].source = 'generated';
@@ -172,7 +184,7 @@ export class AudioEngine {
       if (param === 'bpm' || param === 'source') this.state[deck].duration = 32 * 60 / this.state[deck].bpm;
       if (['elements', 'bpm', 'source'].includes(param)) this.queueWaveform(deck);
     }
-    const command = { type: 'set', deck, param, value };
+    const command = { type: 'set', deck, param, value: param === 'elements' ? this.activeElements(deck) : value };
     if (coalesced) {
       this.controls.set(key, command);
       if (this.controlFrame === null) this.controlFrame = scheduleFrame(() => { this.controlFrame = null; this.flushControls(); });
@@ -283,6 +295,120 @@ export class AudioEngine {
 
   async mixer(param, value) { await this.ensure(); if (param === 'crossfade') this.crossfade = clamp(value, 0, 1); if (param === 'master') this.masterVolume = clamp(value, 0, 1); if (param === 'splitCue') this.splitCue = !!value; this.mix(); }
 
+
+  activeElements(deck) { return this.state[deck].solo >= 0 ? 1 << this.state[deck].solo : this.state[deck].elements; }
+
+  emitDeckChanged(deck) {
+    const { name, bpm, pitch, elements, duration, source, position, playing, voices, solo } = this.state[deck];
+    this.send({ type: 'deckChanged', deck, name, bpm, pitch, elements, duration, source, position, playing, voices, solo });
+  }
+
+  async setVoice(deck, voice, param, rawValue) {
+    if ((deck !== 0 && deck !== 1) || !Number.isInteger(voice) || voice < 0 || voice >= VOICE_COUNT) throw new Error('Choose a valid deck and instrument.');
+    if (!['gain', 'pan', 'pattern', 'reset'].includes(param)) throw new Error('Unknown instrument control.');
+    await this.ensure();
+    let value = Number(rawValue);
+    if (param !== 'reset' && !Number.isFinite(value)) return;
+    const settings = this.state[deck].voices[voice];
+    if (param === 'gain') settings.gain = value = clamp(value, 0, 1.5);
+    if (param === 'pan') settings.pan = value = clamp(value, -1, 1);
+    if (param === 'pattern') settings.pattern = value = value < 0 ? -1 : Math.round(value) & 65535;
+    if (param === 'reset') { settings.pattern = -1; value = 0; }
+    if (settings.pattern >= 0) settings.preview = settings.pattern;
+    this.post({ type: 'voice', deck, voice, param, value });
+    this.queueWaveform(deck);
+    this.send({ type: 'voices', deck, voices: this.state[deck].voices, solo: this.state[deck].solo });
+  }
+
+  async setSolo(deck, voice) {
+    if ((deck !== 0 && deck !== 1) || !Number.isInteger(voice) || voice < -1 || voice >= VOICE_COUNT) throw new Error('Choose an instrument to solo, or clear solo.');
+    await this.ensure();
+    this.state[deck].solo = voice;
+    this.post({ type: 'set', deck, param: 'elements', value: this.activeElements(deck) });
+    this.queueWaveform(deck);
+    this.send({ type: 'solo', deck, voice });
+    this.send({ type: 'voices', deck, voices: this.state[deck].voices, solo: voice });
+  }
+
+  async randomizeTempo(deck, mode) {
+    if (deck !== 0 && deck !== 1) throw new Error('Choose deck A or B.');
+    await this.ensure();
+    const selected = this.state[deck], reference = this.state[1 - deck];
+    const current = selected.bpm * (1 + selected.pitch / 100);
+    const referenceTempo = reference.bpm * (1 + reference.pitch / 100);
+    const width = mode === 'foundation' ? .04 : .08;
+    let low = referenceTempo / (1 + width), high = referenceTempo * (1 + width);
+    if (selected.source === 'pcm') { low = Math.max(low, selected.bpm * .92); high = Math.min(high, selected.bpm * 1.08); }
+    else { low = Math.max(30, low); high = Math.min(300, high); }
+    const intervals = [[low, Math.min(high, current - 1)], [Math.max(low, current + 1), high]].filter(([a, b]) => b >= a);
+    if (!intervals.length) throw new Error('These tracks are too far apart to randomize by at least 1 BPM within ±8% pitch. Choose a track with a tempo closer to the other deck.');
+    const interval = intervals[Math.floor(Math.random() * intervals.length)];
+    const target = interval[0] + Math.random() * (interval[1] - interval[0]);
+    this.flushControls(deck);
+    if (selected.source === 'pcm') {
+      selected.pitch = (target / selected.bpm - 1) * 100;
+      this.post({ type: 'set', deck, param: 'pitch', value: selected.pitch });
+    } else {
+      selected.position *= selected.bpm / target;
+      selected.bpm = target; selected.pitch = 0; selected.duration = 32 * 60 / target;
+      this.post({ type: 'set', deck, param: 'bpm', value: target });
+      this.post({ type: 'set', deck, param: 'pitch', value: 0 });
+      this.queueWaveform(deck);
+    }
+    this.post({ type: 'set', deck, param: 'bend', value: 0 });
+    this.emitDeckChanged(deck);
+  }
+
+  async changeGeneratedTrack(deck, mode, elements) {
+    if (deck !== 0 && deck !== 1) throw new Error('Choose deck A or B.');
+    await this.ensure(); this.flushControls(deck);
+    const selected = this.state[deck];
+    const effective = selected.bpm * (1 + selected.pitch / 100);
+    const seed = freshSeed(selected.seed), random = seededRandom(seed);
+    let mask = 1;
+    if (mode !== 'foundation') {
+      const instruments = Array.from({ length: VOICE_COUNT - 1 }, (_, i) => i + 1);
+      for (let i = instruments.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [instruments[i], instruments[j]] = [instruments[j], instruments[i]]; }
+      const count = 2 + Math.floor(random() * 4);
+      for (const voice of instruments.slice(0, count)) mask |= 1 << voice;
+      const previous = Number.isFinite(elements) ? elements : selected.elements;
+      if (mask === previous || mask === selected.elements) mask = (mask ^ (1 << instruments[0])) | (1 << instruments[count]);
+    }
+    const bpm = clamp(effective, 30, 300), pitch = (effective / bpm - 1) * 100;
+    ++this.loadVersions[deck];
+    Object.assign(selected, { seed, bpm, pitch, elements: mask, source: 'generated', position: 0, beat: 0, duration: 32 * 60 / bpm, solo: -1,
+      name: `${mode === 'foundation' ? 'KICK STUDY' : 'RHYTHM STUDY'} · ${String(seed % 100000).padStart(5, '0')}`,
+      voices: selected.voices.map(voice => ({ ...voice, pattern: -1, preview: 0 })) });
+    this.post({ type: 'randomize', deck, seed, bpm });
+    this.post({ type: 'set', deck, param: 'pitch', value: pitch });
+    this.post({ type: 'set', deck, param: 'elements', value: mask });
+    this.waveforms[deck] = generatedWaveform(mask, seed); this.queueWaveform(deck);
+    this.emitDeckChanged(deck);
+  }
+
+  async chaos(deck) {
+    if (deck !== 0 && deck !== 1) throw new Error('Choose deck A or B.');
+    await this.changeGeneratedTrack(deck, 'builder');
+    const selected = this.state[deck], random = seededRandom(selected.seed ^ 0x6d2b79f5);
+    const order = Array.from({ length: VOICE_COUNT - 1 }, (_, i) => i + 1);
+    for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+    const count = 12 + Math.floor(random() * 9);
+    let elements = 1; for (const voice of order.slice(0, count - 1)) elements |= 1 << voice;
+    selected.elements = elements; selected.name = `CHAOS STUDY · ${String(selected.seed % 100000).padStart(5, '0')}`;
+    selected.voices = selected.voices.map((voice, index) => {
+      let pattern = 0;
+      for (let step = 0; step < 16; step++) if (random() < (index === 0 ? .38 : .45)) pattern |= 1 << step;
+      if (index === 0) pattern |= 0x1111;
+      if (!pattern) pattern = 1 << Math.floor(random() * 16);
+      return { gain: Math.round((.2 + random() * .5) * 100) / 100, pan: index === 0 ? 0 : Math.round((random() * 1.6 - .8) * 100) / 100, pattern, preview: pattern };
+    });
+    this.post({ type: 'set', deck, param: 'elements', value: elements });
+    selected.voices.forEach((voice, index) => {
+      for (const param of ['gain', 'pan', 'pattern']) this.post({ type: 'voice', deck, voice: index, param, value: voice[param] });
+    });
+    this.queueWaveform(deck); this.emitDeckChanged(deck);
+  }
+
   async randomize(mode, elements) {
     await this.ensure(); this.flushControls();
     const base = 100 + Math.floor(Math.random() * 31), delta = (2 + Math.random() * (mode === 'foundation' ? 3 : 6)) * (Math.random() < .5 ? -1 : 1);
@@ -291,9 +417,13 @@ export class AudioEngine {
       ++this.loadVersions[i]; // An earlier, still-decoding import must not replace new generated material.
       const seed = crypto.getRandomValues(new Uint32Array(1))[0];
       const name = `${elements === 1 ? 'KICK STUDY' : 'RHYTHM STUDY'} · ${String(seed % 99).padStart(2, '0')}`;
-      Object.assign(this.state[i], { bpm: bpms[i], pitch: 0, seed, elements, name, source: 'generated', position: 0, beat: 0, duration: 32 * 60 / bpms[i] });
+      Object.assign(this.state[i], { bpm: bpms[i], pitch: 0, seed, elements, name, source: 'generated', position: 0, beat: 0, duration: 32 * 60 / bpms[i], solo: -1, voices: newVoices() });
       this.waveforms[i] = generatedWaveform(elements, seed); names[i] = name; this.queueWaveform(i);
       this.post({ type: 'randomize', deck: i, seed, bpm: bpms[i] });
+      for (let voice = 0; voice < VOICE_COUNT; voice++) {
+        this.post({ type: 'voice', deck: i, voice, param: 'gain', value: 1 });
+        this.post({ type: 'voice', deck: i, voice, param: 'pan', value: 0 });
+      }
       this.post({ type: 'set', deck: i, param: 'elements', value: elements });
       this.post({ type: 'set', deck: i, param: 'pitch', value: 0 });
     }
@@ -330,7 +460,7 @@ export class AudioEngine {
     if (version !== this.loadVersions[deck]) return false;
     this.cancelWaveform(deck);
     this.waveforms[deck] = peaks;
-    Object.assign(this.state[deck], { bpm, pitch: 0, playing: false, position: 0, beat: -(estimate?.offset || 0) * bpm / 60, duration: loaded.duration, source: 'pcm', name });
+    Object.assign(this.state[deck], { bpm, pitch: 0, playing: false, position: 0, beat: -(estimate?.offset || 0) * bpm / 60, duration: loaded.duration, source: 'pcm', name, trackId: null });
     this.send({ type: 'track', deck, name, bpm, duration: loaded.duration });
     this.send({ type: 'notice', message: knownBpm ? `${name} loaded. Use CUE to find your first downbeat.` : `${name} loaded. BPM ${estimate ? 'estimated' : 'defaults to'} ${bpm}; correct it with the track BPM field if needed.` });
     return true;

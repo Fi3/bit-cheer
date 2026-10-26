@@ -14,7 +14,7 @@ node --test engine/tests/worklet.test.cjs
 Build output: `engine/target/wasm32-unknown-unknown/release/bit_cheer_audio.wasm`.
 The application's build script copies this to its public assets.
 
-The benchmark in the worklet tests renders ten seconds of both decks with all seven voices. Its reported wall-clock percentage is host-specific, not a latency promise. Actual output latency depends on the browser, operating system, and audio device.
+The benchmark in the worklet tests renders ten seconds of both decks with all twenty voices. Its reported wall-clock percentage is host-specific, not a latency promise. Actual output latency depends on the browser, operating system, and audio device.
 
 ## Worklet interface
 
@@ -34,7 +34,7 @@ Parameters:
 | `play` | Boolean; play or pause | 0 |
 | `bpm` | Source BPM, 30–300; edits the grid for PCM | 1 |
 | `pitch` | Playback-rate offset in percent, −50 to +50 | 2 |
-| `elements` | Bit mask: kick=1, hat=2, snare=4, clap=8, bass=16, percussion=32, synth=64 | 3 |
+| `elements` | 20-bit instrument mask; see voice bank below (maximum 1048575) | 3 |
 | `nudge` | Move playhead by this many beats; wraps around loop | 4 |
 | `seek` | Source seconds, clamped to duration | 5 |
 | `cue` | Return to saved cue (value ignored) | 6 |
@@ -53,12 +53,38 @@ Output messages:
 - `{type:'error', message, deck?, id?}` for load or engine errors. A load validation error is recoverable; a render error silences output.
 - `{type:'telemetry', positions, beats, peaks, bpms, durations, playing}` contains arrays of two values. Positions and durations are source seconds; `beats = (position − beatOffset) × sourceBpm / 60`. BPM includes pitch and temporary bend. Peaks are measured from the actual DSP output, accumulated over the telemetry interval. `playing` also reflects end-of-track stopping when loop is disabled.
 
-Playback-rate changes naturally change musical pitch; this engine does not implement time stretching or key lock. Generated music is procedural synthesis with seeded rhythm and note variation, not a remote generative-AI model.
+Playback-rate changes naturally change musical pitch; this engine does not implement time stretching or key lock. Generated music combines procedural voice synthesis with a small locally trained Markov rhythm model. The first seven instrument families use the authored training corpus; the thirteen additional timbres draw independently from those learned family priors. No remote generation service is used. Seeded kick palettes change pitch, envelope, and transient character even in kick-only lessons. A stronger downbeat and an optional last-beat fill mark each sixteen-beat phrase.
 
 ## Raw WASM ABI
 
 `engine_init(sample_rate: f64)` initializes one instance. `engine_render(frames: u32)` accepts 0–128 frames and returns a pointer to 512 `f32` samples arranged as four planes of 128 samples: A-left, A-right, B-left, B-right. Unused frames are zero. Memory is exported as `memory`.
 
-`engine_set(deck: u32, parameter: u32, value: f64)` uses the table above. `engine_randomize(deck, seed: u32, bpm: f64)` sets generated material. `engine_reserve(deck, frames: u32, source_rate: f64, bpm: f64)` returns a writable interleaved stereo PCM pointer, or zero on validation/allocation failure; copy the PCM then call `engine_commit(deck)`. Memory growth invalidates previous JavaScript typed-array views, so the worklet refreshes them after load.
+`engine_set(deck: u32, parameter: u32, value: f64)` uses the table above. Changing generated source BPM preserves musical playhead, cue, and grid beat positions by rescaling their source seconds; calibrating PCM source BPM leaves source positions unchanged. `engine_randomize(deck, seed: u32, bpm: f64)` sets generated material. `engine_reserve(deck, frames: u32, source_rate: f64, bpm: f64)` returns a writable interleaved stereo PCM pointer, or zero on validation/allocation failure; copy the PCM then call `engine_commit(deck)`. Memory growth invalidates previous JavaScript typed-array views, so the worklet refreshes them after load.
 
 `engine_position`, `engine_beat`, `engine_bpm`, `engine_peak`, and `engine_duration` accept a deck index and return `f64`. `engine_playing` returns `u32` 0 or 1. An instance must only be called from one thread; each worklet gets its own isolated instance.
+
+
+## Voice bank and composition
+
+The bank has twenty distinct synthesized voices, indexed in this order:
+
+| Index | Voice | Index | Voice |
+| --- | --- | --- | --- |
+| 0 | Kick | 10 | Crash |
+| 1 | Closed hat | 11 | Rim |
+| 2 | Snare | 12 | Low tom |
+| 3 | Clap | 13 | High tom |
+| 4 | Bass | 14 | Cowbell |
+| 5 | Percussion | 15 | Conga |
+| 6 | Synth | 16 | Acid |
+| 7 | Open hat | 17 | Chord |
+| 8 | Shaker | 18 | Noise |
+| 9 | Ride | 19 | Zap |
+
+A bit `1 << index` enables a voice. Per-voice gain (0–1.5), pan (−1 left to +1 right), and optional sixteen-step overrides are changed through `{type:'voice',deck,voice,param,value}`. Parameter names are `gain`, `pan`, `pattern`, or `reset`. A pattern is a sixteen-bit integer with the first step in the least significant bit; zero means no hits, and −1 uses the model-generated pattern. `reset` restores the model pattern without changing gain/pan. Overrides repeat each bar and take precedence over model hits and phrase fills. Disabled voices stay silent regardless of their pattern.
+
+The worklet returns `{type:'patterns',deck,patterns:[20 integers]}` after changing material or manual patterns. Each integer is that voice's actual first-bar pattern, including manual overrides. The UI uses it to show and edit the current pattern.
+
+Raw exports: `engine_voice_count() -> u32`, `engine_voice(deck,voice,param,value)` with parameter IDs 0 gain, 1 pan, 2 pattern, and 3 reset, and `engine_voice_pattern(deck,voice) -> u32`. Controls update coefficients outside the render loop; no audio-render heap allocation is added.
+
+Changing a generated track preserves voice gain/pan and clears manual overrides. Starting a new mode or drill resets the voice mix. Solo is implemented by sending a temporary effective element mask while retaining the user's enabled mask in app state. CHAOS generates a dense twelve-to-twenty-voice composition with seeded patterns, bounded gain, and pan values; the Rust limiter bounds the mixed signal.

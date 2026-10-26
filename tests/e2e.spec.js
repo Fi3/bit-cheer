@@ -26,6 +26,40 @@ async function playBoth(page) {
   await expect.poll(() => page.evaluate(() => window.bitCheer.telemetry.length === 2 && window.bitCheer.telemetry.every(d => d.playing))).toBe(true);
 }
 
+async function pauseBoth(page) {
+  await page.getByRole('button', { name: /Pause both decks/ }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.telemetry.every(deck => !deck.playing))).toBe(true);
+}
+
+async function deckSnapshots(page) {
+  return page.evaluate(() => window.bitCheer.audio.state.map(deck => ({
+    seed: deck.seed, bpm: deck.bpm, pitch: deck.pitch,
+    effectiveBpm: deck.bpm * (1 + deck.pitch / 100),
+    elements: deck.elements, position: deck.position, source: deck.source,
+    name: deck.name, playing: deck.playing, solo: deck.solo,
+    voices: deck.voices?.map(voice => ({ ...voice })),
+  })));
+}
+
+async function seekPausedDeck(page, letter, fraction) {
+  const waveform = page.locator(`#waveform-${letter.toLowerCase()}`);
+  const box = await waveform.boundingBox();
+  await waveform.click({ position: { x: box.width * fraction, y: box.height / 2 } });
+  await expect.poll(() => page.evaluate(deck => window.bitCheer.audio.state[deck].position, letter === 'A' ? 0 : 1)).toBeGreaterThan(.5);
+}
+
+async function assertLcdSprites(page) {
+  const digits = await page.locator('.lcd-digit').evaluateAll(elements => elements.map(element => {
+    const style = getComputedStyle(element);
+    return { digit: Number(element.textContent), cssDigit: style.getPropertyValue('--digit').trim(), x: parseFloat(style.backgroundPositionX), width: parseFloat(style.width) };
+  }));
+  expect(digits.length).toBeGreaterThan(0);
+  for (const digit of digits) {
+    expect(digit.cssDigit, 'The displayed bitmap must use its numeric character, not the default zero sprite').toBe(String(digit.digit));
+    expect(digit.x).toBeCloseTo(-digit.digit * digit.width, 3);
+  }
+}
+
 test.beforeEach(async ({ page }) => {
   page.__errors = [];
   page.on('pageerror', error => page.__errors.push(error.message));
@@ -47,6 +81,7 @@ test('desktop renders real waveform canvases and accessible two-deck controls', 
     for (let i = 0; i < pixels.length; i += 4) if (pixels[i + 1] > 80 && pixels[i + 1] > pixels[i]) green++;
     return green;
   })).toBeGreaterThan(50);
+  await assertLcdSprites(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath('desktop-1440.png'), fullPage: true });
   await page.getByRole('button', { name: 'Keyboard shortcuts and help', exact: true }).click();
@@ -85,9 +120,12 @@ test('Rust audio produces samples, pitch changes tempo, instruments and mixer ar
   await setRange(page, 'Deck B pitch', 4);
   await expect.poll(() => page.evaluate(() => window.bitCheer.telemetry[1].bpm)).toBeCloseTo(128.96, 1);
   await expect(page.getByTestId('bpm-b')).toHaveText('128.96');
-  await page.getByRole('button', { name: 'Add an element to both decks' }).click();
-  await expect(page.getByRole('button', { name: 'Deck A Hi-hat', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await assertLcdSprites(page);
+  await page.getByRole('button', { name: /02 Loop builder/ }).click();
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.map(d => d.elements))).toEqual([3, 3]);
+  await page.getByRole('button', { name: 'Add an element to both decks' }).click();
+  await expect(page.getByRole('button', { name: 'Deck A Snare', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.map(d => d.elements))).toEqual([7, 7]);
   await setRange(page, 'Crossfader', 1);
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.gains[0].gain.value)).toBeLessThan(.002);
   await setRange(page, 'Master volume', .35);
@@ -95,10 +133,6 @@ test('Rust audio produces samples, pitch changes tempo, instruments and mixer ar
   await page.getByText('Show EQ', { exact: true }).click();
   await expect(page.getByLabel('Show EQ', { exact: true })).toBeChecked();
   await setRange(page, 'Deck A low EQ', -12);
-  const seed = await page.evaluate(() => window.bitCheer.audio.state[0].seed);
-  await page.getByRole('button', { name: /Randomize/ }).click();
-  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].seed)).not.toBe(seed);
-  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(d => d.pitch === 0))).toBe(true);
 });
 
 test('jog bends temporarily, dragging seeks, and CUE returns to saved position paused', async ({ page }) => {
@@ -135,6 +169,18 @@ test('skin studio applies all five designs and imports persistent TOML and origi
     await expect(page.locator('html')).toHaveAttribute('data-skin', id);
   }
   await page.screenshot({ path: testInfo.outputPath('skin-studio.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Practice', exact: true }).click();
+  await page.getByRole('button', { name: 'Headspace play/pause deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.telemetry[0]?.playing)).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].position)).toBeGreaterThan(.1);
+  await page.getByRole('button', { name: 'Stop to cue deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].playing)).toBe(false);
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].position)).toBeCloseTo(0, 3);
+  await page.getByRole('button', { name: 'Headspace focus deck A', exact: true }).click();
+  await expect(page.locator('.deck')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Headspace exit focus', exact: true }).click();
+  await expect(page.locator('.deck')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
   await importFile(page, page.getByRole('button', { name: /Import a skin/ }), asset('skins/electric-blue.toml'));
   await expect(page.locator('.active-skin')).toContainText('Electric Blue 2001');
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'custom');
@@ -158,7 +204,7 @@ test('invalid skins report an error and preserve the current design', async ({ p
 });
 
 test('a custom TOML and graphic ZIP applies colors and image assets and survives reload', async ({ page }) => {
-  const manifest = 'version = 1\nname = "Pixel Harbor Test"\n[colors]\naccent = "#25c4ee"\n[assets]\npanel = "panel.png"\n';
+  const manifest = 'version = 1\nname = "Pixel Harbor Test"\nbase = "bento"\n[colors]\naccent = "#25c4ee"\n[assets]\npanel = "panel.png"\n';
   const bytes = zipSync({
     'skin.toml': strToU8(manifest),
     'panel.png': new Uint8Array(readFileSync(asset('skins/classic-titlebar.png'))),
@@ -169,6 +215,7 @@ test('a custom TOML and graphic ZIP applies colors and image assets and survives
   });
   await expect(page.locator('.active-skin')).toContainText('Pixel Harbor Test');
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'custom');
+  await expect(page.locator('html')).toHaveAttribute('data-layout', 'bento');
   const applied = await page.evaluate(() => {
     const style = getComputedStyle(document.documentElement);
     return { accent: style.getPropertyValue('--accent').trim(), panel: style.getPropertyValue('--skin-panel') };
@@ -182,12 +229,48 @@ test('a custom TOML and graphic ZIP applies colors and image assets and survives
     image.src = panel.match(/url\(["']?(.*?)["']?\)$/)[1];
   }), applied.panel);
   expect(imageWidth).toBe(275);
+  await page.getByRole('button', { name: 'Practice', exact: true }).click();
+  expect(await page.locator('.deck').first().evaluate(element => getComputedStyle(element).backgroundImage)).toContain('data:image/png;base64,');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'custom');
+  await expect(page.locator('html')).toHaveAttribute('data-layout', 'bento');
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--skin-panel'))).toBe(applied.panel);
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim())).toBe('#25c4ee');
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
   await expect(page.locator('.active-skin')).toContainText('Pixel Harbor Test');
+
+  // Every structural base must honor every documented graphic slot. Checking
+  // computed styles catches a theme-specific override hiding an imported asset.
+  const slotFiles = {
+    panel: 'classic-titlebar.png', titlebar: 'classic-titlebar.png', background: 'classic-titlebar.png',
+    frame: 'classic/main.png', buttons: 'classic/cbuttons.png', numbers: 'classic/numbers.png',
+    platter: 'classic/main.png', pitch: 'classic/posbar.png',
+  };
+  const artworkFailures = [];
+  for (const base of ['classic', 'classified3', 'classified5', 'bento', 'alien']) {
+    const manifest = `version = 1\nname = "Artwork ${base}"\nbase = "${base}"\n[assets]\n${Object.keys(slotFiles).map(key => `${key} = "${key}.png"`).join('\n')}\n`;
+    const files = { 'skin.toml': strToU8(manifest) };
+    for (const [slot, file] of Object.entries(slotFiles)) files[`${slot}.png`] = new Uint8Array(readFileSync(asset(`skins/${file}`)));
+    await importFile(page, page.getByRole('button', { name: /Import a skin/ }), {
+      name: `artwork-${base}.zip`, mimeType: 'application/zip', buffer: Buffer.from(zipSync(files)),
+    });
+    await expect(page.locator('html')).toHaveAttribute('data-layout', base);
+    await page.getByRole('button', { name: 'Practice', exact: true }).click();
+    await expect(page.locator('.deck')).toHaveCount(2);
+    const renderedSlots = await page.evaluate(() => {
+      const style = selector => getComputedStyle(document.querySelector(selector));
+      return {
+        panel: style('.deck').backgroundImage, titlebar: style('.rack-title').backgroundImage,
+        background: getComputedStyle(document.body).backgroundImage, frame: style('.deck').borderImageSource,
+        buttons: style('.transport-play').backgroundImage, numbers: style('.lcd-digit').backgroundImage,
+        platter: style('.jog-wheel').backgroundImage, pitch: style('.pitch-section').backgroundImage,
+      };
+    });
+    for (const [slot, value] of Object.entries(renderedSlots)) if (!value.includes('data:image/png;base64,')) artworkFailures.push({ base, slot, actual: value });
+    await assertLcdSprites(page);
+    await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
+  }
+  expect(artworkFailures, 'Every base layout must display every custom artwork slot').toEqual([]);
 });
 
 test('Pro mode loads real audio, filters original catalog genres, and imports local tracks', async ({ page }) => {
@@ -266,7 +349,9 @@ test('phase and blind drills configure distinct practice challenges', async ({ p
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].bpm === window.bitCheer.audio.state[1].bpm)).toBe(true);
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[1].position)).toBeGreaterThan(.05);
   const seed = await page.evaluate(() => window.bitCheer.audio.state[0].seed);
-  await page.getByRole('button', { name: /Randomize/ }).click();
+  await expect(page.getByRole('button', { name: 'Randomize tempo deck A', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Randomize tempo deck B', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: 'New challenge', exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].seed)).not.toBe(seed);
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].bpm === window.bitCheer.audio.state[1].bpm)).toBe(true);
   await expect.poll(() => page.evaluate(() => window.bitCheer.telemetry[1].beat - window.bitCheer.telemetry[0].beat)).toBeCloseTo(.28, 2);
@@ -481,4 +566,335 @@ test('a denied output-device change restores the confirmed selector and preserve
     routing: window.bitCheer.audio.routing,
     playing: window.bitCheer.telemetry.every(deck => deck.playing),
   }))).toEqual({ calls: ['denied'], sameGraph: true, routing: { mode: 'mono', a: 0, b: 1 }, playing: true });
+});
+
+test('Foundation stays kick-only and each deck has independent tempo and material actions', async ({ page }) => {
+  await expect(page.locator('.foundation-deck-note')).toHaveCount(2);
+  await expect(page.locator('.foundation-guide')).toBeVisible();
+  await expect(page.locator('button.element')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Add an element/ })).toHaveCount(0);
+  await expect(page.getByLabel('Show EQ', { exact: true })).toHaveCount(0);
+  await playBoth(page);
+  await pauseBoth(page);
+  await setRange(page, 'Deck A pitch', 3);
+  await setRange(page, 'Deck B pitch', -2);
+  await seekPausedDeck(page, 'A', .25);
+  await seekPausedDeck(page, 'B', .375);
+
+  for (const [index, letter] of ['A', 'B'].entries()) {
+    const beforeTempo = await deckSnapshots(page);
+    await page.getByRole('button', { name: `Randomize tempo deck ${letter}`, exact: true }).click();
+    await expect.poll(async () => Math.abs((await deckSnapshots(page))[index].effectiveBpm - beforeTempo[index].effectiveBpm)).toBeGreaterThan(.9);
+    await expect.poll(() => page.evaluate(deck => {
+      const state = window.bitCheer.audio.state[deck];
+      return state.position * state.bpm / 60;
+    }, index)).toBeCloseTo(beforeTempo[index].position * beforeTempo[index].bpm / 60, 2);
+    const afterTempo = await deckSnapshots(page);
+    expect(afterTempo[1 - index]).toEqual(beforeTempo[1 - index]);
+    for (const key of ['seed', 'source', 'name', 'elements', 'playing']) expect(afterTempo[index][key]).toBe(beforeTempo[index][key]);
+    expect(afterTempo[index].position * afterTempo[index].bpm / 60).toBeCloseTo(beforeTempo[index].position * beforeTempo[index].bpm / 60, 2);
+    expect(afterTempo[index].elements).toBe(1);
+
+    await setRange(page, `Deck ${letter} pitch`, 2.5);
+    const beforeTrack = await deckSnapshots(page);
+    const oldWaveform = await page.evaluate(deck => Array.from(window.bitCheer.audio.waveforms[deck]), index);
+    await page.getByRole('button', { name: `Change track deck ${letter}`, exact: true }).click();
+    await expect.poll(async () => (await deckSnapshots(page))[index].seed).not.toBe(beforeTrack[index].seed);
+    await expect.poll(() => page.evaluate(deck => Array.from(window.bitCheer.audio.waveforms[deck]), index)).not.toEqual(oldWaveform);
+    const afterTrack = await deckSnapshots(page);
+    expect(afterTrack[1 - index]).toEqual(beforeTrack[1 - index]);
+    expect(afterTrack[index].effectiveBpm).toBeCloseTo(beforeTrack[index].effectiveBpm, 3);
+    expect(afterTrack[index].elements).toBe(1);
+    expect(afterTrack[index].source).toBe('generated');
+    expect(afterTrack[index].playing).toBe(false);
+    await expect(page.getByRole('slider', { name: `Deck ${letter} pitch`, exact: true })).toHaveValue(String(afterTrack[index].pitch));
+  }
+});
+
+test('Builder independently adds instruments and changes only the selected generated track', async ({ page }) => {
+  await page.getByRole('button', { name: /02 Loop builder/ }).click();
+  await expect(page.getByRole('heading', { name: 'Build your groove.', exact: true })).toBeVisible();
+  await expect(page.locator('button.element')).toHaveCount(4);
+  // Active rows plus eighteen addable voices expose the complete twenty-voice bank.
+  await expect(page.getByLabel('Add instrument to deck A', { exact: true }).locator('option:not([value=""])')).toHaveCount(18);
+  await expect(page.getByLabel('Add instrument to deck B', { exact: true }).locator('option:not([value=""])')).toHaveCount(18);
+  await expect(page.getByLabel('Add instrument to deck A', { exact: true }).locator('option:checked')).toHaveText('+ Add instrument…');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.map(deck => deck.elements))).toEqual([3, 3]);
+  await page.getByRole('button', { name: 'Add an element to deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.map(deck => deck.elements))).toEqual([7, 3]);
+  await page.getByRole('button', { name: 'Add an element to deck B', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.map(deck => deck.elements))).toEqual([7, 7]);
+  await page.getByLabel('Add instrument to deck A', { exact: true }).selectOption('19');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.map(deck => deck.elements))).toEqual([7 | (1 << 19), 7]);
+  await expect(page.getByLabel('Add instrument to deck A', { exact: true })).toHaveValue('');
+  await expect(page.getByLabel('Add instrument to deck A', { exact: true }).locator('option:checked')).toHaveText('+ Add instrument…');
+  await playBoth(page);
+  await pauseBoth(page);
+  await seekPausedDeck(page, 'A', .25);
+  await seekPausedDeck(page, 'B', .375);
+
+  for (const [index, letter] of ['A', 'B'].entries()) {
+    const beforeTempo = await deckSnapshots(page);
+    await page.getByRole('button', { name: `Randomize tempo deck ${letter}`, exact: true }).click();
+    await expect.poll(async () => Math.abs((await deckSnapshots(page))[index].effectiveBpm - beforeTempo[index].effectiveBpm)).toBeGreaterThan(.9);
+    await expect.poll(() => page.evaluate(deck => {
+      const state = window.bitCheer.audio.state[deck];
+      return state.position * state.bpm / 60;
+    }, index)).toBeCloseTo(beforeTempo[index].position * beforeTempo[index].bpm / 60, 2);
+    const afterTempo = await deckSnapshots(page);
+    expect(afterTempo[1 - index]).toEqual(beforeTempo[1 - index]);
+    for (const key of ['seed', 'source', 'name', 'elements', 'playing']) expect(afterTempo[index][key]).toBe(beforeTempo[index][key]);
+    expect(afterTempo[index].position * afterTempo[index].bpm / 60).toBeCloseTo(beforeTempo[index].position * beforeTempo[index].bpm / 60, 2);
+
+    await setRange(page, `Deck ${letter} pitch`, 3.25);
+    const beforeTrack = await deckSnapshots(page);
+    const oldWaveform = await page.evaluate(deck => Array.from(window.bitCheer.audio.waveforms[deck]), index);
+    await page.getByRole('button', { name: `Change track deck ${letter}`, exact: true }).click();
+    await expect.poll(async () => (await deckSnapshots(page))[index].seed).not.toBe(beforeTrack[index].seed);
+    await expect.poll(() => page.evaluate(deck => Array.from(window.bitCheer.audio.waveforms[deck]), index)).not.toEqual(oldWaveform);
+    const afterTrack = await deckSnapshots(page);
+    expect(afterTrack[1 - index]).toEqual(beforeTrack[1 - index]);
+    expect(afterTrack[index].effectiveBpm).toBeCloseTo(beforeTrack[index].effectiveBpm, 3);
+    expect(afterTrack[index].elements).not.toBe(beforeTrack[index].elements);
+    expect(afterTrack[index].elements & 1).toBe(1);
+    expect(afterTrack[index].elements).toBeGreaterThan(1);
+    expect(afterTrack[index].source).toBe('generated');
+  }
+
+  await page.getByRole('button', { name: /01 Foundation/ }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.map(deck => deck.elements))).toEqual([1, 1]);
+  await expect(page.locator('button.element')).toHaveCount(0);
+});
+
+test('Pro tempo preserves PCM and independent genre track changes preserve effective tempo', async ({ page }) => {
+  await page.getByRole('button', { name: /Pro decks/ }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(deck => deck.source === 'pcm'))).toBe(true);
+  // Techno has a different pair from the initial House recordings, proving the
+  // current genre drives Change track instead of falling back to a global pool.
+  await page.getByLabel('Track genre', { exact: true }).selectOption('Techno');
+  await page.getByRole('button', { name: 'Load 21seiki Techno Shonen into deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].name)).toContain('21seiki Techno Shonen');
+  await page.getByRole('button', { name: 'Load Robowalk into deck B', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[1].name)).toContain('Robowalk');
+  await playBoth(page);
+  await pauseBoth(page);
+  await seekPausedDeck(page, 'A', .25);
+  await seekPausedDeck(page, 'B', .375);
+
+  for (const [index, letter] of ['A', 'B'].entries()) {
+    const beforeTempo = await deckSnapshots(page);
+    const oldWaveform = await page.evaluate(deck => Array.from(window.bitCheer.audio.waveforms[deck]), index);
+    await page.getByRole('button', { name: `Randomize tempo deck ${letter}`, exact: true }).click();
+    await expect.poll(async () => Math.abs((await deckSnapshots(page))[index].effectiveBpm - beforeTempo[index].effectiveBpm)).toBeGreaterThan(.9);
+    const afterTempo = await deckSnapshots(page);
+    expect(afterTempo[1 - index]).toEqual(beforeTempo[1 - index]);
+    for (const key of ['seed', 'source', 'bpm', 'name', 'elements', 'position', 'playing']) expect(afterTempo[index][key]).toBe(beforeTempo[index][key]);
+    expect(await page.evaluate(deck => Array.from(window.bitCheer.audio.waveforms[deck]), index)).toEqual(oldWaveform);
+
+    const beforeTrack = await deckSnapshots(page);
+    const expectedTitle = beforeTrack[index].name.includes('Robowalk') ? '21seiki Techno Shonen' : 'Robowalk';
+    await page.getByRole('button', { name: `Change track deck ${letter}`, exact: true }).click();
+    await expect.poll(async () => (await deckSnapshots(page))[index].name).toContain(expectedTitle);
+    const afterTrack = await deckSnapshots(page);
+    expect(afterTrack[1 - index]).toEqual(beforeTrack[1 - index]);
+    expect(afterTrack[index].effectiveBpm).toBeCloseTo(beforeTrack[index].effectiveBpm, 3);
+    expect(afterTrack[index].source).toBe('pcm');
+    expect(afterTrack[index].playing).toBe(false);
+    expect(await page.evaluate(deck => Array.from(window.bitCheer.audio.waveforms[deck]), index)).not.toEqual(oldWaveform);
+    expect(Number(await page.getByRole('slider', { name: `Deck ${letter} pitch`, exact: true }).inputValue())).toBeCloseTo(afterTrack[index].pitch, 2);
+  }
+  // A new recording can require a wider fader range to retain the old audible
+  // tempo. The confirmed UI must not silently clamp the engine's correct rate.
+  await page.getByRole('button', { name: 'Load 21seiki Techno Shonen into deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].name)).toContain('21seiki Techno Shonen');
+  await setRange(page, 'Deck A pitch', 8);
+  const beforeWideChange = await deckSnapshots(page);
+  await page.getByRole('button', { name: 'Change track deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].name)).toContain('Robowalk');
+  const afterWideChange = await deckSnapshots(page);
+  expect(afterWideChange[0].effectiveBpm).toBeCloseTo(beforeWideChange[0].effectiveBpm, 3);
+  expect(afterWideChange[0].pitch).toBeGreaterThan(16);
+  await expect(page.getByLabel('Deck A pitch range', { exact: true })).toHaveValue('32');
+  expect(Number(await page.getByRole('slider', { name: 'Deck A pitch', exact: true }).inputValue())).toBeCloseTo(afterWideChange[0].pitch, 2);
+  expect(afterWideChange[1]).toEqual(beforeWideChange[1]);
+});
+
+test('the twenty-voice composer routes real gain, pan, solo and sixteen-step edits independently', async ({ page }) => {
+  await page.getByRole('button', { name: /02 Loop builder/ }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].elements)).toBe(3);
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].voices[0].preview)).toBeGreaterThan(0);
+  await page.getByLabel('Add instrument to deck A', { exact: true }).selectOption('19');
+  await expect(page.getByRole('button', { name: 'Deck A Zap', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Deck A Zap step \d+$/ })).toHaveCount(16);
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].elements & (1 << 19))).toBe(1 << 19);
+  const otherDeck = (await deckSnapshots(page))[1];
+  await page.getByRole('button', { name: 'Solo Kick deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].solo)).toBe(0);
+  await expect(page.getByRole('button', { name: 'Solo Kick deck A', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Play deck A', exact: true }).click();
+  await page.evaluate(() => {
+    const engine = window.bitCheer.audio;
+    const splitter = engine.context.createChannelSplitter(2);
+    const silent = engine.context.createGain();
+    silent.gain.value = 0;
+    silent.connect(engine.context.destination);
+    engine.node.connect(splitter, 0);
+    const analysers = [0, 1].map(channel => {
+      const analyser = engine.context.createAnalyser();
+      analyser.fftSize = 256;
+      splitter.connect(analyser, channel);
+      analyser.connect(silent);
+      return analyser;
+    });
+    window.__voiceProbe = { splitter, silent, analysers };
+  });
+  const peaks = () => page.evaluate(() => window.__voiceProbe.analysers.map(analyser => {
+    const samples = new Float32Array(256);
+    analyser.getFloatTimeDomainData(samples);
+    return Math.max(...samples.map(Math.abs));
+  }));
+  const peakAcrossBeat = () => page.evaluate(async () => {
+    const until = performance.now() + 700;
+    let peak = 0;
+    while (performance.now() < until) {
+      for (const analyser of window.__voiceProbe.analysers) {
+        const samples = new Float32Array(256);
+        analyser.getFloatTimeDomainData(samples);
+        for (const sample of samples) peak = Math.max(peak, Math.abs(sample));
+      }
+      await new Promise(resolve => requestAnimationFrame(resolve));
+    }
+    return peak;
+  });
+  await setRange(page, 'Deck A Kick pan', -1);
+  await expect.poll(async () => { const [left, right] = await peaks(); return left > .001 && right < .00001; }).toBe(true);
+  await setRange(page, 'Deck A Kick pan', 1);
+  await expect.poll(async () => { const [left, right] = await peaks(); return right > .001 && left < .00001; }).toBe(true);
+  await setRange(page, 'Deck A Kick level', 0);
+  await expect.poll(peakAcrossBeat).toBeLessThan(.00001);
+  // The hat and Zap remain enabled, so silence also proves solo actually
+  // excludes other voices from the DSP rather than only highlighting its row.
+  expect(await page.evaluate(() => window.bitCheer.audio.state[0].elements)).toBe(3 | (1 << 19));
+  await setRange(page, 'Deck A Kick level', 1);
+  await expect.poll(async () => Math.max(...await peaks())).toBeGreaterThan(.001);
+  const activeSteps = await page.getByRole('button', { name: /^Deck A Kick step \d+$/ }).evaluateAll(buttons => buttons.filter(button => button.getAttribute('aria-pressed') === 'true').map(button => button.getAttribute('aria-label')));
+  for (const name of activeSteps) await page.getByRole('button', { name, exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].voices[0].pattern)).toBe(0);
+  await expect.poll(peakAcrossBeat).toBeLessThan(.00001);
+  await page.getByRole('button', { name: 'Deck A Kick step 1', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].voices[0].pattern)).toBe(1);
+  await expect.poll(async () => Math.max(...await peaks())).toBeGreaterThan(.001);
+  await page.getByRole('button', { name: 'Generate pattern for Kick deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].voices[0].pattern)).toBe(-1);
+  await expect(page.locator('.deck-a .voice-row[data-voice="0"] .pattern-mode')).toHaveText('AUTO');
+  await page.getByRole('button', { name: 'Solo Kick deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].solo)).toBe(-1);
+  expect((await deckSnapshots(page))[1]).toEqual(otherDeck);
+  await page.evaluate(() => {
+    const { splitter, silent, analysers } = window.__voiceProbe;
+    splitter.disconnect(); silent.disconnect(); analysers.forEach(analyser => analyser.disconnect());
+  });
+  // Mode entry must recover a usable beginner kick from arbitrary composer
+  // settings, including a muted/panned kick and a soloed alternative voice.
+  await setRange(page, 'Deck A Kick level', 0);
+  await page.getByRole('button', { name: 'Solo Zap deck A', exact: true }).click();
+  await page.getByRole('button', { name: /01 Foundation/ }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.map(deck => ({ elements: deck.elements, solo: deck.solo, gain: deck.voices[0].gain, pan: deck.voices[0].pan })))).toEqual([
+    { elements: 1, solo: -1, gain: 1, pan: 0 },
+    { elements: 1, solo: -1, gain: 1, pan: 0 },
+  ]);
+  await playBoth(page);
+  for (const deck of [0, 1]) await expect.poll(() => page.evaluate(index => window.bitCheer.telemetry[index]?.peak || 0, deck)).toBeGreaterThan(.01);
+});
+
+test('CHAOS creates twelve to twenty actual voices on only the chosen deck without changing tempo', async ({ page }) => {
+  await expect(page.getByRole('button', { name: /^Chaos deck/ })).toHaveCount(0);
+  await page.getByRole('button', { name: /02 Loop builder/ }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.map(deck => deck.elements))).toEqual([3, 3]);
+  await playBoth(page);
+  await pauseBoth(page);
+  await setRange(page, 'Deck A pitch', 2.5);
+  await setRange(page, 'Deck B pitch', -1.5);
+  for (const [index, letter] of ['A', 'B'].entries()) {
+    const before = await deckSnapshots(page);
+    await page.getByRole('button', { name: `Chaos deck ${letter}`, exact: true }).click();
+    await expect.poll(async () => (await deckSnapshots(page))[index].name).toContain('CHAOS STUDY');
+    const after = await deckSnapshots(page);
+    const selected = after[index];
+    const activeCount = selected.elements.toString(2).replace(/0/g, '').length;
+    expect(activeCount).toBeGreaterThanOrEqual(12);
+    expect(activeCount).toBeLessThanOrEqual(20);
+    expect(selected.seed).not.toBe(before[index].seed);
+    expect(selected.effectiveBpm).toBeCloseTo(before[index].effectiveBpm, 3);
+    expect(selected.source).toBe('generated');
+    expect(selected.voices).toHaveLength(20);
+    expect(selected.voices.every(voice => voice.pattern > 0 && voice.pattern <= 65535 && voice.gain > 0 && voice.gain <= 1.5 && Math.abs(voice.pan) <= 1)).toBe(true);
+    expect(after[1 - index]).toEqual(before[1 - index]);
+    await expect(page.locator(`.deck-${letter.toLowerCase()} .voice-row`)).toHaveCount(activeCount);
+  }
+  await playBoth(page);
+  for (const deck of [0, 1]) await expect.poll(() => page.evaluate(index => window.bitCheer.telemetry[index]?.peak || 0, deck)).toBeGreaterThan(.01);
+});
+
+test('deck focus hides the app and enlarges usable controls while wheel pitch stays independent', async ({ page }, testInfo) => {
+  await playBoth(page);
+  await pauseBoth(page);
+  const normalWheel = await page.getByRole('slider', { name: 'Deck A jog wheel', exact: true }).boundingBox();
+  const normalPitch = await page.getByRole('slider', { name: 'Deck A pitch', exact: true }).boundingBox();
+  for (const [index, letter] of ['A', 'B'].entries()) {
+    const before = await deckSnapshots(page);
+    await page.getByRole('button', { name: `Focus deck ${letter}`, exact: true }).click();
+    await expect(page.locator('.app-shell')).toHaveAttribute('data-focused', String(index));
+    await expect(page.locator('.deck')).toHaveCount(1);
+    await expect(page.getByRole('region', { name: `Deck ${letter}`, exact: true })).toBeVisible();
+    await expect(page.locator('.topbar, .sidebar, .coach-panel, .tap-panel')).toHaveCount(0);
+    const wheel = await page.getByRole('slider', { name: `Deck ${letter} jog wheel`, exact: true }).boundingBox();
+    const pitch = page.getByRole('slider', { name: `Deck ${letter} pitch`, exact: true });
+    const pitchBox = await pitch.boundingBox();
+    expect(wheel.width).toBeGreaterThan(normalWheel.width * 1.5);
+    expect(pitchBox.height).toBeGreaterThan(normalPitch.height * 1.5);
+    await pitch.hover();
+    await pitch.focus();
+    await page.mouse.wheel(0, -120);
+    await expect.poll(async () => (await deckSnapshots(page))[index].pitch).not.toBe(before[index].pitch);
+    const after = await deckSnapshots(page);
+    expect(after[1 - index]).toEqual(before[1 - index]);
+    expect(after[index].source).toBe(before[index].source);
+    expect(after[index].seed).toBe(before[index].seed);
+    expect(Number(await pitch.inputValue())).toBeCloseTo(after[index].pitch, 2);
+    await page.screenshot({ path: testInfo.outputPath(`focus-${letter.toLowerCase()}-desktop.png`), fullPage: true });
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.deck')).toHaveCount(2);
+    await expect(page.getByRole('button', { name: 'Skin studio', exact: true })).toBeVisible();
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: 'Focus deck B', exact: true }).click();
+  await expect(page.locator('.deck')).toHaveCount(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('focus-b-mobile.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Exit deck focus', exact: true }).click();
+  await expect(page.locator('.deck')).toHaveCount(2);
+});
+
+test('the expert lesson requires a timed handover before a matched real-track mix completes', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('bit-cheer-progress', JSON.stringify({ progress: [1, 2, 3, 4, 5, 6, 7], history: [] })));
+  await page.reload();
+  await page.getByRole('button', { name: 'Learning path', exact: true }).click();
+  await page.locator('.lesson-card').last().getByRole('button', { name: /Start lesson/ }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(deck => deck.source === 'pcm'))).toBe(true);
+  await page.getByRole('button', { name: 'Load Selection into deck B', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[1].name)).toContain('Selection');
+  await playBoth(page);
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].position)).toBeGreaterThan(3.3);
+  await page.getByRole('button', { name: /Check my match/ }).click();
+  await expect(page.getByText(/Complete the handover: while both decks play/)).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('bit-cheer-progress')).progress)).not.toContain(8);
+  await setRange(page, 'Crossfader', 0);
+  for (const value of [.25, .5, .75, 1]) {
+    await page.waitForTimeout(800);
+    await setRange(page, 'Crossfader', value);
+  }
+  await page.getByRole('button', { name: /Check my match/ }).click();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('bit-cheer-progress')).progress)).toContain(8);
+  expect(Number(await page.locator('.score-circle strong').textContent())).toBeGreaterThanOrEqual(85);
 });

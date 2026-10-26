@@ -1,0 +1,279 @@
+/* Native Bit Cheer layouts adapted from the original Classified and Bento skins.
+   The original main/equalizer/button/number bitmaps are retained in public/skins.
+   Load after winamp.css. Every rule is scoped to its own layout, including custom
+   skins which inherit a chosen layout independently of their palette. */
+
+/* WINAMP 3 CLASSIFIED: square nickel/champagne panels, gold rules, black LCD. */
+:root[data-layout="classified3"] {
+  --number-sheet:url('/skins/classified3/numbers.png');
+  --numbers-width:297px;
+  --transport-sheet:url('/skins/classified3/cbuttons.png');
+  --variant-metal:linear-gradient(90deg,#aaa9b1 0%,#d2d0c9 7%,#96949d 16%,#b8b5b7 47%,#807e89 100%);
+}
+:root[data-layout="classified3"] .topbar,
+:root[data-layout="classified3"] .focus-toolbar {
+  border-radius:0;
+  border:2px solid #a09b99;
+  border-top-color:#e3ddcb;
+  border-bottom-color:#3c3b44;
+  background:linear-gradient(#777580,#383841 50%,#595763);
+  color:#f6f3e7;
+  text-shadow:1px 1px #17171b;
+}
+:root[data-layout="classified3"] .main-nav {gap:2px}
+:root[data-layout="classified3"] .nav-item {
+  border-radius:0;
+  background:linear-gradient(#d2cdc0,#a7a4a8 45%,#777580);
+  border:1px solid #25252d;
+  box-shadow:inset 1px 1px #efeddd,inset -1px -1px #68636b;
+  color:#16161a;
+  text-shadow:0 1px #e2ddcd;
+}
+:root[data-layout="classified3"] .nav-item.active {background:#3b3a45;color:#f7e8b9;text-shadow:none;box-shadow:inset 1px 1px #17171d}
+:root[data-layout="classified3"] .deck-rack {border-radius:0;padding:4px;background:#6b6872;border:3px ridge #c5bda8;box-shadow:0 4px 0 #111,inset 0 0 0 1px #28252b}
+:root[data-layout="classified3"] .rack-title,
+:root[data-layout="classified3"] .deck-heading,
+:root[data-layout="classified3"] .panel-heading {
+  background:linear-gradient(#3f3e49,#22232a);
+  border-top:2px ridge #d6bd82;
+  border-bottom:2px groove #a88e59;
+  border-radius:0;
+  color:#f5f1e6;
+  letter-spacing:1px;
+}
+:root[data-layout="classified3"] .deck {
+  border-radius:0;
+  padding:8px;
+  border:2px ridge #d0c6b0;
+  background:var(--skin-panel),var(--variant-metal);
+  color:#16171b;
+  box-shadow:inset 0 0 0 1px #4a4654,3px 3px 0 #181820;
+}
+:root[data-layout="classified3"] .deck-heading {margin:-2px -2px 6px;padding:4px 6px;min-height:24px}
+:root[data-layout="classified3"] .deck-letter {background:#d4bc7d;color:#25232c;border:1px outset #e6ddc8;border-radius:0;text-shadow:0 1px #eee7d7}
+:root[data-layout="classified3"] .deck-screen {border:3px ridge #b0aeb7;border-radius:0;background:#030303;padding:9px 10px;color:#f4f5e9;box-shadow:inset 2px 2px #000,0 1px #ece5cd}
+:root[data-layout="classified3"] .track-title {border-bottom:1px solid #393839;padding-bottom:5px;font-family:Tahoma,Arial,sans-serif;font-size:11px;letter-spacing:1px}
+:root[data-layout="classified3"] .lcd-row {justify-content:flex-start;gap:20px;padding:4px 0}
+:root[data-layout="classified3"] .time-display {margin-left:auto;align-items:flex-end;color:#dedfd3}
+:root[data-layout="classified3"] .lcd-time {font-family:'Courier New',monospace;font-weight:400;color:#f5f5e9}
+:root[data-layout="classified3"] .waveform-wrap {border-radius:0;border:1px inset #64616b;background:#000;height:48px}
+:root[data-layout="classified3"] .beat-dot {border-radius:0;border-color:#42463b;color:#8b9a75}
+:root[data-layout="classified3"] .beat-dot.on {background:#9cec51;color:#0a1501;box-shadow:none}
+:root[data-layout="classified3"] .deck-actions {border-top:3px ridge #d1c2a2;border-bottom:3px groove #77737b;padding:5px 0;margin-top:8px}
+:root[data-layout="classified3"] .deck-action,
+:root[data-layout="classified3"] .small-button,
+:root[data-layout="classified3"] .generate-pattern,
+:root[data-layout="classified3"] .voice-solo,
+:root[data-layout="classified3"] .transport-cue,
+:root[data-layout="classified3"] .set-cue,
+:root[data-layout="classified3"] .nudge-controls button {
+  border-radius:0;
+  background:linear-gradient(#d9d3c6,#b3ada8 45%,#8b878d 48%,#beb8ad);
+  border:1px solid #46414a;
+  box-shadow:inset 1px 1px #f4efdd,inset -1px -1px #625d69;
+  color:#1c191e;
+  text-shadow:0 1px #e5dec9;
+  font-family:Tahoma,Arial,sans-serif;
+}
+:root[data-layout="classified3"] .jog-wheel {border:7px ridge #c6bfab;background:repeating-radial-gradient(#22232b 0 2px,#363641 3px 4px);border-radius:50%;box-shadow:0 0 0 2px #4a4351,3px 4px 0 #6a6267}
+:root[data-layout="classified3"] .jog-label {background:linear-gradient(120deg,#c5b689,#5e5761);color:#f4edd4;border:2px ridge #c9c1af}
+:root[data-layout="classified3"] .pitch-section {border:3px ridge #cfc7b2;border-radius:0;background:linear-gradient(90deg,#8c8996,#b9b5bb 35%,#c8c3c0 62%,#85818d);padding:10px 8px;color:#f6e0a3}
+:root[data-layout="classified3"] .pitch-ticks {color:#fff6da;text-shadow:1px 1px #625c64}
+:root[data-layout="classified3"] .voice-row {border-radius:0;border:1px inset #5d5a64;background:#191a20;color:#e3dfcf;box-shadow:0 1px #e0d8c5}
+:root[data-layout="classified3"] .voice-strip {border-bottom:1px solid #77716e;background:linear-gradient(#6c6a78,#4b4954)}
+:root[data-layout="classified3"] .step-button {border-radius:0;border:1px outset #7c777c;background:#3a3944;color:#b3b2b8}
+:root[data-layout="classified3"] .step-button.on {background:linear-gradient(#ddedb5,#8da85c);border-color:#d1dcaf;color:#202514;box-shadow:inset 0 1px #f7ffe0}
+:root[data-layout="classified3"] .mixer,
+:root[data-layout="classified3"] .output-routing {border-radius:0;border:2px ridge #bfb7a2;background:linear-gradient(#777480,#484751);color:#ece7d8}
+
+/* WINAMP 5 CLASSIFIED: curved chrome housing, blue glass and circular buttons. */
+:root[data-layout="classified5"] {
+  --number-sheet:url('/skins/classified5/numbers.png');
+  --numbers-width:297px;
+  --transport-sheet:url('/skins/classified5/cbuttons.png');
+  --variant-metal:linear-gradient(110deg,#e9edf3 0%,#b1b7c2 17%,#f7faff 36%,#aeb5c0 58%,#dce3eb 81%,#8a96a5 100%);
+}
+:root[data-layout="classified5"] .topbar,
+:root[data-layout="classified5"] .focus-toolbar {background:linear-gradient(#111a2d,#56718f 48%,#162238 52%,#10192c);border:2px ridge #b9cadc;border-radius:7px 7px 0 0;color:#fff;text-shadow:1px 1px #050e1b}
+:root[data-layout="classified5"] .nav-item {border-radius:15px 15px 5px 5px;background:linear-gradient(#f0f7ff,#a2b4c9 48%,#576c88 51%,#c2d1e4);color:#14243a;border:1px solid #142038;box-shadow:inset 0 1px 2px #fff,0 1px 2px #050c15}
+:root[data-layout="classified5"] .nav-item.active {background:linear-gradient(#20548c,#092650 60%,#163b69);color:#dcedff;box-shadow:inset 0 1px 5px #050e1f}
+:root[data-layout="classified5"] .deck-rack {border-radius:10px;padding:5px;background:linear-gradient(#7f93ad,#253954 45%,#8295ae);border:2px ridge #bccde2;box-shadow:0 5px 8px #000b,inset 0 0 0 1px #20314a}
+:root[data-layout="classified5"] .rack-title {background:linear-gradient(#163151,#6e87a5 48%,#1b2b46 52%,#101c33);border-radius:5px 5px 0 0;border-top:1px solid #d7e2f1;border-bottom:1px solid #081426;color:#fff;letter-spacing:1.5px}
+:root[data-layout="classified5"] .deck {border-radius:12px 12px 20px 7px;padding:12px 10px;background:var(--skin-panel),var(--variant-metal);border:2px solid #142640;box-shadow:inset 2px 2px 1px #fff,inset -2px -2px #667687,0 1px 0 #cbd8e8;color:#152337}
+:root[data-layout="classified5"] .deck-heading {padding:3px 6px 6px;border-bottom:1px solid #506680;box-shadow:0 1px #fff;color:#203049}
+:root[data-layout="classified5"] .deck-letter {border-radius:50%;background:radial-gradient(circle at 35% 25%,#fff,#a9bdd3 45%,#3d526a 80%);border:1px solid #293d58;box-shadow:inset 0 1px #fff,0 1px 2px #273448;color:#152943}
+:root[data-layout="classified5"] .deck-screen {border:3px solid #1a2c48;border-top-color:#536b87;border-left-color:#576f8a;border-bottom-color:#f0f8ff;border-radius:12px 12px 5px 5px;padding:12px 12px 8px;background:repeating-linear-gradient(0deg,#d3e5ff06 0 1px,transparent 1px 3px),linear-gradient(110deg,#143c71,#194d95 56%,#2e67b0);color:#eef8ff;box-shadow:inset 0 2px 7px #020d29,0 0 0 1px #8b9bae}
+:root[data-layout="classified5"] .lcd-row {padding:5px 3px 7px;align-items:center}
+:root[data-layout="classified5"] .lcd-number {filter:drop-shadow(0 0 3px #b8dcff55)}
+:root[data-layout="classified5"] .time-display {background:linear-gradient(#0e3261,#245b9f);border:1px inset #547ba4;border-radius:7px;padding:5px 8px;align-items:center;min-width:100px}
+:root[data-layout="classified5"] .lcd-time {font-family:'Courier New',monospace;font-weight:bold;color:#fff;text-shadow:0 0 3px #b9e1ff}
+:root[data-layout="classified5"] .track-title {font-family:Tahoma,Arial,sans-serif;letter-spacing:1px;color:#f0f6ff}
+:root[data-layout="classified5"] .waveform-wrap {border:1px solid #386ea8;border-radius:5px;background:#12386d;height:52px}
+:root[data-layout="classified5"] .waveform {mix-blend-mode:screen}
+:root[data-layout="classified5"] .beat-dot {border-radius:50%;border:1px solid #426a9f;background:#173f76;color:#96bce9}
+:root[data-layout="classified5"] .beat-dot.on {background:#c9e6ff;color:#102e58;box-shadow:0 0 5px #e0f2ff}
+:root[data-layout="classified5"] .deck-actions {border-radius:14px;background:linear-gradient(#77899d,#eef5fb 32%,#b4c2cf 66%,#d8e2ea);padding:5px;border:1px solid #6a819a;box-shadow:inset 0 1px #fff;margin-top:8px;gap:8px}
+:root[data-layout="classified5"] .deck-action,
+:root[data-layout="classified5"] .small-button,
+:root[data-layout="classified5"] .generate-pattern,
+:root[data-layout="classified5"] .voice-solo {border-radius:14px;background:linear-gradient(#fff,#c3d0de 43%,#8596a9 48%,#d2dce7);border:1px solid #526d88;box-shadow:inset 0 1px #fff,0 1px 2px #6e7c8c;color:#1c2d46;text-shadow:0 1px #f3faff}
+:root[data-layout="classified5"] .transport {border-radius:20px;background:linear-gradient(#f2f7fd,#9eacbd);border-top:1px solid #fff;border-bottom:1px solid #657891;padding:5px 7px;gap:8px}
+:root[data-layout="classified5"] .transport-cue,
+:root[data-layout="classified5"] .set-cue,
+:root[data-layout="classified5"] .nudge-controls button {border-radius:50%;min-width:36px;height:36px;padding:0 5px;background:radial-gradient(circle at 50% 32%,#fff 0%,#d8e0eb 32%,#78899e 61%,#f0f5fb 70%,#687b95 78%,#17283d 100%);border:1px solid #6e829a;box-shadow:0 1px 3px #334158;color:#25364b;font-weight:bold}
+:root[data-layout="classified5"] .jog-wheel {border:9px ridge #d8e5f1;background:repeating-radial-gradient(#172a47 0 2px,#2d4262 3px 4px);box-shadow:0 0 0 2px #526984,0 4px 7px #3c4a5b;border-radius:50%}
+:root[data-layout="classified5"] .jog-label {background:radial-gradient(circle at 40% 30%,#d2e7fc,#7091b6 50%,#1a3c66);color:#fff;border:2px ridge #b3cce7;border-radius:50%}
+:root[data-layout="classified5"] .pitch-section {border:2px ridge #b8c7d7;border-radius:18px 18px 7px 7px;background:linear-gradient(90deg,#9cabbc,#f6faff 24%,#c4cfdb 70%,#8d9fb4);box-shadow:inset 0 1px 3px #fff;color:#20354d;padding:12px 9px}
+:root[data-layout="classified5"] .pitch-ticks {color:#334d69;text-shadow:0 1px #fff}
+:root[data-layout="classified5"] .voice-row {border:2px ridge #cedbea;border-radius:9px;background:linear-gradient(110deg,#b8c7d9,#f0f7ff 48%,#b0bfd1);color:#233a55;box-shadow:0 1px 2px #5b6c81}
+:root[data-layout="classified5"] .voice-strip {background:linear-gradient(#edf6ff,#b2c5da);border-bottom:1px solid #647f9f;border-radius:7px 7px 0 0}
+:root[data-layout="classified5"] .step-button {border:1px solid #506b8c;border-radius:5px;background:linear-gradient(#b8cee3,#6b89a8);color:#243e5c;box-shadow:inset 0 1px #eaf6ff}
+:root[data-layout="classified5"] .step-button.on {background:linear-gradient(#245b9b,#103465);color:#eff8ff;box-shadow:inset 0 1px 3px #051a37,0 0 2px #e5f6ff}
+:root[data-layout="classified5"] .mixer,
+:root[data-layout="classified5"] .output-routing {border:2px ridge #b9cce0;border-radius:8px;background:linear-gradient(#dfe9f4,#9cabbd);color:#24384e}
+
+/* BENTO CLASSIFIED: restrained dark modules, small steel title strips, flat LCD. */
+:root[data-layout="bento"] {
+  --number-sheet:url('/skins/bento/nums_ex.png');
+  --numbers-width:324px;
+  --transport-sheet:url('/skins/bento/cbuttons.png');
+  --variant-metal:linear-gradient(90deg,#30383c,#42494d 45%,#272f33);
+}
+:root[data-layout="bento"] .topbar,
+:root[data-layout="bento"] .focus-toolbar {border:1px solid #151a1e;border-radius:0;background:linear-gradient(#b0b8bc,#667177 40%,#2c343b 45%,#48535b);box-shadow:inset 0 1px #e2e7e9;color:#e1e9ec;font:11px Tahoma,Arial,sans-serif;text-shadow:1px 1px #182025}
+:root[data-layout="bento"] .nav-item {border-radius:0;background:linear-gradient(#879298,#59656c);border:1px solid #1e2a30;box-shadow:inset 1px 1px #bac3c7;color:#eff3f3;font-family:Tahoma,Arial,sans-serif;font-size:11px}
+:root[data-layout="bento"] .nav-item.active {background:#222d34;color:#bbd9e3;box-shadow:inset 1px 1px #0b141a;border-bottom:2px solid #90b5c2}
+:root[data-layout="bento"] .deck-rack {border-radius:0;background:#1c242a;border:2px solid #0a1014;box-shadow:inset 0 1px #89959e,0 3px 2px #000;padding:4px}
+:root[data-layout="bento"] .rack-title,
+:root[data-layout="bento"] .deck-heading,
+:root[data-layout="bento"] .panel-heading {border-radius:0;background:linear-gradient(#b2bcc1,#738087 32%,#39454e 38%,#596771);border:1px solid #1a232b;border-top-color:#d7dfe3;color:#edf2f3;font:bold 10px Tahoma,Arial,sans-serif;letter-spacing:.2px;text-shadow:1px 1px #25313a}
+:root[data-layout="bento"] .rack-title {height:19px;min-height:19px}
+:root[data-layout="bento"] .deck {border:1px solid #738087;border-radius:0;padding:6px;background:var(--skin-panel),var(--variant-metal);box-shadow:inset 1px 1px #111b20,inset -1px -1px #0a1218;color:#c3cfd3}
+:root[data-layout="bento"] .deck-heading {margin:-2px -2px 5px;padding:2px 5px;min-height:21px}
+:root[data-layout="bento"] .deck-letter {width:19px;height:17px;border-radius:0;background:#293841;border:1px inset #a1b2bb;box-shadow:none;color:#b7d8e1;font:11px Tahoma,Arial,sans-serif}
+:root[data-layout="bento"] .deck-screen {border:1px solid #68767e;border-right-color:#111a20;border-bottom-color:#111a20;border-radius:0;padding:8px;background:#060b0d;box-shadow:inset 0 0 0 2px #172125;color:#a9c4cc}
+:root[data-layout="bento"] .track-title {font:10px 'Courier New',monospace;letter-spacing:.4px;border-bottom:1px solid #1e2a2e;padding-bottom:5px;color:#b2ced6}
+:root[data-layout="bento"] .lcd-row {align-items:flex-start;margin:8px 0 6px}
+:root[data-layout="bento"] .time-display {align-items:flex-start;border-left:1px solid #34434a;padding:2px 0 2px 10px;color:#8faeb8}
+:root[data-layout="bento"] .lcd-time {font:18px 'Courier New',monospace;letter-spacing:3px;font-weight:bold;color:#bad1d8}
+:root[data-layout="bento"] .lcd-number {text-shadow:none;filter:none}
+:root[data-layout="bento"] .waveform-wrap {height:40px;border-radius:0;border:0;border-top:1px solid #26383f;background:#080f12}
+:root[data-layout="bento"] .beat-indicators {gap:2px}
+:root[data-layout="bento"] .beat-dot {height:12px;width:14px;line-height:10px;border-radius:0;border:1px solid #31434b;background:#111a1e;color:#657c85}
+:root[data-layout="bento"] .beat-dot.on {background:#b0d1d9;color:#132129;box-shadow:none}
+:root[data-layout="bento"] .deck-actions {padding:5px 0;margin-top:5px;border-top:1px solid #171f24;border-bottom:1px solid #5a686e;gap:4px}
+:root[data-layout="bento"] .deck-action,
+:root[data-layout="bento"] .small-button,
+:root[data-layout="bento"] .generate-pattern,
+:root[data-layout="bento"] .voice-solo,
+:root[data-layout="bento"] .transport-cue,
+:root[data-layout="bento"] .set-cue,
+:root[data-layout="bento"] .nudge-controls button {border-radius:1px;background:linear-gradient(#e4e7e7,#aab1b4 48%,#7d888d 51%,#bac2c5);border:1px solid #121d24;box-shadow:inset 1px 1px #f8ffff,inset -1px -1px #636f76;color:#202b31;text-shadow:0 1px #dfe7e9;font:10px Tahoma,Arial,sans-serif}
+:root[data-layout="bento"] .transport {border-top:1px solid #111b20;box-shadow:0 -1px #667178;padding-top:8px;gap:3px}
+:root[data-layout="bento"] .transport-cue {min-width:48px}
+:root[data-layout="bento"] .jog-wheel {border:6px solid #69777d;border-radius:50%;background:repeating-radial-gradient(#131d22 0 2px,#253139 3px 4px);box-shadow:0 0 0 1px #101a20,inset 0 0 0 1px #9daeb5,0 2px 0 #131d23}
+:root[data-layout="bento"] .jog-label {border:1px solid #93aab3;background:#263941;border-radius:50%;color:#bad7df}
+:root[data-layout="bento"] .pitch-section {border:1px solid #111b21;border-left:2px groove #778990;border-radius:0;background:#111a20;padding:9px 8px;color:#b0c5cd;box-shadow:inset 0 1px #3f5059}
+:root[data-layout="bento"] .pitch-ticks {color:#8ba3ad;text-shadow:none}
+:root[data-layout="bento"] .voice-row {border-radius:0;border:1px solid #0b1318;background:#111b21;color:#a4bac4;box-shadow:0 1px #52636c}
+:root[data-layout="bento"] .voice-strip {border-radius:0;background:linear-gradient(#4b5a64,#303e48);border-top:1px solid #8a9ba4;border-bottom:1px solid #0c171d}
+:root[data-layout="bento"] .step-button {border-radius:0;border:1px solid #070e13;background:#2d3c47;color:#839ba9;box-shadow:inset 0 1px #506575}
+:root[data-layout="bento"] .step-button.on {background:linear-gradient(#d7e4e9,#8fa9b7);border-color:#b3ccd6;color:#14252d;box-shadow:inset 0 1px #f1fcff}
+:root[data-layout="bento"] .mixer,
+:root[data-layout="bento"] .output-routing {border-radius:0;border:1px solid #15222a;border-top:3px ridge #83959e;background:#24323c;color:#c4d4db}
+
+/* Real original transport sprites; functional labels remain in the DOM and ARIA. */
+:root:is([data-layout="classified3"],[data-layout="classified5"],[data-layout="bento"]) .transport-play {
+  width:46px;min-width:46px;height:36px;padding:0;
+  background-image:var(--transport-sheet);
+  background-size:272px 72px;
+  background-position:-46px 0;
+  background-repeat:no-repeat;
+  border:0;box-shadow:none;
+  color:transparent;text-shadow:none;font-size:0;
+  image-rendering:pixelated;
+}
+:root:is([data-layout="classified3"],[data-layout="classified5"],[data-layout="bento"]) .transport-play.engaged {background-position:-92px 0}
+:root[data-layout="classified3"] .transport-play {border-radius:0}
+:root[data-layout="classified5"] .transport-play {border-radius:18px}
+:root[data-layout="bento"] .transport-play {border-radius:1px}
+:root:is([data-layout="classified3"],[data-layout="classified5"],[data-layout="bento"]) .deck-focus-view .deck {box-shadow:none}
+:root:is([data-layout="classified3"],[data-layout="classified5"],[data-layout="bento"]) .voice-solo.active {color:#10140e;background:#d2d7a0;text-shadow:none}
+@media(max-width:700px) {
+  :root[data-layout="classified5"] .deck {border-radius:10px;padding:8px}
+  :root[data-layout="classified5"] .transport {gap:4px;padding:4px}
+  :root[data-layout="classified5"] .nudge-controls button {min-width:30px;height:32px}
+  :root[data-layout="classified5"] .time-display {min-width:75px;padding:4px}
+  :root[data-layout="classified3"] .deck {padding:6px}
+  :root[data-layout="bento"] .deck {padding:5px}
+  :root:is([data-layout="classified3"],[data-layout="classified5"],[data-layout="bento"]) .deck-actions {gap:5px}
+}
+
+/* Preserve imported and museum titlebar assets over each native chrome material. */
+:root:is([data-layout="classified3"],[data-layout="classified5"],[data-layout="bento"]) .rack-title {
+  background-image:var(--skin-titlebar),linear-gradient(#737f8c,#242b34);
+  background-size:auto 100%,cover;
+  background-repeat:repeat-x;
+}
+
+/* Elm's native style property assignment does not support CSS custom properties.
+   Data attributes supply the sprite index at every responsive glyph scale. */
+.lcd-digit[data-digit="0"]{--digit:0}
+.lcd-digit[data-digit="1"]{--digit:1}
+.lcd-digit[data-digit="2"]{--digit:2}
+.lcd-digit[data-digit="3"]{--digit:3}
+.lcd-digit[data-digit="4"]{--digit:4}
+.lcd-digit[data-digit="5"]{--digit:5}
+.lcd-digit[data-digit="6"]{--digit:6}
+.lcd-digit[data-digit="7"]{--digit:7}
+.lcd-digit[data-digit="8"]{--digit:8}
+.lcd-digit[data-digit="9"]{--digit:9}
+
+/* Contextual label colors: the original silver housings use dark printed legends. */
+:root[data-layout="classified3"] .deck :is(.deck-action-hint,.jog-description strong,.jog-description small,.zoom-controls>span,.control-label,.pitch-wheel-hint,.composer-help,.deck-options .toggle-label,.deck-volume-row>label,.vu-section>span,.source-bpm,.nudge-controls>span){color:#38343d;text-shadow:0 1px #e5e0d555}
+:root[data-layout="classified3"] .pitch-section>.control-label{color:#27232d}
+:root[data-layout="classified3"] .pitch-ticks{color:#39323d;text-shadow:0 1px #e5dfd1}
+:root[data-layout="classified3"] .deck-letter{background:#d4bc7d!important;color:#25232c}
+:root[data-layout="classified3"] .voice-pattern .pattern-mode{color:#d9d6c4}
+:root[data-layout="classified5"] .deck :is(.deck-action-hint,.jog-description strong,.jog-description small,.zoom-controls>span,.control-label,.pitch-wheel-hint,.composer-help,.deck-options .toggle-label,.deck-volume-row>label,.vu-section>span,.source-bpm,.nudge-controls>span){color:#304156;text-shadow:0 1px #f8fcff77}
+:root[data-layout="classified5"] .pitch-section>.control-label{color:#20334a}
+:root[data-layout="classified5"] .voice-gain,
+:root[data-layout="classified5"] .voice-pan,
+:root[data-layout="classified5"] .voice-pattern .pattern-mode{color:#253e59}
+:root[data-layout="classified5"] .deck-heading{background:linear-gradient(#dce8f4,#98aec5 45%,#bdcddd);color:#172c43;text-shadow:0 1px #f2faff;border-top:1px solid #fff}
+:root[data-layout="classified5"] .deck-letter{background:radial-gradient(circle at 35% 25%,#fff,#a9bdd3 45%,#3d526a 80%)!important;color:#152943}
+:root[data-layout="classified5"] .mixer :is(.control-label,.crossfader-labels,.toggle-label,.mixer-monitor>small),
+:root[data-layout="classified5"] .output-routing :is(.routing-heading>small,.routing-explanation,.routing-device-note,.routing-limitation){color:#243b54}
+:root:is([data-layout="classified3"],[data-layout="classified5"],[data-layout="bento"]) .rack-title{background-size:100% 100%,cover;background-repeat:no-repeat}
+/* Keep the original title artwork's aspect ratio; extend its metal with CSS. */
+:root:is([data-layout="classified3"],[data-layout="classified5"],[data-layout="bento"]) .rack-title{background-size:auto 100%,cover;background-position:center;background-repeat:no-repeat}
+:root:is([data-layout="classified3"],[data-layout="classified5"],[data-layout="bento"]) .rack-title>span:first-child,
+:root:is([data-layout="classified3"],[data-layout="classified5"],[data-layout="bento"]) .rack-title>span:last-child{position:relative;padding:1px 3px;background:#293039;white-space:nowrap}
+:root[data-layout="classified5"] .rack-title>span:first-child,
+:root[data-layout="classified5"] .rack-title>span:last-child{background:#172b45}
+@media(max-width:700px){
+  :root:is([data-layout="classified3"],[data-layout="classified5"],[data-layout="bento"]) .rack-title>span:first-child{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  :root:is([data-layout="classified3"],[data-layout="classified5"],[data-layout="bento"]) .rack-title>span:last-child{display:none}
+}
+
+/* Lower modules use the same silver enclosure and dark legends as their decks. */
+:root:is([data-layout="classified3"],[data-layout="classified5"]) :is(.coach-panel,.tap-panel){background:var(--skin-panel),var(--variant-metal);color:#26313e}
+:root:is([data-layout="classified3"],[data-layout="classified5"]) :is(.coach-copy h3,.coach-copy p,.coach-bottom>span,.match-result>div:last-child strong,.match-result>div:last-child p,.match-result>div:last-child small,.mic-row button,.mic-row small){color:#2e3a48}
+:root:is([data-layout="classified3"],[data-layout="classified5"]) .tap-button{background:linear-gradient(#f4f6f8,#b9c1cb 45%,#8c98a6 50%,#c8d0d8);border-color:#8998a9;color:#203044}
+:root:is([data-layout="classified3"],[data-layout="classified5"]) .tap-button :is(strong,small){color:#203044}
+:root:is([data-layout="classified3"],[data-layout="classified5"]) .tap-readout{min-width:0;flex:1;background:var(--screen);border:2px inset var(--border);padding:8px}
+:root:is([data-layout="classified3"],[data-layout="classified5"]) .tap-readout>strong{color:var(--accent)}
+:root:is([data-layout="classified3"],[data-layout="classified5"]) .tap-readout>:is(small,span){color:var(--muted)}
+:root:is([data-layout="classified3"],[data-layout="classified5"]) .score-circle{background:var(--screen);border:2px inset var(--border);color:var(--accent)}
+:root[data-layout="classified5"] .output-routing :is(.routing-toggle,.routing-control>span,.routing-mix-note){color:#20374f}
+:root[data-layout="classified5"] .mixer .crossfader-labels strong,
+:root[data-layout="classified5"] .mixer .master-volume .control-label strong{color:#20374f}
+
+/* Learning, training and the skin editor use printed dark text on silver too. */
+:root:is([data-layout="classified3"],[data-layout="classified5"]) :is(.lesson-card,.drill-card,.history-panel,.stat-card,.skin-import-panel,.skin-card-copy){--text:#203047;--muted:#34465d;--accent:#193c68;--secondary:#715126;background:var(--skin-panel),var(--variant-metal);color:var(--text)}
+:root[data-layout="classified3"] :is(.lesson-card,.drill-card,.history-panel,.stat-card,.skin-import-panel,.skin-card-copy){--text:#2d2832;--muted:#46404b;--accent:#4a3520}
+:root:is([data-layout="classified3"],[data-layout="classified5"]) .lesson-card.locked{opacity:.8}
+:root:is([data-layout="classified3"],[data-layout="classified5"]) .lesson-button{border-top:1px solid #536172}
+:root:is([data-layout="classified3"],[data-layout="classified5"]) :is(.track-library,.reference-library){background:var(--skin-panel),linear-gradient(#32465b,#202e3e);color:#edf5ff}
+:root[data-layout="classified3"] :is(.track-library,.reference-library){background:var(--skin-panel),linear-gradient(#4f4b55,#28252e)}
+:root:is([data-layout="classified3"],[data-layout="classified5"]) .footer{color:#e0e5e8}

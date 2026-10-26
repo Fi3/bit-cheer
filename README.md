@@ -28,21 +28,25 @@ Serve `dist/` on HTTPS or localhost. AudioWorklet and optional microphone access
 ## Practice
 
 - **Foundation:** two kick drums, initially 120 and 124 BPM. Play both; move a pitch fader until drift stops, then nudge the beats together.
-- **Loop builder:** independently enable kick, hi-hat, snare, clap, bass, percussion, and synth; add one element to both decks; randomize source tempos and generated patterns.
+- **Loop builder:** start with kick and closed hat, then independently compose twenty instruments: kick, closed/open hats, snare, clap, bass, percussion, synth, shaker, ride, crash, rim, low/high toms, cowbell, conga, acid, chord, noise, and zap. Every active voice has level, pan, solo, and an editable sixteen-step pattern. **CHAOS!** builds a dense twelve-to-twenty-voice arrangement on that deck only.
 - **By ear:** hide tempo, elapsed time, waveforms, and beat lights. Adjust pitch using your hearing.
 - **Pro decks:** four licensed House/Techno practice recordings, local audio imports, editable source BPM, cue points, manual downbeat grid, looping, waveform seeking and zoom. Browse 574 original Beatmatch PRO catalog links by genre and obtain tracks from their artists before importing them.
-- **Learning path:** eight sequential lessons from clean kicks through layered rhythms, hidden-BPM practice, and real-track transitions. A score of 85 unlocks the next lesson. Completion and the last 50 checks persist locally.
+- **Learning path:** eight sequential lessons from clean kicks through layered rhythms, hidden-BPM practice, and real-track transitions. A score of 85 unlocks the next lesson; the final lesson additionally requires a crossfader handover lasting at least three seconds while both decks play. Completion and the last 50 checks persist locally.
 - **Training:** tempo-only, phase, blind, and 16-beat phrase drills. Phase/phrase challenges begin at equal tempos with a deliberate offset. Scores use recent playback history rather than a single coincidental alignment.
 
 Scores measure BPM and beat-grid alignment; they do not evaluate musical taste or transition quality. Imported-track BPM is an estimate and may be half/double time: correct it and mark the first downbeat with **SET GRID** before relying on scores.
 
 ### Deck controls
 
-Each deck has a vertical pitch fader with ±2/4/8/16% ranges, 0.01% fine adjustment, temporary nudging, a jog wheel, play/pause, saved cue, volume, three-band EQ, waveform zoom, and actual signal-level meters. Master output has an equal-power crossfader, volume, a limiter, and split cue (A left, B right).
+Each deck has separate **Randomize tempo** and **Change track** buttons. Tempo changes keep its material and musical position; track changes preserve its effective BPM. Neither action alters the other deck. In Pro, Change track selects another eligible recording in the chosen genre. Fixed-tempo drills disable tempo randomization and provide a separate New challenge action.
+
+Each deck has a large vertical pitch fader with ±2/4/8/16/32/50% ranges, 0.01% fine adjustment, temporary nudging, a jog wheel, play/pause, saved cue, volume, optional three-band EQ, waveform zoom, and actual signal-level meters. Foundation deliberately hides the composer and EQ. Master output has an equal-power crossfader, volume, a limiter, and split cue (A left, B right).
+
+Hover or focus the pitch fader and scroll to adjust it; hold Shift for fine increments. **Focus deck A/B** opens only that deck with enlarged controls and requests native fullscreen where supported. Escape or Exit deck focus returns to both decks without resetting playback.
 
 **Scroll a jog wheel** to temporarily accelerate/decelerate its deck. It returns to the pitch setting after 160 ms. **Drag a jog wheel** to scrub in source time; horizontal/right or upward movement moves forward. Arrow keys nudge a focused jog wheel; Home/End move to the start/end. Click/drag a waveform to seek; wheel or ± buttons zoom. Audio uses classic varispeed, so changing tempo also changes musical pitch.
 
-Keyboard: Space plays/pauses both decks; A/B control a deck; left/right nudge B; T taps tempo; R randomizes. Input fields, native controls, modifier combinations, and focused jog wheels keep their own keyboard behavior. The help dialog supports Tab/Shift+Tab and Escape.
+Keyboard: Space plays/pauses both decks, or just the selected deck in focus view; A/B control a deck; left/right nudge B; T taps tempo. Input fields, native controls, modifier combinations, and focused jog wheels keep their own keyboard behavior. The help dialog supports Tab/Shift+Tab and Escape.
 
 Tap tempo uses recent tap intervals and resets after a long pause. Optional microphone BPM uses continuous, downsampled audio captured by a separate AudioWorklet, analyzed locally in six-second windows. It never monitors the microphone to speakers, uploads audio, or starts without a click and browser permission.
 
@@ -87,13 +91,14 @@ Where supported, choose an output device in the panel or use the browser's devic
 
 The five native themes include the museum's first four entries as observed on 26 October 2026: **base-2.91**, **Winamp3_Classified_v5.5**, **Winamp5_Classified_v5.5**, and **Bento_Classified**. **Headspace · Alien Lime** recreates the supplied green-face reference using the HeadAMP adaptation's graphics. It was originally a Windows Media Player design.
 
-The themes adapt the original palettes, title strips, and selected graphics to Bit Cheer's larger two-deck controls; they are not pixel-perfect Winamp window emulation. Skin studio shows authentic original previews and keeps original author credits.
+The skins use original bitmap number fonts, transport buttons and title strips, with distinct native housings: Classic violet/gold bevels, square champagne Classified 3, rounded chrome/blue Classified 5, compact charcoal Bento, and Headspace's large green face with purple controls. These are functional two-deck adaptations. Skin studio shows the original previews and keeps author credits.
 
 Download the template ZIP in Skin studio, edit `skin.toml`, and optionally add graphics:
 
 ```toml
 version = 1
 name = "My midnight session"
+base = "classic" # classic | classified3 | classified5 | bento | alien
 
 [colors]
 background = "#151719"
@@ -111,9 +116,14 @@ border = "#555a62"
 # panel = "graphics/panel.png"
 # titlebar = "graphics/titlebar.png"
 # background = "graphics/background.png"
+# frame = "graphics/frame.png"
+# buttons = "graphics/cbuttons.png" # Winamp 136 x 36 transport atlas
+# numbers = "graphics/numbers.png" # Winamp 99 x 13 or 108 x 13 atlas
+# platter = "graphics/platter.png"
+# pitch = "graphics/pitch-panel.png"
 ```
 
-Import a standalone `.toml`, a ZIP containing `skin.toml` plus PNG/JPEG/WebP/BMP assets, or a classic Winamp 2 `.wsz`. WSZ import extracts the original titlebar and derives its palette. Modern `.wal`/`.wac` files are not supported as arbitrary imports; the included Headspace theme is integrated explicitly. Imports validate colors and paths, reject remote image URLs, and limit archive expansion. No custom script or CSS executes. The last selected/custom skin persists in local storage subject to the browser's quota.
+Import a standalone `.toml`, a ZIP containing `skin.toml` plus PNG/JPEG/WebP/BMP assets, or a classic Winamp 2 `.wsz`. The optional `base` selects the housing and control shapes; omitted colors inherit that base. WSZ import preserves original MAIN, CBUTTONS, NUMBERS and TITLEBAR graphics and derives a matching palette. Modern `.wal`/`.wac` files are not supported as arbitrary imports; the included Headspace theme is integrated explicitly. Imports validate colors, paths, image dimensions and number atlases, reject remote image URLs, and limit archive expansion. No custom script or CSS executes. The last selected/custom skin persists in local storage subject to the browser's quota.
 
 ## Reference materials and licenses
 
