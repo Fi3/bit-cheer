@@ -1,0 +1,195 @@
+/* Composable player windows and the two-deck practice session. */
+.app-shell .decks .deck{display:block}
+.app-shell .deck-module-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:9px;align-items:start;margin-top:10px}
+.app-shell .deck-module-grid.has-pitch{grid-template-columns:minmax(0,1fr) 154px}
+.app-shell .deck-module-grid>.player-module{min-width:0;grid-column:1;margin:0}
+.app-shell .deck-module-grid.has-pitch>.module-pitch:not(.is-collapsed){grid-column:2;grid-row:1/span 7;align-self:start}
+.app-shell .deck-module-grid>.module-pitch.is-collapsed{grid-column:1/-1}
+.player-module{border:2px ridge var(--border);background:var(--panel);box-shadow:1px 2px #0006;min-width:0;overflow:visible}
+.module-titlebar{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:25px;padding:2px 4px;background:linear-gradient(#635e77,#29283d 48%,#181826 52%,#444056);border-bottom:1px solid #08080f;color:#eee9d1;font:10px Tahoma,Verdana,sans-serif;text-shadow:1px 1px #000}
+.module-titlebar>strong,.module-titlebar>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:bold 9px Tahoma,sans-serif;letter-spacing:.3px}
+.module-titlebar>div,.module-window-actions{display:flex;align-items:center;gap:3px;flex-shrink:0}
+.module-titlebar button{font:9px Tahoma,sans-serif;padding:1px 4px;min-height:19px;min-width:21px;background:linear-gradient(#b7b4c3,#777283);color:#13121b;text-shadow:0 1px #d8d2df;border:1px outset #d4cbdc;border-radius:0;box-shadow:none}
+.module-titlebar button:last-child{font-weight:bold}
+.module-titlebar button:active{border-style:inset}
+.module-body{padding:8px;min-width:0}
+.player-module.is-collapsed{box-shadow:none}
+.player-module.is-collapsed .module-titlebar{border:0}
+.app-shell .module-screen .module-body{padding:4px}
+.app-shell .module-screen .deck-screen{margin:0;width:auto;min-width:0}
+.app-shell .module-screen .lcd-row{margin-bottom:3px;flex-wrap:wrap}
+.app-shell .module-screen .lcd-number{flex-shrink:0}
+.app-shell .module-screen .time-display{margin-left:auto}
+.app-shell .module-waveform .waveform-wrap{height:100px;margin:0 0 6px}
+.app-shell .module-waveform .waveform-label{font-size:8px}
+.app-shell .module-jog .jog-row{margin:2px 0;gap:15px}
+.app-shell .deck-transport .transport{gap:6px;margin:0;justify-content:flex-start}
+.app-shell .module-volume .deck-volume-row{margin:0;display:block}
+.app-shell .module-volume label{display:flex;gap:10px;align-items:center;width:100%;font:10px 'Courier New',monospace}
+.app-shell .module-volume input{flex:1;width:100%;min-width:0;height:7px}
+.app-shell .module-volume input::-webkit-slider-thumb{width:18px;height:24px}
+.app-shell .module-vu .vu-section{justify-content:center;padding:4px}
+.app-shell .module-vu .vu-meter{height:28px;flex:1;max-width:300px;gap:3px}
+.app-shell .module-vu .vu-segment{flex:1;min-width:4px}
+.app-shell .module-loop .deck-options{margin:0}
+.app-shell .module-eq .eq-controls{margin:0;border:0;padding:4px;background:transparent}
+.app-shell .module-composer .element-panel{margin:0}
+.app-shell .module-composer .composer-rack{max-height:430px}
+.app-shell .module-composer .composer-actions{gap:4px}
+.app-shell .module-composer .instrument-selector{width:100%;flex-basis:100%}
+.add-module-menu{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:8px 0 2px;margin-top:5px;border-top:2px groove var(--border)}
+.add-module-menu>label{display:flex;align-items:center;gap:6px;font:10px Tahoma,sans-serif;min-width:0}
+.add-module-menu select{max-width:100%;min-width:140px;padding:5px 7px;background:var(--screen);color:var(--accent);border:2px inset var(--border);font:11px Tahoma,sans-serif;border-radius:0}
+.add-module-menu button,.layout-preset{padding:5px 8px;background:linear-gradient(var(--panel-light),var(--panel));border:2px outset var(--border);color:var(--text);border-radius:0;font:10px Tahoma,sans-serif}
+.add-module-menu small,.module-empty{font:10px/1.5 Tahoma,sans-serif;color:var(--muted)}
+.app-shell .global-module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px;align-items:start}
+.app-shell .global-module-grid>.player-module{min-width:0}
+.app-shell .global-module-grid>.module-outputs,.app-shell .global-module-grid>.module-discovery{grid-column:1/-1}
+.app-shell .global-module-grid .crossfader{padding:6px 8px}
+.app-shell .global-module-grid .crossfader-labels{font-size:10px}
+.app-shell .global-module-grid .crossfader input{height:8px}
+.app-shell .global-module-grid .crossfader input::-webkit-slider-thumb{height:28px;width:36px}
+.app-shell .global-module-grid .master-volume{width:auto;justify-self:stretch;padding:6px 8px;margin:0;display:flex;gap:8px}
+.app-shell .global-module-grid .mixer-monitor{padding:6px 8px}
+.app-shell .global-module-grid .output-routing{padding:2px;border:0;background:transparent;box-shadow:none}
+.app-shell .global-module-grid .coach-panel,.app-shell .global-module-grid .tap-panel{border:0;box-shadow:none;margin:0;padding:8px;background:transparent}
+.app-shell .global-module-grid .panel-heading{margin:0 0 9px;padding:3px 0;background:none;border:0}
+.app-shell .global-module-grid .module-body>.reference-crate{margin:0;padding:0;border:0}
+.app-shell .global-module-grid .track-library{margin:0;padding:3px;border:0;box-shadow:none}
+
+/* The visible marker has the same 28px travel geometry as the accessible range. */
+.app-shell .module-pitch .module-body{padding:6px}
+.app-shell .pitch-section{display:flex;flex-direction:column;align-items:center;width:100%!important;max-width:none;min-width:0;padding:5px 7px;gap:7px;border:0!important;border-radius:0!important;box-shadow:none!important;background-color:var(--panel);background-image:var(--skin-pitch),linear-gradient(90deg,#0003,#fff1,#0003)}
+.app-shell .pitch-track{position:relative;display:block;flex:0 0 340px;width:100%;max-width:122px;height:340px;min-height:340px;padding:0;margin:0;border:0}
+.app-shell .pitch-rail{position:absolute;top:14px;bottom:14px;left:50%;width:9px;transform:translateX(-50%);background:#080911;border:1px inset #7e7c8f;box-shadow:1px 0 0 #b0abb65c;border-radius:2px;pointer-events:none}
+.app-shell .pitch-rail:after{content:'';position:absolute;top:50%;left:-18px;right:-18px;height:1px;background:var(--accent);box-shadow:0 0 2px var(--accent)}
+.app-shell .pitch-marker-layer{position:absolute;inset:14px 0;pointer-events:none}
+.app-shell .pitch-handle{position:absolute;top:var(--pitch-position,50%);left:50%;transform:translate(-50%,-50%);width:64px;height:28px;border:1px solid #131522;border-top-color:#f6f2e8;border-left-color:#d9d6d4;border-radius:2px;background:linear-gradient(#e0ded7 0%,#c3bfc2 38%,#9c98a2 44%,#c7c2c9 51%,#918b99 100%);box-shadow:0 3px 3px #0008,inset 0 0 0 1px #ece4d057;z-index:2}
+.app-shell .pitch-handle:before,.app-shell .pitch-handle:after{content:'';position:absolute;left:7px;right:7px;height:1px;background:#fff7;box-shadow:0 1px #5a56616e}
+.app-shell .pitch-handle:before{top:5px}.app-shell .pitch-handle:after{bottom:5px}
+.app-shell .pitch-handle-line{position:absolute;left:-2px;right:-2px;height:3px;top:11px;background:#101222;border-top:1px solid #f9f2dc;box-shadow:0 1px 0 #f5efe75c}
+.app-shell .pitch-handle-line:before,.app-shell .pitch-handle-line:after{content:'';position:absolute;top:0;width:8px;height:2px;background:var(--accent)}
+.app-shell .pitch-handle-line:before{left:0}.app-shell .pitch-handle-line:after{right:0}
+.app-shell .pitch-ticks{inset:14px 0;left:2px;right:2px;font:10px 'Courier New',monospace;background:repeating-linear-gradient(to bottom,transparent 0,transparent calc(10% - 1px),#c7c2d12b calc(10% - 1px),#c7c2d12b 10%);color:var(--muted);pointer-events:none}
+.app-shell .vertical-fader{position:absolute;inset:0;display:block;writing-mode:vertical-lr;direction:rtl;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;margin:0!important;padding:0!important;opacity:0;background:transparent!important;border:0!important;border-radius:0;box-shadow:none!important;cursor:ns-resize;touch-action:none;z-index:3}
+.app-shell .vertical-fader::-webkit-slider-runnable-track{width:8px;border:0;background:transparent;box-shadow:none;border-radius:0}
+.app-shell .vertical-fader::-webkit-slider-thumb{width:64px!important;height:28px!important;margin-left:-28px!important;border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0}
+.app-shell .vertical-fader::-moz-range-track{width:8px;border:0;background:transparent;box-shadow:none}
+.app-shell .vertical-fader::-moz-range-thumb{width:64px;height:28px;border:0;background:transparent;box-shadow:none}
+.app-shell .pitch-track:focus-within{outline:1px dashed var(--accent);outline-offset:3px;background:#ffffff04}
+.app-shell .pitch-track:focus-within .pitch-handle{box-shadow:0 3px 3px #0008,0 0 0 1px var(--accent)}
+.app-shell .pitch-value{font:bold 16px 'Courier New',monospace;padding:5px 3px;max-width:116px;line-height:1.1}
+.app-shell .pitch-section>.control-label{font:bold 10px Tahoma,sans-serif;letter-spacing:1px;color:var(--text)}
+.app-shell .pitch-section select{font:10px Tahoma,sans-serif;width:100%;max-width:122px;padding:5px 3px}
+.app-shell .pitch-section label{display:flex;flex-direction:column;gap:4px;width:100%;max-width:122px;font:9px Tahoma,sans-serif;color:var(--muted)}
+.app-shell .pitch-sensitivity{width:100%;font-size:10px}
+.app-shell .pitch-wheel-hint{font:9px/1.3 Tahoma,sans-serif;text-align:center;max-width:122px}
+
+/* Playable tracks are selected on the deck itself. */
+.app-shell .track-picker{display:flex;flex-direction:column;gap:8px;min-width:0}
+.app-shell .track-picker label{display:flex;flex-direction:column;gap:4px;font:10px Tahoma,sans-serif;color:var(--muted);min-width:0}
+.app-shell .track-picker select{width:100%;min-width:0;padding:7px 5px;border:2px inset var(--border);background:var(--screen);color:var(--accent);font:11px Tahoma,sans-serif;border-radius:0}
+.app-shell .track-picker-buttons,.app-shell .track-picker-actions{display:flex;flex-wrap:wrap;gap:5px}
+.app-shell .track-picker button{padding:6px 8px;border:2px outset var(--border);border-radius:0;background:linear-gradient(var(--panel-light),var(--panel));color:var(--text);font:10px Tahoma,sans-serif;flex:1;white-space:nowrap}
+.app-shell .track-picker .load-track-button{background:linear-gradient(#d6d7df,#8e909f);color:#171a28;font-weight:bold;border-color:#c1c3d0}
+.app-shell .track-picker .current-track,.app-shell .track-picker .picker-current{border:2px inset var(--border);padding:7px;background:var(--screen);color:var(--accent);font:10px/1.5 'Courier New',monospace;overflow-wrap:anywhere}
+.app-shell .track-picker small{font:9px/1.5 Tahoma,sans-serif;color:var(--muted)}
+.app-shell .external-discovery-toggle,.app-shell .discovery-toggle{font:10px Tahoma,sans-serif;border:2px outset var(--border);background:var(--panel);color:var(--text);padding:6px 9px}
+
+/* Focus is a paired practice console. Module preferences remain untouched. */
+.app-shell.session-focus-view{width:100%;max-width:none;margin:0;min-height:100dvh;padding:8px;border:0;border-radius:0;box-shadow:none;display:flex;flex-direction:column}
+.session-focus-view .focus-toolbar{width:100%;max-width:1100px;min-height:40px;margin:0 auto 9px;padding:6px 10px;flex-shrink:0}
+.session-focus-view .focus-toolbar h1{font:bold 12px Tahoma,sans-serif;letter-spacing:1px}
+.session-focus-view .focus-toolbar small{font:9px 'Courier New',monospace}
+.session-focus-view .focus-decks{width:100%;max-width:1100px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:0 auto;flex:1;align-items:stretch;min-height:0}
+.session-focus-view .focus-channel{display:flex;flex-direction:column;gap:10px;align-items:stretch;min-width:0;padding:12px 16px;border:3px ridge var(--border);background:var(--skin-panel),linear-gradient(110deg,var(--panel-light),var(--panel));box-shadow:inset 0 0 0 1px #0009}
+.session-focus-view .focus-channel>h2,.session-focus-view .focus-channel>.focus-deck-heading{font:bold 13px Tahoma,sans-serif;letter-spacing:2px;text-align:center;padding:6px;color:var(--text);background:#0003;border-top:2px ridge var(--secondary);border-bottom:2px groove var(--secondary)}
+.session-focus-view .focus-transport{display:flex;justify-content:center;margin:0;gap:0}
+.session-focus-view .focus-transport button{width:100%;max-width:260px;min-height:42px;padding:8px 12px;border:2px outset #cfccd4;border-radius:2px;background:linear-gradient(#d3d0d9,#a9a5b3 45%,#797684 50%,#b3afba);color:#171724;font:bold 15px Tahoma,sans-serif;box-shadow:0 2px #0006;image-rendering:auto;text-shadow:0 1px #fff8}
+.session-focus-view .focus-transport button.engaged{border-style:inset;background:linear-gradient(#9abf7b,#5a8650);color:#061606}
+.session-focus-view .focus-channel>.pitch-section{flex:1;max-width:230px;margin:0 auto;background:none!important;min-height:0;gap:6px;padding:0 12px}
+.session-focus-view .pitch-track{flex:1;min-height:240px;height:calc(100dvh - 350px);max-height:650px;width:100%;max-width:180px}
+.session-focus-view .pitch-handle{width:84px;height:28px}
+.session-focus-view .vertical-fader::-webkit-slider-thumb{width:84px!important;margin-left:-38px!important}
+.session-focus-view .pitch-value{max-width:160px;font-size:21px}
+.session-focus-view .pitch-ticks{font-size:12px}
+.session-focus-view .pitch-wheel-hint{font-size:10px;max-width:180px}
+.session-focus-view .pitch-section label,.session-focus-view .pitch-section select{max-width:180px}
+.session-focus-view .pitch-section label{font-size:10px;gap:4px}
+.session-focus-view .pitch-section select{font-size:11px}
+.session-focus-view .pitch-section>.control-label{display:none}
+.session-focus-view .focus-volume,.session-focus-view .deck-volume-row{margin:0 auto;width:100%;max-width:340px;padding:9px 7px;border:2px inset var(--border);background:#0002;flex-shrink:0}
+.session-focus-view .focus-volume label,.session-focus-view .deck-volume-row>label{display:flex;align-items:center;gap:10px;width:100%;font:11px 'Courier New',monospace;color:var(--text)}
+.session-focus-view .focus-volume input,.session-focus-view .deck-volume-row input{width:100%;min-width:20px;height:8px}
+.session-focus-view .focus-volume input::-webkit-slider-thumb,.session-focus-view .deck-volume-row input::-webkit-slider-thumb{width:22px;height:28px}
+
+/* Window materials remain specific to each skin. */
+:root[data-layout=classified3] .player-module{background:var(--variant-metal);border:2px ridge #c8bda9;color:#29232d}
+:root[data-layout=classified3] .module-titlebar{background:linear-gradient(#66606f,#272330);border-top:1px solid #d1b771;color:#fff4dc}
+:root[data-layout=classified5] .player-module{background:var(--variant-metal);border:2px ridge #bfcedd;border-radius:9px;color:#24394f}
+:root[data-layout=classified5] .module-titlebar{border-radius:6px 6px 0 0;background:linear-gradient(#dfedfa,#99aec4 45%,#b9ccdd);color:#1b344c;text-shadow:0 1px #fff;border-bottom:1px solid #72899f}
+:root[data-layout=classified5] .module-titlebar button{border-radius:8px;background:linear-gradient(#fff,#8fa7bd);border-color:#adbdcd}
+:root[data-layout=bento] .player-module{background:#243039;border:1px solid #0e1b22;box-shadow:inset 0 1px #8b9aa3}
+:root[data-layout=bento] .module-titlebar{background:linear-gradient(#aab8bd,#56666e 45%,#34414a);border-top:1px solid #d2e0e6;color:#f4fafc}
+:root[data-layout=alien] .player-module{background:linear-gradient(110deg,#567a20,#324e11);border:2px ridge #a9c251;border-radius:12px}
+:root[data-layout=alien] .module-titlebar{background:linear-gradient(#b28ac8,#6c4386 45%,#4c2f62);border-radius:9px 9px 0 0;color:#f2ffd3}
+:root[data-layout=alien] .module-titlebar button{border-radius:9px;background:linear-gradient(#e2c4f4,#9866b4);color:#2b1239}
+:root:is([data-layout=classified3],[data-layout=classified5]) .player-module .module-body{--text:#29394c;--muted:#3f4c5d}
+:root:is([data-layout=classified3],[data-layout=classified5]) .player-module .pitch-section{background:linear-gradient(90deg,#939aab44,#f4faff66,#8395a333);color:#24364d}
+:root:is([data-layout=classified3],[data-layout=classified5]) .player-module .pitch-ticks{color:#2e4158}
+:root:is([data-layout=classified3],[data-layout=classified5]) .player-module :is(.control-label,.pitch-wheel-hint,.pitch-sensitivity,.composer-help){color:#344457}
+:root:is([data-layout=classified3],[data-layout=classified5]) .player-module .deck-screen,:root:is([data-layout=classified3],[data-layout=classified5]) .player-module .composer-rack{--text:#eef6ff;--muted:#c1d2e3}
+:root:is([data-layout=classified3],[data-layout=classified5]) .player-module .pitch-value,:root:is([data-layout=classified3],[data-layout=classified5]) .player-module select{color:var(--accent)}
+:root:is([data-layout=classified3],[data-layout=classified5]) .global-module-grid :is(.panel-heading h2,.routing-toggle,.routing-control>span,.routing-mix-note,.crossfader-labels,.crossfader-labels strong){color:#24384e}
+:root[data-layout=classified3] .focus-channel{background:var(--variant-metal);border-color:#cec2aa;--text:#312a33;--muted:#453c46}
+:root[data-layout=classified5] .focus-channel{background:var(--variant-metal);border-radius:20px;--text:#263a50;--muted:#344e68}
+:root:is([data-layout=classified3],[data-layout=classified5]) .focus-channel>h2{background:#e5e2dd66;color:var(--text)}
+:root[data-layout=bento] .focus-channel{background:linear-gradient(#394953,#1d2a33);border:2px ridge #72838c}
+:root[data-layout=alien] .focus-channel{background:linear-gradient(110deg,#8bbd2c,#3c6712);border:3px ridge #b8d759;border-radius:28px;color:#f1ffcb}
+:root[data-layout=alien] .focus-transport button{background:linear-gradient(#dbb5f0,#9563b2 45%,#5a3375 50%,#b080c7);border:2px outset #d7b9e7;border-radius:25px;color:#f7ffdf;text-shadow:1px 1px #351442}
+:root[data-layout=alien] .focus-transport button.engaged{background:linear-gradient(#cffa6f,#71a91e);color:#182b09}
+:root[data-layout=classified3] .app-shell .pitch-handle{border-top-color:#fff5d3;border-left-color:#e4d5b6;background:linear-gradient(#e4d8ba,#b8aa98 42%,#a39687 48%,#d1c2a9 53%,#958b82);border-radius:0}
+:root[data-layout=classified5] .app-shell .pitch-handle{border-top-color:#fff;border-left-color:#e4f3ff;background:linear-gradient(#fff,#d4e0eb 40%,#9baebf 47%,#e6f0f7 53%,#8c9fac);border-radius:5px}
+:root[data-layout=bento] .app-shell .pitch-handle{border-radius:0;background:linear-gradient(#c5d2d7,#8fa0a8 44%,#63757e 49%,#aabcc4 54%,#61747c)}
+:root[data-layout=alien] .app-shell .pitch-handle{border-color:#452456;border-top-color:#e3c4f7;border-left-color:#d3a9ed;background:linear-gradient(#d9b9eb,#ab80c2 40%,#754590 48%,#b58acf 54%,#71438b);border-radius:5px}
+:root[data-layout=alien] .module-screen .deck-screen{width:260px;height:438px;margin:auto;max-width:100%}
+:root[data-layout=alien] .module-screen .deck-screen>.track-title{top:82px;left:23px;right:23px}
+:root[data-layout=alien] .module-screen .deck-screen>.lcd-row{top:112px;left:24px;right:24px;gap:10px;justify-content:center;flex-direction:column;align-items:center}
+:root[data-layout=alien] .module-screen .time-display{margin:0;align-items:center;gap:5px}
+:root[data-layout=alien] .module-screen .time-display small{font-size:7px;max-width:100%}
+:root[data-layout=alien] .module-screen .lcd-time{font-size:20px}
+:root[data-layout=alien] .module-screen .headspace-transport{position:absolute;inset:0}
+:root[data-artwork~=pitch] .app-shell .pitch-section{background-image:var(--skin-pitch);background-size:100% 100%;background-repeat:no-repeat}
+/* Override the legacy skin geometry, including Classic's desktop selector. */
+:root .app-shell .pitch-track{position:relative;display:block;flex:0 0 340px;width:100%;max-width:122px;height:340px;min-height:340px;padding:0;margin:0;border:0}
+:root .app-shell .vertical-fader{inset:0;width:100%!important;height:100%!important;min-height:0!important;margin:0!important;padding:0!important;opacity:0;z-index:3}
+:root .app-shell.session-focus-view .pitch-track{flex:1;min-height:240px;height:calc(100dvh - 350px);max-height:650px;width:100%;max-width:180px}
+@media(max-width:1100px){.app-shell .deck-module-grid.has-pitch{grid-template-columns:minmax(0,1fr) 138px}.app-shell .module-body{padding:6px}.app-shell .module-titlebar{font-size:9px;gap:3px;padding:2px 3px}.app-shell .module-titlebar>strong,.app-shell .module-titlebar>span:first-child{font-size:8px}.app-shell .module-titlebar button{font-size:8px;padding:1px 3px}.app-shell .pitch-section{padding:3px 4px}.app-shell .module-screen .lcd small{font-size:7px}.app-shell .module-screen .lcd-time{font-size:17px}.app-shell .module-screen .time-display small{font-size:7px}.app-shell .module-screen .loop-badge{display:none}.app-shell .module-jog .jog-row{flex-wrap:wrap}:root[data-layout=alien] .app-shell .deck-module-grid.has-pitch>.module-screen{grid-column:1/-1}:root[data-layout=alien] .app-shell .deck-module-grid.has-pitch>.module-pitch:not(.is-collapsed){grid-row:2/span 7}}
+@media(max-width:760px){.app-shell .deck-module-grid.has-pitch{grid-template-columns:minmax(0,1fr) 130px;gap:6px}.app-shell .module-body{padding:6px}.app-shell .deck-module-grid .module-titlebar{min-height:25px}.app-shell .module-titlebar>strong,.app-shell .module-titlebar>span:first-child{font-size:8px}.app-shell .module-titlebar button{font-size:8px;min-height:20px}.app-shell .module-screen .lcd-digit{width:18px;height:26px;flex-basis:18px;background-size:calc(var(--numbers-width) * 2 / 3) 26px;background-position:calc(var(--digit) * -18px) 0}.app-shell .module-screen .lcd-dot{width:6px;height:26px;flex-basis:6px}.app-shell .module-screen .lcd-dot:after{height:4px;width:4px;left:1px}.app-shell .module-screen .lcd-dash{width:18px;height:26px}.app-shell .module-screen .lcd-row{gap:8px;align-items:flex-start}.app-shell .module-screen .time-display{margin-left:0;align-items:flex-start}.app-shell .module-screen .time-display small{font-size:7px}.app-shell .module-screen .track-title{font-size:9px}.app-shell .module-screen .track-title>span:first-child{display:none}.app-shell .pitch-track{height:320px;min-height:320px;flex-basis:320px}.app-shell .pitch-value{font-size:14px}.app-shell .module-volume label{font-size:9px;flex-wrap:wrap;gap:5px}.app-shell .module-volume input{min-width:100%}.app-shell .module-composer .voice-strip{grid-template-columns:minmax(0,1fr) 34px}.app-shell .module-composer .voice-gain,.app-shell .module-composer .voice-pan{font-size:7px}.app-shell .module-composer .voice-gain span,.app-shell .module-composer .voice-pan span{min-width:55px}.app-shell .module-composer .step-grid{gap:2px}.app-shell .module-composer .step-button{font-size:8px;min-width:0}.app-shell .module-composer .deck-add-element,.app-shell .module-composer .chaos-button{font-size:8px;letter-spacing:0;padding:5px 3px}.app-shell .module-composer .instrument-selector{font-size:9px;padding:5px 3px}.app-shell .module-composer .voice-name.element{font-size:8px}.app-shell .global-module-grid{grid-template-columns:1fr}.app-shell .global-module-grid>.player-module{grid-column:1}.app-shell .add-module-menu{gap:5px}.app-shell .add-module-menu select{min-width:0;max-width:180px;font-size:10px}.app-shell .track-picker select{font-size:10px}.app-shell .track-picker-buttons,.app-shell .track-picker-actions{gap:4px}.app-shell .track-picker button{font-size:9px;padding:5px}.app-shell.session-focus-view{padding:4px;min-width:320px}.session-focus-view .focus-toolbar{min-height:35px;margin-bottom:6px;padding:4px 6px;gap:5px;flex-wrap:nowrap}.session-focus-view .focus-toolbar h1{font-size:10px;letter-spacing:.3px}.session-focus-view .focus-toolbar small{display:none}.session-focus-view .exit-focus-button{font-size:10px;padding:4px 6px}.session-focus-view .focus-decks{gap:6px;grid-template-columns:repeat(2,minmax(0,1fr));flex:1}.session-focus-view .focus-channel{gap:7px;padding:7px 5px;border-width:2px}.session-focus-view .focus-channel>h2,.session-focus-view .focus-channel>.focus-deck-heading{font-size:11px;padding:4px;letter-spacing:1px}.session-focus-view .focus-transport button{min-height:40px;font-size:12px;padding:6px}.session-focus-view .focus-channel>.pitch-section{padding:0 4px;max-width:180px;gap:5px}.session-focus-view .pitch-track{flex:1;min-height:200px;height:calc(100dvh - 335px);max-height:570px;width:100%;max-width:142px}.session-focus-view .pitch-handle{width:68px}.session-focus-view .vertical-fader::-webkit-slider-thumb{width:68px!important;margin-left:-30px!important}.session-focus-view .pitch-ticks{font-size:10px}.session-focus-view .pitch-value{font-size:18px;max-width:135px}.session-focus-view .pitch-wheel-hint{font-size:8px;max-width:130px}.session-focus-view .pitch-section label{font-size:9px;max-width:130px}.session-focus-view .pitch-section select{font-size:10px;max-width:130px;padding:4px 2px}.session-focus-view .focus-volume,.session-focus-view .deck-volume-row{padding:5px;margin:0;max-width:none}.session-focus-view .focus-volume label,.session-focus-view .deck-volume-row>label{font-size:9px;gap:5px;display:flex;flex-direction:column;align-items:stretch}.session-focus-view .focus-volume input,.session-focus-view .deck-volume-row input{width:100%;margin:10px 0}:root[data-layout=alien] .focus-channel{border-radius:16px}:root[data-layout=classified5] .focus-channel{border-radius:12px}}
+@media(max-width:760px){:root .app-shell .pitch-track{height:320px;min-height:320px;flex-basis:320px}:root .app-shell.session-focus-view .pitch-track{flex:1;min-height:200px;height:calc(100dvh - 335px);max-height:570px;width:100%;max-width:142px}}
+.session-focus-button{padding:5px 9px;background:linear-gradient(#b8b5c3,#777386);color:#15151f;border:2px outset #c7c2d2;border-radius:0;font:11px Tahoma,sans-serif}
+.app-shell .deck-heading .deck-state{margin-right:3px}
+.app-shell .deck-transport .deck-actions:has(>button:only-child){grid-template-columns:1fr}
+/* Silver cases use dark labels; their inset LCD messages retain light text. */
+:root:is([data-layout=classified3],[data-layout=classified5]) .app-shell .module-coach .lesson-instruction p{color:#dce7ef}
+:root:is([data-layout=classified3],[data-layout=classified5]) .app-shell .decks .add-module-menu small{color:#33475c}
+:root:is([data-layout=classified3],[data-layout=classified5]) .app-shell .module-master .control-label strong,:root:is([data-layout=classified3],[data-layout=classified5]) .app-shell .focus-channel .deck-volume-row>strong{color:#24384e}
+.app-shell .track-picker .picker-current strong{display:block;font-size:8px;letter-spacing:1px;margin-bottom:3px}
+
+/* Playback is part of the player housing and is always available. */
+.app-shell .deck-transport{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;padding:7px 2px 8px;margin:0;border-bottom:2px groove var(--border);background:transparent;box-shadow:none}
+.app-shell .deck-transport .deck-actions{margin:0}
+.app-shell .deck-transport .deck-action-hint{margin:0;grid-column:1/-1}
+.app-shell .deck-transport .nudge-controls{margin-left:auto}
+@media(min-width:1200px){.app-shell .deck-transport{grid-template-columns:minmax(230px,.95fr) minmax(0,1fr);column-gap:12px;align-items:center}.app-shell .deck-transport .deck-actions{align-self:stretch;align-items:center}.app-shell .deck-transport .deck-action{font-size:10px;padding:5px 4px}}
+
+.session-focus-view .focus-transport{gap:6px}
+.session-focus-view .focus-transport button{flex:1;min-width:0;width:auto;max-width:180px}
+.session-focus-view .focus-transport button:disabled{opacity:.68}
+
+/* Pro track selection lives below the paired player housings. */
+.app-shell .pro-track-pickers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px;align-items:start}
+.app-shell .pro-track-pickers:empty{display:none}
+.app-shell .pro-track-pickers>[data-scope=deck-a]{grid-column:1}
+.app-shell .pro-track-pickers>[data-scope=deck-b]{grid-column:2}
+@media(max-width:760px){.app-shell .pro-track-pickers{grid-template-columns:minmax(0,1fr)}.app-shell .pro-track-pickers>[data-scope]{grid-column:1}}

@@ -1,3 +1,4 @@
+import { assetUrl } from './assets.js';
 import { clamp, estimateTempo, generatedWaveform, waveformPeaks } from './training.js';
 import { availableChannelCount, validateRouting, buildHardwareGraph } from './output-routing.js';
 
@@ -14,7 +15,7 @@ const scheduleFrame = callback => typeof requestAnimationFrame === 'function' ? 
 export class AudioEngine {
   constructor(send) {
     this.send = send; this.context = null; this.node = null; this.pending = null;
-    this.state = [0, 1].map(i => ({ bpm: i ? 124 : 120, pitch: 0, playing: false, position: 0, beat: 0, peak: 0, duration: 32 * 60 / (i ? 124 : 120), elements: 1, seed: i + 1, source: 'generated', voices: newVoices(), solo: -1, name: i ? 'KICK STUDY · 02' : 'KICK STUDY · 01' }));
+    this.state = [0, 1].map(i => ({ bpm: i ? 124 : 120, pitch: 0, playing: false, position: 0, beat: 0, peak: 0, duration: 32 * 60 / (i ? 124 : 120), elements: 1, seed: i + 1, source: 'generated', trackId: null, voices: newVoices(), solo: -1, name: i ? 'KICK STUDY · 02' : 'KICK STUDY · 01' }));
     this.waveforms = [generatedWaveform(1, 1), generatedWaveform(1, 2)];
     this.crossfade = .5; this.masterVolume = .75; this.volumes = [.8, .8]; this.splitCue = false;
     this.routing = { mode: 'mix', a: 0, b: 1 }; this.hardwareGraph = null;
@@ -23,7 +24,7 @@ export class AudioEngine {
     this.controls = new Map(); this.controlVersions = new Map(); this.controlFrame = null;
     this.waveformWorker = null; this.waveformReady = false; this.waveformVersions = [0, 0]; this.waveformPending = new Map(); this.waveformFrame = null;
     // Compilation is asynchronous and happens before the module reaches the audio thread.
-    this.wasmModule = fetch('/engine.wasm').then(r => {
+    this.wasmModule = fetch(assetUrl('/engine.wasm')).then(r => {
       if (!r.ok) throw new Error('WASM engine could not be loaded. Run npm run build.');
       return r.arrayBuffer();
     }).then(bytes => WebAssembly.compile(bytes));
@@ -34,7 +35,7 @@ export class AudioEngine {
   startWaveformWorker(wasmModule) {
     if (typeof Worker !== 'function') return;
     try {
-      const worker = new Worker('/waveform-worker.js', { type: 'module' });
+      const worker = new Worker(assetUrl('/waveform-worker.js'), { type: 'module' });
       this.waveformWorker = worker;
       worker.onmessage = ({ data }) => {
         if (data.type === 'ready') {
@@ -80,7 +81,7 @@ export class AudioEngine {
     const resume = context.resume();
     resume.catch(() => {});
     this.pending = (async () => {
-      const [wasmModule] = await Promise.all([this.wasmModule, context.audioWorklet.addModule('/audio-worklet.js')]);
+      const [wasmModule] = await Promise.all([this.wasmModule, context.audioWorklet.addModule(assetUrl('/audio-worklet.js'))]);
       this.node = new AudioWorkletNode(context, 'bit-cheer-engine', { numberOfInputs: 0, numberOfOutputs: 2, outputChannelCount: [2, 2], processorOptions: { wasmModule } });
       let readyResolve, readyReject;
       const ready = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
@@ -178,7 +179,7 @@ export class AudioEngine {
     if (param === 'elements') value = Number(value) & MAX_ELEMENT_MASK;
     if (['pitch', 'bpm', 'elements'].includes(param)) this.state[deck][param] = value;
     if (param === 'play') this.state[deck].playing = !!value;
-    if (param === 'source' && Number(value) === 0) this.state[deck].source = 'generated';
+    if (param === 'source' && Number(value) === 0) { this.state[deck].source = 'generated'; this.state[deck].trackId = null; }
     if (this.state[deck].source === 'generated') {
       if (param === 'elements' || param === 'source') this.waveforms[deck] = generatedWaveform(this.state[deck].elements, this.state[deck].seed);
       if (param === 'bpm' || param === 'source') this.state[deck].duration = 32 * 60 / this.state[deck].bpm;
@@ -363,7 +364,6 @@ export class AudioEngine {
     if (deck !== 0 && deck !== 1) throw new Error('Choose deck A or B.');
     await this.ensure(); this.flushControls(deck);
     const selected = this.state[deck];
-    const effective = selected.bpm * (1 + selected.pitch / 100);
     const seed = freshSeed(selected.seed), random = seededRandom(seed);
     let mask = 1;
     if (mode !== 'foundation') {
@@ -374,9 +374,10 @@ export class AudioEngine {
       const previous = Number.isFinite(elements) ? elements : selected.elements;
       if (mask === previous || mask === selected.elements) mask = (mask ^ (1 << instruments[0])) | (1 << instruments[count]);
     }
-    const bpm = clamp(effective, 30, 300), pitch = (effective / bpm - 1) * 100;
+    // A new source starts at its native tempo; only Randomize tempo changes tempo.
+    const bpm = selected.bpm, pitch = 0;
     ++this.loadVersions[deck];
-    Object.assign(selected, { seed, bpm, pitch, elements: mask, source: 'generated', position: 0, beat: 0, duration: 32 * 60 / bpm, solo: -1,
+    Object.assign(selected, { seed, bpm, pitch, elements: mask, source: 'generated', trackId: null, position: 0, beat: 0, duration: 32 * 60 / bpm, solo: -1,
       name: `${mode === 'foundation' ? 'KICK STUDY' : 'RHYTHM STUDY'} · ${String(seed % 100000).padStart(5, '0')}`,
       voices: selected.voices.map(voice => ({ ...voice, pattern: -1, preview: 0 })) });
     this.post({ type: 'randomize', deck, seed, bpm });
@@ -388,7 +389,11 @@ export class AudioEngine {
 
   async chaos(deck) {
     if (deck !== 0 && deck !== 1) throw new Error('Choose deck A or B.');
+    const previousPitch = this.state[deck].pitch;
     await this.changeGeneratedTrack(deck, 'builder');
+    // CHAOS changes composition, so it retains its separate tempo/pitch contract.
+    this.state[deck].pitch = previousPitch;
+    this.post({ type: 'set', deck, param: 'pitch', value: previousPitch });
     const selected = this.state[deck], random = seededRandom(selected.seed ^ 0x6d2b79f5);
     const order = Array.from({ length: VOICE_COUNT - 1 }, (_, i) => i + 1);
     for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
@@ -417,7 +422,7 @@ export class AudioEngine {
       ++this.loadVersions[i]; // An earlier, still-decoding import must not replace new generated material.
       const seed = crypto.getRandomValues(new Uint32Array(1))[0];
       const name = `${elements === 1 ? 'KICK STUDY' : 'RHYTHM STUDY'} · ${String(seed % 99).padStart(2, '0')}`;
-      Object.assign(this.state[i], { bpm: bpms[i], pitch: 0, seed, elements, name, source: 'generated', position: 0, beat: 0, duration: 32 * 60 / bpms[i], solo: -1, voices: newVoices() });
+      Object.assign(this.state[i], { bpm: bpms[i], pitch: 0, seed, elements, name, source: 'generated', trackId: null, position: 0, beat: 0, duration: 32 * 60 / bpms[i], solo: -1, voices: newVoices() });
       this.waveforms[i] = generatedWaveform(elements, seed); names[i] = name; this.queueWaveform(i);
       this.post({ type: 'randomize', deck: i, seed, bpm: bpms[i] });
       for (let voice = 0; voice < VOICE_COUNT; voice++) {

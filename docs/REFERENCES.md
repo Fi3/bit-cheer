@@ -22,7 +22,7 @@ represented as Beatmatch PRO's audio library.
 
 ## Bundled real-track practice excerpts
 
-All four recordings are offered under **Creative Commons Attribution 3.0** on
+All 40 recordings are offered under **Creative Commons Attribution 3.0** on
 their individual SampleSwap pages. License:
 <https://creativecommons.org/licenses/by/3.0/>.
 
@@ -32,14 +32,61 @@ their individual SampleSwap pages. License:
 | `public/tracks/house-tweek.mp3` | My First House Tweek | TEAMFOCUS | House | <https://sampleswap.org/mp3/song.php?id=955> |
 | `public/tracks/techno-shonen.mp3` | 21seiki Techno Shonen | emanon | Techno | <https://sampleswap.org/mp3/song.php?id=413> |
 | `public/tracks/robowalk.mp3` | Robowalk | sausageblowfly | Techno | <https://sampleswap.org/mp3/song.php?id=1455> |
+| `public/tracks/ss-29.mp3` | Albert Ross/Dee Light | BeatNabob | House | <https://sampleswap.org/mp3/song.php?id=29> |
+| `public/tracks/ss-244.mp3` | DISCO remix | JacquesLMond | House | <https://sampleswap.org/mp3/song.php?id=244> |
+| `public/tracks/ss-2592.mp3` | Chicken Dance Song | Dj Thwar | Techno | <https://sampleswap.org/mp3/song.php?id=2592> |
+| `public/tracks/ss-3563.mp3` | Subway | XBloome | Techno | <https://sampleswap.org/mp3/song.php?id=3563> |
+| `public/tracks/ss-138.mp3` | maniac in the desert | alienzzz | Trance | <https://sampleswap.org/mp3/song.php?id=138> |
+| `public/tracks/ss-888.mp3` | Run | Double Helix | Trance | <https://sampleswap.org/mp3/song.php?id=888> |
+| `public/tracks/ss-1417.mp3` | Solstice | Tejaswi | Trance | <https://sampleswap.org/mp3/song.php?id=1417> |
+| `public/tracks/ss-248.mp3` | Flying Higher(Shankar Mix) | BeatNabob | Trance | <https://sampleswap.org/mp3/song.php?id=248> |
+| `public/tracks/ss-2198.mp3` | Goddess Nike | ChaseBronson | Trance | <https://sampleswap.org/mp3/song.php?id=2198> |
+| `public/tracks/ss-590.mp3` | 9 Mile | Naram | Drum & Bass | <https://sampleswap.org/mp3/song.php?id=590> |
+| `public/tracks/ss-930.mp3` | Dawn | Beda | Drum & Bass | <https://sampleswap.org/mp3/song.php?id=930> |
+| `public/tracks/ss-935.mp3` | State of Abstraction | robbot | Drum & Bass | <https://sampleswap.org/mp3/song.php?id=935> |
+| `public/tracks/ss-1272.mp3` | Aqua Cat | Wutec | Drum & Bass | <https://sampleswap.org/mp3/song.php?id=1272> |
+| `public/tracks/ss-1315.mp3` | THROW THE SWITCH | Robert Meyers | Drum & Bass | <https://sampleswap.org/mp3/song.php?id=1315> |
+| `public/tracks/ss-1185.mp3` | lovepartyinjapan | benzoul | Breakbeat | <https://sampleswap.org/mp3/song.php?id=1185> |
+| `public/tracks/ss-2527.mp3` | The Act of pressure | penispanik | Breakbeat | <https://sampleswap.org/mp3/song.php?id=2527> |
+| `public/tracks/ss-3839.mp3` | The Brushfield Eye | tylersrevenge | Breakbeat | <https://sampleswap.org/mp3/song.php?id=3839> |
+| `public/tracks/ss-3843.mp3` | Japan dnb (Cruis'n USA mix) | tylersrevenge | Breakbeat | <https://sampleswap.org/mp3/song.php?id=3843> |
+| `public/tracks/ss-1982.mp3` | SITAR | saeed pakfetrat | Electro | <https://sampleswap.org/mp3/song.php?id=1982> |
+| `public/tracks/ss-2574.mp3` | cover trance | djchacha | Electro | <https://sampleswap.org/mp3/song.php?id=2574> |
+| `public/tracks/ss-3058.mp3` | Action | Blueboma | Electro | <https://sampleswap.org/mp3/song.php?id=3058> |
+| `public/tracks/ss-2543.mp3` | 112 | 3dE | Dubstep | <https://sampleswap.org/mp3/song.php?id=2543> |
+| `public/tracks/ss-3089.mp3` | Tear Down This Wall! | Lous Kyklous | Dubstep | <https://sampleswap.org/mp3/song.php?id=3089> |
+| `public/tracks/ss-4515.mp3` | Matrix | Chained Nomad | Dubstep | <https://sampleswap.org/mp3/song.php?id=4515> |
+| `public/tracks/ss-933.mp3` | cold as ice | jjb8675309 | Hip Hop | <https://sampleswap.org/mp3/song.php?id=933> |
+| `public/tracks/ss-1783.mp3` | thug in this club | arcanethegreat | Hip Hop | <https://sampleswap.org/mp3/song.php?id=1783> |
+| `public/tracks/ss-2135.mp3` | TOP GUN | sameoneskie | Hip Hop | <https://sampleswap.org/mp3/song.php?id=2135> |
+| `public/tracks/ss-2277.mp3` | man up | kellis1mc | Hip Hop | <https://sampleswap.org/mp3/song.php?id=2277> |
+| `public/tracks/ss-92.mp3` | BAGHDAD | tomfox | Downtempo | <https://sampleswap.org/mp3/song.php?id=92> |
+| `public/tracks/ss-194.mp3` | tree star | TrustProductions | Downtempo | <https://sampleswap.org/mp3/song.php?id=194> |
+| `public/tracks/ss-213.mp3` | 43 Days | Kemi Helwa | Downtempo | <https://sampleswap.org/mp3/song.php?id=213> |
+| `public/tracks/ss-312.mp3` | tranzethnik_01 | benzoul | Downtempo | <https://sampleswap.org/mp3/song.php?id=312> |
+| `public/tracks/ss-970.mp3` | Insanety | Nico | Hardcore | <https://sampleswap.org/mp3/song.php?id=970> |
+| `public/tracks/ss-1352.mp3` | brain waved | DJIKEYCISDIABLO | Hardcore | <https://sampleswap.org/mp3/song.php?id=1352> |
+| `public/tracks/ss-1353.mp3` | Ravestyle | DJIKEYCISDIABLO | Hardcore | <https://sampleswap.org/mp3/song.php?id=1353> |
+| `public/tracks/ss-1390.mp3` | A dark secret | DJIKEYCISDIABLO | Hardcore | <https://sampleswap.org/mp3/song.php?id=1390> |
 
-Changes: each file is a 64-beat practice excerpt from the original recording,
-re-encoded to 160 kbps MP3 with 5 ms edge fades. Exact source offsets, durations,
-download links, and license links are retained in `public/catalog.json`.
-Tempos were estimated from low-frequency onsets: Selection 130 BPM, My First
-House Tweek 123 BPM, 21seiki Techno Shonen 148.19 BPM, and Robowalk 130 BPM.
-These are estimates, not artist-supplied beat grids. Users can calibrate their
-own files and cue positions by ear. The genres follow the SampleSwap listings.
+Changes: each file is a 128-beat practice excerpt from the original recording,
+re-encoded to 160 kbps stereo MP3 at 44.1 kHz with 5 ms edge fades. Exact source
+offsets, durations, original download URLs and SHA-256 hashes, and license links
+are retained in `public/catalog.json`. The collection spans House, Techno, Trance,
+Drum & Bass, Breakbeat, Electro, Dubstep, Hip Hop, Downtempo, and Hardcore.
+
+Tempos and starting beat phases are estimated from recorded onsets, including
+multiband periodicity and repeated-section checks for the expanded collection.
+They are not artist-supplied beat grids. Six excerpts carry conservative
+`manualGridRecommended` flags; all tracks can be calibrated by ear with the
+source BPM and Mark beat one controls. Genres follow the SampleSwap listings.
+
+The excerpts are committed and require no downloads during app builds. To
+recreate them, install `curl` and `ffmpeg`, then run
+`python3 scripts/prepare-library.py --force`. This optional maintenance script
+verifies original-file hashes and preserves attribution in MP3 metadata. Add
+`--track <catalog-id>` to rebuild one excerpt. Full source recordings stay in
+the temporary cache and are not included in the repository or distribution.
 
 These recordings are distinct from Bit Cheer's synthesized practice loops. A local
 learned Markov model trained on 20 original authored rhythm patterns generates

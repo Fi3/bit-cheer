@@ -1,12 +1,24 @@
 import './style.css';
 import './winamp.css';
 import './skin-variants.css';
+import './session.css';
+import './module-skins.css';
 import { AudioEngine } from './audio.js';
+import { assetUrl, BASE_PATH } from './assets.js';
 import { clamp, tapTempo, matchScore, estimateTempo } from './training.js';
 import { applySkin, importSkin, downloadTemplate } from './skins.js';
+import { SessionLibrary, DeckSelections } from './library.js';
+import { adjustedPitch, wheelPitchDelta, keyPitchDelta, pitchSensitivity } from './pitch-control.js';
+import { validateLayout } from './layout.js';
 
-const app = Elm.Main.init({ node: document.getElementById('app') });
-let telemetry = [], recent = [], lastStart = performance.now(), mode = 'foundation', catalog = {tracks:[]}, taps = [], zoom = [1,1], mic = null, drill = '', configVersion = 0, trackSelections = [0,0], micEpoch = 0, micPending = false, focusedDeck = -1, wasFullscreen = false, activeLesson = 1, transition = null;
+// Apply the saved skin before Elm mounts, so the first app frame has its final theme.
+const startupSkin = restore('bit-cheer-skin');
+let startupSkinName;
+try { startupSkinName = applySkin(startupSkin?.id || 'classified5', startupSkin?.custom); }
+catch { startupSkinName = applySkin('classified5'); }
+
+const app = Elm.Main.init({ node: document.getElementById('app'), flags: { basePath: BASE_PATH } });
+let telemetry = [], recent = [], lastStart = performance.now(), mode = 'foundation', catalog = {tracks:[]}, taps = [], zoom = [1,1], mic = null, drill = '', configVersion = 0, micEpoch = 0, micPending = false, focusActive = false, wasFullscreen = false, activeLesson = 1, transition = null;
 const send = event => {
   if(event.type==='telemetry') {
     telemetry=event.decks;
@@ -16,6 +28,10 @@ const send = event => {
   app.ports.incoming.send(event);
 };
 const engine = new AudioEngine(send);
+const library = new SessionLibrary(), selections = new DeckSelections();
+let sensitivities = [.05,.05], pendingProCatalog = false;
+function publishLibrary(){catalog.tracks=library.list();send({type:'catalog',tracks:catalog.tracks});}
+function beginSelection(deck){engine.loadVersions[deck]++;return selections.begin(deck);}
 const notice=message=>send({type:'notice',message});
 const fail=error=>{if(engine.context)engine.emitRouting();send({type:'error',message:error instanceof Error?error.message:String(error)});};
 function chooseFile(accept,handle) {
@@ -25,20 +41,35 @@ function chooseFile(accept,handle) {
 }
 function store(key,value) {try{localStorage.setItem(key,JSON.stringify(value));}catch{notice('Browser storage is full or unavailable. This session still works; progress cannot be saved.');}}
 function restore(key) {try{return JSON.parse(localStorage.getItem(key));}catch{return null;}}
-async function loadTrack(deck,id,keepTempo=false) {
-  const previous={...engine.state[deck]},effective=previous.bpm*(1+previous.pitch/100);
-  const config=configVersion, selection=++trackSelections[deck];
-  const track=catalog.tracks.find(x=>x.id===id);if(!track)throw new Error('Track not found in your library.');
+async function loadTrack(deck,id,resumePlayback=false,genreFilter=null) {
+  if(deck!==0&&deck!==1)throw new Error('Choose deck A or B.');
+  const previous={...engine.state[deck]};
+  const token=beginSelection(deck),track=library.find(id);
+  if(!track)throw new Error('Track not found in your session library.');
   notice(`Loading ${track.title || track.name}…`);
-  const response=await fetch(track.url);if(!response.ok)throw new Error('Track download failed. Please try again.');
-  const bytes=await response.arrayBuffer();
-  if(config!==configVersion||selection!==trackSelections[deck])return;
-  const loaded=await engine.load(deck,bytes,`${track.title || track.name} — ${track.artist}`,track.bpm);
-  if(!loaded||config!==configVersion||selection!==trackSelections[deck])return;
+  const bytes=await library.audioBytes(id);
+  if(!selections.valid(token))return false;
+  const name=track.local?track.name:`${track.title || track.name} — ${track.artist}`;
+  const loaded=await engine.load(deck,bytes,name,track.bpm||undefined);
+  if(!loaded||!selections.valid(token))return false;
   engine.state[deck].trackId=track.id;
-  if(keepTempo){await engine.set(deck,'pitch',(effective/track.bpm-1)*100);await engine.set(deck,'play',+previous.playing);engine.emitDeckChanged(deck);}
-  recent=[];lastStart=performance.now();
+  library.update(track.id,{bpm:engine.state[deck].bpm,duration:engine.state[deck].duration});
+  if(resumePlayback){
+    await engine.set(deck,'play',+previous.playing);
+    if(!selections.valid(token))return false;
+    engine.emitDeckChanged(deck);
+  }
+  publishLibrary();send({type:'trackSelection',deck,track:track.id,...(genreFilter?{genre:genreFilter}:{})});
+  recent=[];lastStart=performance.now();return true;
 }
+async function navigateTrack(deck,genre,direction){
+  pendingProCatalog=false;
+  const state=engine.state[deck];
+  const track=library.choose(state.trackId,genre||'All genres',direction);
+  if(!track){notice('No other playable track in this genre. Import another file or choose another genre.');return;}
+  await loadTrack(deck,track.id,true);
+}
+
 function primaryGenre(tags) {
   const tag=tags.join(' ').toLowerCase();
   if(/drum.*bass|jungle|dnb/.test(tag))return 'Drum & Bass';
@@ -58,7 +89,7 @@ async function constrainDrill() {
   send({type:'randomized',bpms:[bpm,bpm],names:engine.state.map(d=>d.name)});
 }
 async function configure(command) {
-  const version=++configVersion;trackSelections=trackSelections.map(v=>v+1);
+  const version=++configVersion;selections.invalidate();engine.loadVersions=engine.loadVersions.map(value=>value+1);pendingProCatalog=false;
   const requestedMode=command.mode||'foundation';mode=requestedMode;recent=[];lastStart=performance.now();zoom=[1,1];
   await engine.ensure();
   if(version!==configVersion)return;
@@ -66,7 +97,7 @@ async function configure(command) {
   if(version!==configVersion)return;
   if(requestedMode==='pro') {
     if(catalog.tracks.length>=2){await loadTrack(0,catalog.tracks[0].id);if(version!==configVersion)return;await loadTrack(1,catalog.tracks[1].id);}
-    else notice('Import a track into each deck to start real-track practice.');
+    else {pendingProCatalog=true;notice('The playable library is loading. You can also import your own files.');}
   } else {
     await engine.randomize(requestedMode,requestedMode==='foundation'?1:command.elements??3);
     await constrainDrill();
@@ -76,7 +107,9 @@ async function configure(command) {
 async function handle(command) {
   const {type,deck,param,value}=command;
   switch(type) {
-    case 'set': await engine.set(deck,param,param==='elements'&&mode==='foundation'?1:value); if(['bpm','pitch','elements'].includes(param)){recent=[];lastStart=performance.now();} break;
+    case 'set': await engine.set(deck,param,param==='elements'&&mode==='foundation'?1:value); if(param==='bpm'&&engine.state[deck].trackId){library.update(engine.state[deck].trackId,{bpm:engine.state[deck].bpm});publishLibrary();}if(['bpm','pitch','elements'].includes(param)){recent=[];lastStart=performance.now();} break;
+    case 'sensitivity': if(deck===0||deck===1)sensitivities[deck]=pitchSensitivity(value);break;
+    case 'layout': {const layout=validateLayout(command.layout);if(layout){sensitivities=layout.sensitivity;store('bit-cheer-layout',layout);}break;}
     case 'mixer': await engine.mixer(param,value);if(activeLesson===8&&param==='crossfade'&&telemetry.every(d=>d.playing)){if(value<=.1||value>=.9){const edge=value<=.1?0:1;if(!transition)transition={edge,time:performance.now(),done:false};else if(edge!==transition.edge&&performance.now()-transition.time>=3000)transition.done=true;}}break;
     case 'routing': await engine.setRouting({mode:command.mode,a:command.a,b:command.b});break;
     case 'refreshOutputs': await engine.refreshOutputs();break;
@@ -92,19 +125,19 @@ async function handle(command) {
       if(drill==='phase'||drill==='phrase'){notice('This drill keeps tempos equal. Use New challenge for a fresh offset.');break;}
       await engine.randomizeTempo(deck,mode);recent=[];lastStart=performance.now();break;
     case 'changeTrack': {
-      ++trackSelections[deck];
-      if(mode==='pro'){
-        const current=engine.state[deck],effective=current.bpm*(1+current.pitch/100),genre=command.genre||'All genres';
-        const pool=catalog.tracks.filter(t=>(genre==='All genres'||t.genre===genre)&&t.id!==current.trackId&&Math.abs((effective/t.bpm-1)*100)<=50);
-        if(!pool.length){notice('No other compatible track in this genre. Import your own track or select another genre.');break;}
-        await loadTrack(deck,pool[Math.floor(Math.random()*pool.length)].id,true);
-      }else await engine.changeGeneratedTrack(deck,mode);
+      if(mode==='pro')await navigateTrack(deck,command.genre,'random');
+      else {beginSelection(deck);await engine.changeGeneratedTrack(deck,mode);}
       recent=[];lastStart=performance.now();break;
     }
+    case 'nextTrack': await navigateTrack(deck,command.genre,1);break;
+    case 'previousTrack': await navigateTrack(deck,command.genre,-1);break;
+    case 'trackGenre': break;
     case 'voice': if(mode!=='foundation')await engine.setVoice(deck,command.voice,param,value);break;
     case 'solo': if(mode!=='foundation')await engine.setSolo(deck,command.voice);break;
-    case 'chaos': if(mode!=='foundation'){++trackSelections[deck];await engine.chaos(deck);recent=[];lastStart=performance.now();}break;
-    case 'focusDeck': focusDeck(command.deck);break;
+    case 'chaos': if(mode!=='foundation'){beginSelection(deck);await engine.chaos(deck);recent=[];lastStart=performance.now();}break;
+    case 'focusSession': focusSession(!!command.active,command.fullscreen!==false);break;
+    case 'focusDeck': focusSession(command.deck>=0,command.fullscreen!==false);break;
+    case 'fullscreen': focusSession(focusActive,!!command.active);break;
     case 'newChallenge': await configure(command);break;
     case 'mode': activeLesson=null;transition=null;drill='';await configure(command);break;
     case 'lesson': activeLesson=command.lesson;transition=null;drill='';await configure(command);break;
@@ -119,8 +152,17 @@ async function handle(command) {
       send(result);break;
     }
     case 'tap': {const result=tapTempo(taps,performance.now());taps=result.times;send({type:'tap',bpm:result.bpm,taps:result.taps});break;}
-    case 'importTrack': {const config=configVersion, selection=++trackSelections[deck];chooseFile('audio/*,.mp3,.wav,.ogg,.flac,.m4a',async file=>{if(file.size>100*1024*1024)throw new Error('Choose an audio file smaller than 100 MB.');notice(`Decoding ${file.name}…`);const bytes=await file.arrayBuffer();if(config!==configVersion||selection!==trackSelections[deck])return;await engine.load(deck,bytes,file.name);recent=[];lastStart=performance.now();});break;}
-    case 'loadTrack': await loadTrack(deck,command.track);break;
+    case 'importTrack': {
+      pendingProCatalog=false;const token=beginSelection(deck);
+      chooseFile('audio/*,.mp3,.wav,.ogg,.flac,.m4a',async file=>{
+        if(file.size>100*1024*1024)throw new Error('Choose an audio file smaller than 100 MB.');
+        notice(`Adding ${file.name} to this session…`);
+        const bytes=await file.arrayBuffer();if(!selections.valid(token))return;
+        const track=library.addLocal(file,bytes);publishLibrary();
+        await loadTrack(deck,track.id,false,'Local files');
+      });break;
+    }
+    case 'loadTrack': pendingProCatalog=false;await loadTrack(deck,command.track);break;
     case 'skin': {const name=applySkin(command.id);store('bit-cheer-skin',{id:command.id});send({type:'skin',id:command.id,name});break;}
     case 'importSkin': chooseFile('.toml,.zip,.wsz',async file=>{const custom=await importSkin(file);const name=applySkin('custom',custom);store('bit-cheer-skin',{id:'custom',custom});send({type:'skin',id:'custom',name});notice(`Skin loaded: ${name}`);});break;
     case 'exportSkin': downloadTemplate();notice('Your skin kit is downloaded. Edit skin.toml, add optional images, then import the ZIP.');break;
@@ -131,12 +173,13 @@ async function handle(command) {
 }
 app.ports.command.subscribe(command=>handle(command).catch(fail));
 
-function focusDeck(deck){
-  focusedDeck=deck;
-  if(deck<0){if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});return;}
-  if(!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().then(()=>{wasFullscreen=true;}).catch(()=>{});
+function focusSession(active,fullscreen=true){
+  focusActive=active;
+  if(!active){if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});return;}
+  if(fullscreen&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().then(()=>{wasFullscreen=true;}).catch(()=>{});
 }
-document.addEventListener('fullscreenchange',()=>{if(document.fullscreenElement){wasFullscreen=true;}else if(wasFullscreen){wasFullscreen=false;focusedDeck=-1;send({type:'focus',deck:-1});}});
+document.addEventListener('fullscreenchange',()=>{if(document.fullscreenElement){wasFullscreen=true;}else if(wasFullscreen){wasFullscreen=false;focusActive=false;send({type:'focus',active:false});}});
+
 async function toggleMic() {
   const epoch=++micEpoch;
   if(micPending){micPending=false;send({type:'mic',active:false,bpm:0});notice('Microphone request cancelled.');return;}
@@ -148,7 +191,7 @@ async function toggleMic() {
   await engine.ensure();
   stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
   if(epoch!==micEpoch){stream.getTracks().forEach(t=>t.stop());return;}
-    await engine.context.audioWorklet.addModule('/mic-worklet.js');
+    await engine.context.audioWorklet.addModule(assetUrl('/mic-worklet.js'));
     if(epoch!==micEpoch){stream.getTracks().forEach(t=>t.stop());return;}
     const source=engine.context.createMediaStreamSource(stream);
     const capture=new AudioWorkletNode(engine.context,'bit-cheer-mic',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[1]});
@@ -163,10 +206,21 @@ async function toggleMic() {
 // Turntable-style jog: wheel temporarily bends rate; dragging scrubs the timeline.
 const bendTimers=[null,null];let drag=null;
 const jogDeck=target=>{const jog=target.closest?.('.jog-wheel');return jog?{element:jog,deck:jog.id==='jog-b'?1:0}:null;};
+const pitchDeck=element=>element.getAttribute('data-deck')==='1'||element.getAttribute('aria-label')?.includes(' B ')?1:0;
+const pitchRequests=[0,0];
+function applyPitch(element,delta,absolute=null){
+  const deck=pitchDeck(element),request=++pitchRequests[deck];
+  const next=absolute===null?adjustedPitch(engine.state[deck].pitch,delta,Number(element.min),Number(element.max)):absolute;
+  // Keep high-frequency trackpad/key input cumulative while ensure() is pending.
+  engine.state[deck].pitch=next;
+  engine.set(deck,'pitch',next).then(()=>{if(request===pitchRequests[deck])send({type:'pitchChanged',deck,pitch:engine.state[deck].pitch});}).catch(fail);
+  recent=[];lastStart=performance.now();
+}
+
 document.addEventListener('wheel',event=>{
   const jog=jogDeck(event.target);
   if(!jog){const pitch=event.target.closest?.('.vertical-fader')||document.activeElement?.matches?.('.vertical-fader')&&document.activeElement;
-    if(pitch){event.preventDefault();const index=pitch.getAttribute('aria-label').includes(' B ')?1:0;const step=event.shiftKey?.01:.05;const units=event.deltaMode===1?event.deltaY/3:event.deltaY/100;const change=clamp(-units,-4,4)*step;const next=clamp(engine.state[index].pitch+change,Number(pitch.min),Number(pitch.max));engine.set(index,'pitch',Math.round(next*100)/100).then(()=>send({type:'pitchChanged',deck:index,pitch:engine.state[index].pitch})).catch(fail);recent=[];lastStart=performance.now();return;}
+    if(pitch){event.preventDefault();const index=pitchDeck(pitch),sensitivity=pitch.getAttribute('data-pitch-sensitivity')||sensitivities[index];applyPitch(pitch,wheelPitchDelta(event,sensitivity));return;}
     const canvas=event.target.closest?.('canvas[id^=\"waveform-\"]');if(canvas){event.preventDefault();const deck=canvas.id==='waveform-b'?1:0;zoom[deck]=clamp(zoom[deck]*(event.deltaY<0?1.25:.8),1,16);}return;}event.preventDefault();
   const amount=clamp(-event.deltaY*(event.deltaMode===1?1:.06),-16,16);
   clearTimeout(bendTimers[jog.deck]);engine.set(jog.deck,'bend',amount).catch(fail);
@@ -174,17 +228,23 @@ document.addEventListener('wheel',event=>{
   bendTimers[jog.deck]=setTimeout(()=>{engine.set(jog.deck,'bend',0).catch(fail);jog.element.classList.remove('jogging');},160);
 },{passive:false});
 document.addEventListener('pointerdown',event=>{
+  const pitch=event.target.closest?.('.vertical-fader');
+  if(pitch&&event.shiftKey){event.preventDefault();pitch.setPointerCapture(event.pointerId);const rect=pitch.getBoundingClientRect();drag={kind:'pitch-fine',deck:pitchDeck(pitch),element:pitch,y:event.clientY,position:engine.state[pitchDeck(pitch)].pitch,scale:(Number(pitch.max)-Number(pitch.min))/Math.max(1,rect.height)*.1};engine.ensure().catch(fail);return;}
   const jog=jogDeck(event.target);
   const canvas=event.target.closest?.('canvas[id^="waveform-"]');
   if(jog){event.preventDefault();jog.element.setPointerCapture(event.pointerId);drag={deck:jog.deck,x:event.clientX,y:event.clientY,position:engine.state[jog.deck].position,element:jog.element,kind:'jog'};jog.element.classList.add('jogging');engine.ensure().catch(fail);}
   else if(canvas){const deck=canvas.id==='waveform-b'?1:0,r=canvas.getBoundingClientRect();canvas.setPointerCapture(event.pointerId);drag={deck,element:canvas,kind:'waveform'};seekWave(deck,(event.clientX-r.left)/r.width);}
 });
-document.addEventListener('pointermove',event=>{if(!drag)return;if(drag.kind==='waveform'){const r=drag.element.getBoundingClientRect();seekWave(drag.deck,(event.clientX-r.left)/r.width);return;}const seconds=drag.position+(event.clientX-drag.x-(event.clientY-drag.y))*.018;engine.set(drag.deck,'seek',Math.max(0,seconds)).catch(fail);recent=[];lastStart=performance.now();});
+document.addEventListener('pointermove',event=>{if(!drag)return;if(drag.kind==='pitch-fine'){const next=adjustedPitch(drag.position,(drag.y-event.clientY)*drag.scale,Number(drag.element.min),Number(drag.element.max));applyPitch(drag.element,0,Math.round(next*100)/100);return;}if(drag.kind==='waveform'){const r=drag.element.getBoundingClientRect();seekWave(drag.deck,(event.clientX-r.left)/r.width);return;}const seconds=drag.position+(event.clientX-drag.x-(event.clientY-drag.y))*.018;engine.set(drag.deck,'seek',Math.max(0,seconds)).catch(fail);recent=[];lastStart=performance.now();});
 const endDrag=()=>{if(drag)drag.element.classList.remove('jogging');drag=null;};
 document.addEventListener('pointerup',endDrag);document.addEventListener('pointercancel',endDrag);
 function seekWave(deck,fraction){const duration=engine.state[deck].duration,visibleDuration=duration/zoom[deck],start=zoom[deck]>1?clamp(engine.state[deck].position-visibleDuration/2,0,duration-visibleDuration):0;engine.set(deck,'seek',start+clamp(fraction,0,1)*visibleDuration).catch(fail);recent=[];lastStart=performance.now();}
 document.addEventListener('keydown',event=>{
-  if(event.target.matches('input,textarea,select')||event.ctrlKey||event.metaKey||event.altKey)return;
+  if(event.ctrlKey||event.metaKey||event.altKey)return;
+  if(focusActive&&event.code==='Space'&&event.target.matches('input[type=range]'))event.preventDefault();
+  const pitch=event.target.closest?.('.vertical-fader');
+  if(pitch){const deck=pitchDeck(pitch),delta=keyPitchDelta(event,pitch.getAttribute('data-pitch-sensitivity')||sensitivities[deck]);if(delta!==null||event.code==='Home'||event.code==='End'){event.preventDefault();event.stopPropagation();applyPitch(pitch,delta||0,event.code==='Home'?Number(pitch.min):event.code==='End'?Number(pitch.max):null);return;}}
+  if(event.target.matches('input,textarea,select'))return;
   const jog=jogDeck(event.target);
   if(jog&&['Home','End'].includes(event.code)){event.preventDefault();engine.set(jog.deck,'seek',event.code==='Home'?0:Math.max(0,engine.state[jog.deck].duration-.01)).catch(fail);return;}
   if(jog&&['ArrowLeft','ArrowRight'].includes(event.code)){event.preventDefault();engine.set(jog.deck,'nudge',event.code==='ArrowRight'?.04:-.04).catch(fail);return;}
@@ -217,9 +277,10 @@ function draw(now) {
 requestAnimationFrame(draw);
 
 queueMicrotask(async()=>{
+  const layout=validateLayout(restore('bit-cheer-layout'));if(layout){sensitivities=layout.sensitivity;send({type:'restoreLayout',layout});}
   const saved=restore('bit-cheer-progress');if(saved&&Array.isArray(saved.progress)&&Array.isArray(saved.history))send({type:'restore',...saved});
-  const skin=restore('bit-cheer-skin');if(skin){try{const name=applySkin(skin.id,skin.custom);send({type:'skin',id:skin.id,name});}catch{applySkin('classic');}}else applySkin('classic');
-  try{const response=await fetch('/catalog.json');if(!response.ok)throw new Error('Library catalog unavailable. Local imports still work.');catalog=await response.json();send({type:'catalog',tracks:catalog.tracks.map(t=>({...t,name:t.title||t.name}))});send({type:'skins',skins:catalog.skins});send({type:'referenceCatalog',tracks:(catalog.referenceTracks||[]).map(t=>({id:String(t.id),name:t.title,source:t.source,genre:primaryGenre(t.tags||[]),bpm:Number(t.bpm)||0}))});}catch(error){fail(error);}
+  send({type:'skin',id:document.documentElement.dataset.skin,name:startupSkinName});
+  try{const response=await fetch(assetUrl('/catalog.json'));if(!response.ok)throw new Error('Library catalog unavailable. Local imports still work.');catalog=await response.json();library.setBundled(catalog.tracks);publishLibrary();send({type:'skins',skins:(catalog.skins||[]).map(skin=>({...skin,preview:skin.preview?assetUrl(skin.preview):'',archive:skin.archive?assetUrl(skin.archive):''}))});send({type:'referenceCatalog',tracks:(catalog.referenceTracks||[]).map(t=>({id:String(t.id),name:t.title,source:t.source,genre:primaryGenre(t.tags||[]),bpm:Number(t.bpm)||0}))});if(pendingProCatalog&&mode==='pro'&&catalog.tracks.length>=2){pendingProCatalog=false;const version=configVersion;await loadTrack(0,catalog.tracks[0].id);if(version===configVersion&&mode==='pro')await loadTrack(1,catalog.tracks[1].id);}}catch(error){fail(error);}
 });
 // Small diagnostics surface for automated browser/audio verification.
-window.bitCheer={get audio(){return engine;},get telemetry(){return telemetry;},get mode(){return mode;}};
+window.bitCheer={get audio(){return engine;},get telemetry(){return telemetry;},get mode(){return mode;},get library(){return library.list();},get focus(){return focusActive;}};

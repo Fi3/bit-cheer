@@ -88,6 +88,7 @@
 
 /* WINAMP 5 CLASSIFIED: curved chrome housing, blue glass and circular buttons. */
 :root[data-layout="classified5"] {
+  --background:#192332;--panel:#48627d;--panel-light:#d8dfe7;--text:#f2f8ff;--muted:#d3e1ed;--accent:#d9edff;--secondary:#f5ca67;--screen:#164884;--border:#c4d0e0;
   --number-sheet:url('/skins/classified5/numbers.png');
   --numbers-width:297px;
   --transport-sheet:url('/skins/classified5/cbuttons.png');

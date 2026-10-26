@@ -1,3 +1,4 @@
+import { assetUrl } from './assets.js';
 import { parse } from 'smol-toml';
 import { unzipSync, strFromU8, zipSync, strToU8 } from 'fflate';
 
@@ -165,7 +166,7 @@ export function applySkin(id, custom = null) {
     const supplied = custom?.images?.[key];
     const valid = typeof supplied === 'string' && IMAGE_DATA.test(supplied);
     if (valid) artwork.push(key);
-    const asset = valid ? supplied : inherited[key];
+    const asset = valid ? supplied : inherited[key] ? assetUrl(inherited[key]) : null;
     urls[key] = asset ? `url("${asset}")` : 'none';
     root.style.setProperty(`--skin-${key}`, urls[key]);
   }

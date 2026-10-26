@@ -1,0 +1,71 @@
+name: Deploy Bit Cheer to GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install Rust and the WebAssembly target
+        run: |
+          rustup toolchain install 1.94.1 --profile minimal --target wasm32-unknown-unknown
+          rustup default 1.94.1
+      - name: Install locked dependencies, including Elm
+        run: npm ci
+      - name: Check the rhythm model, Rust engine, and JavaScript
+        run: npm test
+      - name: Determine the Pages base path
+        env:
+          PAGES_REPOSITORY: ${{ github.repository }}
+          PAGES_BASE_OVERRIDE: ${{ vars.VITE_BASE_PATH }}
+        run: |
+          pages_owner_name="${PAGES_REPOSITORY%%/*}"
+          pages_repo_name="${PAGES_REPOSITORY#*/}"
+          if [ -n "$PAGES_BASE_OVERRIDE" ]; then
+            pages_base="$PAGES_BASE_OVERRIDE"
+          elif [ "${pages_repo_name,,}" = "${pages_owner_name,,}.github.io" ]; then
+            pages_base="/"
+          else
+            pages_base="/${pages_repo_name}/"
+          fi
+          printf 'VITE_BASE_PATH=%s\n' "$pages_base" >> "$GITHUB_ENV"
+      - name: Build Rust WASM, Elm, and the static site
+        run: npm run build
+      - name: Upload the static site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+      - name: Deploy the static site
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5

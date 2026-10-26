@@ -66,6 +66,7 @@ test('dragging coalesces seeks, while bend release executes without waiting for 
 test('track is announced only after matching WASM acknowledgement', async () => {
   const { engine, events, worklet } = await create();
   engine.state[0].trackId = 'previous-catalog-track';
+  engine.state[0].pitch = 23.11;
   const loading = engine.load(0, new ArrayBuffer(8), 'Stereo study', 128);
   await settle();
   const command = worklet.messages.find(message => message.type === 'load');
@@ -74,6 +75,7 @@ test('track is announced only after matching WASM acknowledgement', async () => 
   worklet.receive({ type: 'loaded', deck: 0, id: command.id, duration: 1, bpm: 128 });
   assert.equal(await loading, true);
   assert.equal(engine.state[0].source, 'pcm');
+  assert.equal(engine.state[0].pitch, 0); assert.equal(engine.state[0].bpm, 128);
   assert.equal(engine.state[0].trackId, null, 'a personal import must clear the previous catalog identity');
   assert.equal(events.find(event => event.type === 'track').name, 'Stereo study');
 });
@@ -187,7 +189,7 @@ test('randomizing a PCM tempo only changes playback rate and rejects impossible 
   assert.deepEqual(engine.state, impossible); assert.equal(worklet.messages.length, 0);
 });
 
-test('changing only one foundation track changes its kick palette but preserves effective tempo and playback', async () => {
+test('changing one foundation track resets pitch to native tempo, preserves playback, and leaves its peer unchanged', async () => {
   const { engine, worklet } = await create();
   engine.state[0].pitch = 5; engine.state[0].playing = true; engine.state[0].position = 3;
   engine.state[0].voices[0] = { gain: .7, pan: -.4, pattern: 5, preview: 5 };
@@ -198,7 +200,8 @@ test('changing only one foundation track changes its kick palette but preserves 
   assert.deepEqual(engine.state[1], other);
   assert.notEqual(changed.seed, before.seed); assert.notEqual(changed.seed & 7, before.seed & 7);
   assert.equal(changed.elements, 1); assert.equal(changed.playing, true); assert.equal(changed.position, 0);
-  assert.ok(Math.abs(changed.bpm * (1 + changed.pitch / 100) - 126) < 1e-8);
+  assert.equal(changed.pitch, 0); assert.equal(changed.bpm, before.bpm);
+  assert.equal(changed.bpm * (1 + changed.pitch / 100), before.bpm);
   assert.equal(changed.voices[0].gain, .7); assert.equal(changed.voices[0].pan, -.4); assert.equal(changed.voices[0].pattern, -1);
   assert.ok(worklet.messages.every(message => message.deck === 0));
 });
@@ -250,10 +253,11 @@ test('new mode or drill resets voice mixes so a muted builder kick cannot silenc
   const { engine, worklet } = await create();
   engine.state[0].voices[0] = { gain: 0, pan: -1, pattern: 0, preview: 0 };
   engine.state[0].solo = 19;
+  engine.state[0].trackId = 'previous-pcm-track';
   worklet.messages.length = 0;
   await engine.randomize('foundation', 1);
   for (const state of engine.state) {
-    assert.equal(state.solo, -1); assert.equal(state.elements, 1);
+    assert.equal(state.solo, -1); assert.equal(state.elements, 1); assert.equal(state.trackId, null);
     assert.ok(state.voices.every(voice => voice.gain === 1 && voice.pan === 0 && voice.pattern === -1));
   }
   assert.ok(worklet.messages.some(message => message.type === 'voice' && message.deck === 0 && message.voice === 0 && message.param === 'gain' && message.value === 1));

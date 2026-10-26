@@ -2,9 +2,44 @@ import { test, expect } from '@playwright/test';
 import { zipSync, strToU8 } from 'fflate';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { assetUrl } from '../src/assets.js';
 
 const root = process.cwd();
 const asset = name => path.join(root, 'public', name);
+const playableTracks = JSON.parse(readFileSync(asset('catalog.json'), 'utf8')).tracks;
+const moduleLabels = {
+  screen: 'Screen', pitch: 'Pitch fader', volume: 'Volume', jog: 'Jog wheel',
+  waveform: 'Waveform', eq: 'Equalizer', vu: 'VU meter', loop: 'Loop', composer: 'Composer', picker: 'Track picker',
+  crossfader: 'Crossfader', master: 'Master volume', monitor: 'Monitor', outputs: 'Audio outputs',
+  coach: 'Coach', tap: 'Tap tempo', discovery: 'External track discovery',
+};
+
+function moduleElement(page, id, owner = 'session') {
+  return page.locator(`.player-module[data-module="${id}"][data-scope="${owner === 'session' ? owner : `deck-${owner.toLowerCase()}`}"]`);
+}
+
+async function openModule(page, id, owner = 'session') {
+  const module = moduleElement(page, id, owner);
+  const suffix = owner === 'session' ? 'session' : `deck ${owner}`;
+  if (!await module.count()) {
+    await page.getByLabel(owner === 'session' ? 'Add session module' : `Add module to deck ${owner}`, { exact: true }).selectOption(id);
+  }
+  await expect(module).toBeVisible();
+  if (await module.getAttribute('class').then(value => value.includes('is-collapsed'))) {
+    await page.getByRole('button', { name: `Open ${moduleLabels[id]} ${suffix}`, exact: true }).click();
+  }
+  await expect(module).not.toHaveClass(/is-collapsed/);
+}
+
+async function selectAndLoadTrack(page, letter, title, genre) {
+  const track = playableTracks.find(track => (track.title || track.name) === title);
+  if (!track) throw new Error(`Unknown test recording ${title}`);
+  await openModule(page, 'picker', letter);
+  if (genre) await page.getByLabel(`Deck ${letter} genre`, { exact: true }).selectOption(genre);
+  await page.getByLabel(`Deck ${letter} track`, { exact: true }).selectOption(track.id);
+  await page.getByRole('button', { name: `Load selected track deck ${letter}`, exact: true }).click();
+  await expect.poll(() => page.evaluate(deck => window.bitCheer.audio.state[deck].name, letter === 'A' ? 0 : 1)).toContain(title);
+}
 
 async function setRange(page, name, value) {
   const slider = page.getByRole('slider', { name, exact: true });
@@ -36,19 +71,21 @@ async function deckSnapshots(page) {
     seed: deck.seed, bpm: deck.bpm, pitch: deck.pitch,
     effectiveBpm: deck.bpm * (1 + deck.pitch / 100),
     elements: deck.elements, position: deck.position, source: deck.source,
-    name: deck.name, playing: deck.playing, solo: deck.solo,
+    name: deck.name, trackId: deck.trackId, playing: deck.playing, solo: deck.solo,
     voices: deck.voices?.map(voice => ({ ...voice })),
   })));
 }
 
 async function seekPausedDeck(page, letter, fraction) {
+  await openModule(page, 'waveform', letter);
   const waveform = page.locator(`#waveform-${letter.toLowerCase()}`);
   const box = await waveform.boundingBox();
   await waveform.click({ position: { x: box.width * fraction, y: box.height / 2 } });
-  await expect.poll(() => page.evaluate(deck => window.bitCheer.audio.state[deck].position, letter === 'A' ? 0 : 1)).toBeGreaterThan(.5);
+  await expect.poll(() => page.evaluate(deck => window.bitCheer.telemetry[deck].position, letter === 'A' ? 0 : 1)).toBeGreaterThan(.5);
 }
 
 async function assertLcdSprites(page) {
+  await expect(page.locator('.lcd-digit').first()).toBeVisible();
   const digits = await page.locator('.lcd-digit').evaluateAll(elements => elements.map(element => {
     const style = getComputedStyle(element);
     return { digit: Number(element.textContent), cssDigit: style.getPropertyValue('--digit').trim(), x: parseFloat(style.backgroundPositionX), width: parseFloat(style.width) };
@@ -62,8 +99,12 @@ async function assertLcdSprites(page) {
 
 test.beforeEach(async ({ page }) => {
   page.__errors = [];
+  page.__requests = [];
+  page.__badResponses = [];
   page.on('pageerror', error => page.__errors.push(error.message));
-  await page.goto('/');
+  page.on('request', request => page.__requests.push(request.url()));
+  page.on('response', response => { if (response.status() >= 400) page.__badResponses.push({ url: response.url(), status: response.status() }); });
+  await page.goto('./');
   await expect(page.getByRole('heading', { name: 'Find your rhythm.' })).toBeVisible();
   await expect(page.locator('.deck')).toHaveCount(2);
 });
@@ -73,8 +114,21 @@ test.afterEach(async ({ page }) => {
 });
 
 test('desktop renders real waveform canvases and accessible two-deck controls', async ({ page }, testInfo) => {
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'classified5');
+  await expect(page.locator('html')).toHaveAttribute('data-layout', 'classified5');
   await expect(page.getByRole('slider', { name: 'Deck A pitch', exact: true })).toBeVisible();
   await expect(page.getByRole('slider', { name: 'Deck B pitch', exact: true })).toBeVisible();
+  await expect(page.locator('.player-module[data-scope="deck-a"]')).toHaveCount(3);
+  await expect(page.locator('.player-module[data-scope="deck-b"]')).toHaveCount(3);
+  await expect(page.locator('.player-module[data-scope="session"]')).toHaveCount(3);
+  for (const letter of ['A', 'B']) {
+    await expect(page.getByLabel(`Deck ${letter} transport`, { exact: true })).toBeVisible();
+    await expect(page.getByLabel(`Add module to deck ${letter}`, { exact: true }).locator('option[value="transport"]')).toHaveCount(0);
+  }
+  await expect(page.getByRole('button', { name: /^(Hide|Open|Remove) Transport deck/ })).toHaveCount(0);
+  await expect(page.locator('#waveform-a, #jog-a, .composer-rack')).toHaveCount(0);
+  await page.screenshot({ path: testInfo.outputPath('sparse-desktop-1440.png'), fullPage: true });
+  await openModule(page, 'waveform', 'A');
   await expect.poll(() => page.locator('#waveform-a').evaluate(canvas => {
     const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
     let green = 0;
@@ -130,12 +184,12 @@ test('Rust audio produces samples, pitch changes tempo, instruments and mixer ar
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.gains[0].gain.value)).toBeLessThan(.002);
   await setRange(page, 'Master volume', .35);
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.master.gain.value)).toBeCloseTo(.35, 2);
-  await page.getByText('Show EQ', { exact: true }).click();
-  await expect(page.getByLabel('Show EQ', { exact: true })).toBeChecked();
+  await openModule(page, 'eq', 'A');
   await setRange(page, 'Deck A low EQ', -12);
 });
 
 test('jog bends temporarily, dragging seeks, and CUE returns to saved position paused', async ({ page }) => {
+  await openModule(page, 'jog', 'A');
   await playBoth(page);
   const jog = page.getByRole('slider', { name: 'Deck A jog wheel', exact: true });
   await jog.hover();
@@ -168,6 +222,9 @@ test('skin studio applies all five designs and imports persistent TOML and origi
     await page.locator('.skin-card').filter({ has: page.locator('.skin-card-copy strong', { hasText: name }) }).click();
     await expect(page.locator('html')).toHaveAttribute('data-skin', id);
   }
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'alien');
+  await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
   await page.screenshot({ path: testInfo.outputPath('skin-studio.png'), fullPage: true });
   await page.getByRole('button', { name: 'Practice', exact: true }).click();
   await page.getByRole('button', { name: 'Headspace play/pause deck A', exact: true }).click();
@@ -176,9 +233,9 @@ test('skin studio applies all five designs and imports persistent TOML and origi
   await page.getByRole('button', { name: 'Stop to cue deck A', exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].playing)).toBe(false);
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].position)).toBeCloseTo(0, 3);
-  await page.getByRole('button', { name: 'Headspace focus deck A', exact: true }).click();
-  await expect(page.locator('.deck')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Headspace exit focus', exact: true }).click();
+  await page.getByRole('button', { name: 'Headspace focus session from deck A', exact: true }).click();
+  await expect(page.locator('.focus-channel')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Exit session focus', exact: true }).click();
   await expect(page.locator('.deck')).toHaveCount(2);
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
   await importFile(page, page.getByRole('button', { name: /Import a skin/ }), asset('skins/electric-blue.toml'));
@@ -200,7 +257,7 @@ test('invalid skins report an error and preserve the current design', async ({ p
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
   await importFile(page, page.getByRole('button', { name: /Import a skin/ }), { name: 'bad.toml', mimeType: 'text/plain', buffer: Buffer.from('version = 1\nname = "Bad"\n[colors]\naccent = "url(https://example.com/x)"') });
   await expect(page.getByText(/Color accent must be a six-digit hex color/)).toBeVisible();
-  await expect(page.locator('html')).toHaveAttribute('data-skin', 'classic');
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'classified5');
 });
 
 test('a custom TOML and graphic ZIP applies colors and image assets and survives reload', async ({ page }) => {
@@ -257,6 +314,7 @@ test('a custom TOML and graphic ZIP applies colors and image assets and survives
     await expect(page.locator('html')).toHaveAttribute('data-layout', base);
     await page.getByRole('button', { name: 'Practice', exact: true }).click();
     await expect(page.locator('.deck')).toHaveCount(2);
+    await openModule(page, 'jog', 'A');
     const renderedSlots = await page.evaluate(() => {
       const style = selector => getComputedStyle(document.querySelector(selector));
       return {
@@ -273,23 +331,91 @@ test('a custom TOML and graphic ZIP applies colors and image assets and survives
   expect(artworkFailures, 'Every base layout must display every custom artwork slot').toEqual([]);
 });
 
-test('Pro mode loads real audio, filters original catalog genres, and imports local tracks', async ({ page }) => {
+test('Pro selectors load playable genres and reuse a local import on either deck', async ({ page }) => {
   await page.getByRole('button', { name: /Pro decks/ }).click();
   await expect(page.getByRole('heading', { name: 'Make the mix yours.' })).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(d => d.source === 'pcm'))).toBe(true);
-  await page.getByLabel('Track genre', { exact: true }).selectOption('House');
-  await expect(page.locator('.track-row')).toHaveCount(2);
+  await expect(page.locator('.pro-track-pickers .module-picker')).toHaveCount(2);
+  await expect(page.locator('.deck .module-picker')).toHaveCount(0);
+  const pickerPosition = await page.evaluate(() => {
+    const decks = document.querySelector('.decks');
+    const pickers = document.querySelector('.pro-track-pickers');
+    return { follows: !!(decks.compareDocumentPosition(pickers) & Node.DOCUMENT_POSITION_FOLLOWING), deckBottom: decks.getBoundingClientRect().bottom, pickerTop: pickers.getBoundingClientRect().top };
+  });
+  expect(pickerPosition.follows).toBe(true);
+  expect(pickerPosition.pickerTop).toBeGreaterThanOrEqual(pickerPosition.deckBottom - 1);
+  await expect(page.getByLabel('Deck A genre', { exact: true })).toHaveValue('All genres');
+  await expect(page.getByLabel('Deck B genre', { exact: true })).toHaveValue('All genres');
+  await expect(page.getByLabel('Deck A track', { exact: true }).locator('option:not([value=""])')).toHaveCount(playableTracks.length);
+  const optionTitles = await page.getByLabel('Deck A track', { exact: true }).locator('option:not([value=""])').allTextContents();
+  expect(optionTitles).toEqual(playableTracks.map(track => track.title));
+  expect(optionTitles.some(title => /\bbpm\b/i.test(title))).toBe(false);
+  await expect(page.getByLabel('Deck A library size', { exact: true })).toHaveText(`${playableTracks.length} playable tracks · ${new Set(playableTracks.map(track => track.genre)).size} genres`);
+  await expect(page.locator('.reference-track:visible')).toHaveCount(0);
+  const beforeSelection = await deckSnapshots(page);
+  await page.getByLabel('Deck A genre', { exact: true }).selectOption('Techno');
+  await expect(page.getByLabel('Deck A library size', { exact: true })).toHaveText(`${playableTracks.filter(track => track.genre === 'Techno').length} tracks shown · ${playableTracks.length} in library`);
+  const selectorA = page.getByLabel('Deck A track', { exact: true });
+  expect(await selectorA.locator('option:not([value=""])').count()).toBeGreaterThanOrEqual(2);
+  await selectorA.selectOption(playableTracks.find(track => track.title === 'Robowalk').id);
+  expect(await deckSnapshots(page)).toEqual(beforeSelection);
+  await page.getByRole('button', { name: 'Load selected track deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].name)).toContain('Robowalk');
+  await expect(page.getByLabel('Deck A genre', { exact: true })).toHaveValue('Techno');
+  expect((await deckSnapshots(page))[1]).toEqual(beforeSelection[1]);
+  await setRange(page, 'Deck A pitch', 3.25);
+  const beforeNavigation = await deckSnapshots(page);
+  const techno = playableTracks.filter(track => track.genre === 'Techno');
+  const next = techno[(techno.findIndex(track => track.id === beforeNavigation[0].trackId) + 1) % techno.length];
+  await page.getByRole('button', { name: 'Play deck A', exact: true }).click();
+  for (const [direction, title] of [['Next', next.title], ['Previous', 'Robowalk']]) {
+    await page.getByRole('button', { name: `${direction} track deck A`, exact: true }).click();
+    await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].name)).toContain(title);
+    const navigated = await deckSnapshots(page);
+    expect(navigated[0].playing).toBe(true);
+    expect(navigated[0].pitch).toBe(0);
+    expect(navigated[0].effectiveBpm).toBe(navigated[0].bpm);
+    expect(navigated[1]).toEqual(beforeNavigation[1]);
+    await expect(page.getByLabel('Deck A genre', { exact: true })).toHaveValue('Techno');
+    await expect(selectorA).toHaveValue(navigated[0].trackId);
+  }
+  await page.getByRole('button', { name: 'Pause deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].playing)).toBe(false);
+
+  let fileChoosers = 0;
+  page.on('filechooser', () => { fileChoosers++; });
+  await importFile(page, page.getByRole('button', { name: 'Import track into deck A', exact: true }), {
+    name: 'my-house-loop.mp3', mimeType: 'audio/mpeg', buffer: readFileSync(asset('tracks/selection.mp3')),
+  });
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].name)).toBe('my-house-loop.mp3');
+  await expect(page.getByLabel('Deck A genre', { exact: true })).toHaveValue('Local files');
+  expect(await page.evaluate(() => window.bitCheer.audio.state[0].pitch)).toBe(0);
+  const localId = await page.evaluate(() => window.bitCheer.audio.state[0].trackId);
+  expect(localId).toMatch(/^local:/);
+  await expect.poll(() => page.evaluate(id => window.bitCheer.library.some(track => track.id === id), localId)).toBe(true);
+  const beforeReuse = await deckSnapshots(page);
+  await page.getByLabel('Deck B genre', { exact: true }).selectOption('Local files');
+  await page.getByLabel('Deck B track', { exact: true }).selectOption(localId);
+  expect(await deckSnapshots(page)).toEqual(beforeReuse);
+  await page.getByRole('button', { name: 'Load selected track deck B', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[1].trackId)).toBe(localId);
+  expect((await deckSnapshots(page))[0]).toEqual(beforeReuse[0]);
+  expect(fileChoosers).toBe(1);
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(deck => deck.duration > 20))).toBe(true);
+  const loaded = await deckSnapshots(page);
+  await page.getByRole('button', { name: 'Hide Track picker deck B', exact: true }).click();
+  await expect(page.getByLabel('Deck B track', { exact: true })).toHaveCount(0);
+  await openModule(page, 'picker', 'B');
+  await page.getByRole('button', { name: 'Remove Track picker deck B', exact: true }).click();
+  await expect(moduleElement(page, 'picker', 'B')).toHaveCount(0);
+  await openModule(page, 'picker', 'B');
+  await expect(page.getByLabel('Deck B track', { exact: true })).toHaveValue(localId);
+  expect(await deckSnapshots(page)).toEqual(loaded);
+  await openModule(page, 'discovery');
   await expect(page.locator('.reference-track')).toHaveCount(8);
   expect(await page.locator('.reference-track').first().getAttribute('href')).toContain('bandcamp.com/track/');
-  await page.getByLabel('Track genre', { exact: true }).selectOption('Techno');
-  await expect(page.locator('.track-row')).toHaveCount(2);
-  await page.getByRole('button', { name: 'Load Robowalk into deck B', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[1].name)).toContain('Robowalk');
-  await importFile(page, page.getByRole('button', { name: /Load a track into A/ }), asset('tracks/selection.mp3'));
-  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].name)).toBe('selection.mp3');
-  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].duration)).toBeGreaterThan(20);
   await playBoth(page);
-  await expect.poll(() => page.evaluate(() => window.bitCheer.telemetry[0].peak)).toBeGreaterThan(.01);
+  for (const deck of [0, 1]) await expect.poll(() => page.evaluate(index => window.bitCheer.telemetry[index].peak, deck)).toBeGreaterThan(.01);
 });
 
 test('a delayed Pro download cannot replace generated decks after switching to Foundation', async ({ page }) => {
@@ -305,9 +431,13 @@ test('a delayed Pro download cannot replace generated decks after switching to F
     fulfilled++;
   });
   await page.getByRole('button', { name: /Pro decks/ }).click();
-  await expect(page.locator('.track-row')).toHaveCount(4);
+  const selection = playableTracks.find(track => track.title === 'Selection');
+  await expect(page.getByLabel('Deck A track', { exact: true }).locator(`option[value="${selection.id}"]`)).toBeAttached();
   // Also covers a fast click before the public catalog finished loading.
-  if (!requested) await page.getByRole('button', { name: 'Load Selection into deck A', exact: true }).click();
+  if (!requested) {
+    await page.getByLabel('Deck A track', { exact: true }).selectOption(selection.id);
+    await page.getByRole('button', { name: 'Load selected track deck A', exact: true }).click();
+  }
   await expect.poll(() => requested).toBeGreaterThan(0);
   await page.getByRole('button', { name: /01 Foundation/ }).click();
   await expect(page.getByRole('heading', { name: 'Find your rhythm.' })).toBeVisible();
@@ -366,6 +496,7 @@ test('tap tempo measures human tapping and mobile layout remains usable', async 
   await expect(page.getByRole('slider', { name: 'Deck A pitch', exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath('mobile-390.png'), fullPage: true });
+  await openModule(page, 'tap');
   const tap = page.getByRole('button', { name: 'Tap tempo', exact: true });
   for (let i = 0; i < 5; i++) {
     await tap.click();
@@ -386,7 +517,7 @@ test('actual Web Audio graph routes isolated stereo pairs and mono sums without 
     body: readFileSync(path.join(root, 'src/output-routing.js'), 'utf8'),
   }));
   const results = await page.evaluate(async () => {
-    const { buildHardwareGraph, validateRouting } = await import('/__bitcheer_test__/output-routing.js');
+    const { buildHardwareGraph, validateRouting } = await import(new URL('__bitcheer_test__/output-routing.js', location.href).href);
     const cases = [
       { channels: 4, config: { mode: 'stereo', a: 0, b: 2 }, expected: [.1, .2, .3, .4] },
       { channels: 6, config: { mode: 'stereo', a: 4, b: 0 }, expected: [.3, .4, 0, 0, .1, .2] },
@@ -455,7 +586,8 @@ test('actual Web Audio graph routes isolated stereo pairs and mono sums without 
 test('stereo-device output controls route independent mono decks and restore the stereo mix', async ({ page }, testInfo) => {
   await playBoth(page);
   await setRange(page, 'Crossfader', 1);
-  await page.getByRole('button', { name: 'Audio outputs', exact: true }).click();
+  await openModule(page, 'monitor');
+  await openModule(page, 'outputs');
   const capacity = await page.evaluate(() => window.bitCheer.audio.context.destination.maxChannelCount);
   await expect(page.getByText(`${capacity} channels exposed by browser`, { exact: true })).toBeVisible();
   // Headless Chromium exposes a stereo default device. On machines with more
@@ -539,7 +671,7 @@ test('stereo-device output controls route independent mono decks and restore the
 
 test('a denied output-device change restores the confirmed selector and preserves the playing graph', async ({ page }) => {
   await playBoth(page);
-  await page.getByRole('button', { name: 'Audio outputs', exact: true }).click();
+  await openModule(page, 'outputs');
   await page.getByLabel('Output mode', { exact: true }).selectOption('mono');
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.routing)).toEqual({ mode: 'mono', a: 0, b: 1 });
   await page.evaluate(() => {
@@ -569,7 +701,8 @@ test('a denied output-device change restores the confirmed selector and preserve
 });
 
 test('Foundation stays kick-only and each deck has independent tempo and material actions', async ({ page }) => {
-  await expect(page.locator('.foundation-deck-note')).toHaveCount(2);
+  await expect(page.getByText('KICK-ONLY EXERCISE', { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => window.bitCheer.audio.state.map(deck => deck.elements))).toEqual([1, 1]);
   await expect(page.locator('.foundation-guide')).toBeVisible();
   await expect(page.locator('button.element')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Add an element/ })).toHaveCount(0);
@@ -601,9 +734,11 @@ test('Foundation stays kick-only and each deck has independent tempo and materia
     await page.getByRole('button', { name: `Change track deck ${letter}`, exact: true }).click();
     await expect.poll(async () => (await deckSnapshots(page))[index].seed).not.toBe(beforeTrack[index].seed);
     await expect.poll(() => page.evaluate(deck => Array.from(window.bitCheer.audio.waveforms[deck]), index)).not.toEqual(oldWaveform);
+    await expect.poll(() => page.evaluate(deck => window.bitCheer.telemetry[deck].position, index)).toBe(0);
     const afterTrack = await deckSnapshots(page);
     expect(afterTrack[1 - index]).toEqual(beforeTrack[1 - index]);
-    expect(afterTrack[index].effectiveBpm).toBeCloseTo(beforeTrack[index].effectiveBpm, 3);
+    expect(afterTrack[index].pitch).toBe(0);
+    expect(afterTrack[index].effectiveBpm).toBe(afterTrack[index].bpm);
     expect(afterTrack[index].elements).toBe(1);
     expect(afterTrack[index].source).toBe('generated');
     expect(afterTrack[index].playing).toBe(false);
@@ -652,9 +787,11 @@ test('Builder independently adds instruments and changes only the selected gener
     await page.getByRole('button', { name: `Change track deck ${letter}`, exact: true }).click();
     await expect.poll(async () => (await deckSnapshots(page))[index].seed).not.toBe(beforeTrack[index].seed);
     await expect.poll(() => page.evaluate(deck => Array.from(window.bitCheer.audio.waveforms[deck]), index)).not.toEqual(oldWaveform);
+    await expect.poll(() => page.evaluate(deck => window.bitCheer.telemetry[deck].position, index)).toBe(0);
     const afterTrack = await deckSnapshots(page);
     expect(afterTrack[1 - index]).toEqual(beforeTrack[1 - index]);
-    expect(afterTrack[index].effectiveBpm).toBeCloseTo(beforeTrack[index].effectiveBpm, 3);
+    expect(afterTrack[index].pitch).toBe(0);
+    expect(afterTrack[index].effectiveBpm).toBe(afterTrack[index].bpm);
     expect(afterTrack[index].elements).not.toBe(beforeTrack[index].elements);
     expect(afterTrack[index].elements & 1).toBe(1);
     expect(afterTrack[index].elements).toBeGreaterThan(1);
@@ -666,16 +803,13 @@ test('Builder independently adds instruments and changes only the selected gener
   await expect(page.locator('button.element')).toHaveCount(0);
 });
 
-test('Pro tempo preserves PCM and independent genre track changes preserve effective tempo', async ({ page }) => {
+test('Pro tempo preserves PCM while independent track changes reset to native tempo', async ({ page }) => {
   await page.getByRole('button', { name: /Pro decks/ }).click();
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(deck => deck.source === 'pcm'))).toBe(true);
   // Techno has a different pair from the initial House recordings, proving the
   // current genre drives Change track instead of falling back to a global pool.
-  await page.getByLabel('Track genre', { exact: true }).selectOption('Techno');
-  await page.getByRole('button', { name: 'Load 21seiki Techno Shonen into deck A', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].name)).toContain('21seiki Techno Shonen');
-  await page.getByRole('button', { name: 'Load Robowalk into deck B', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[1].name)).toContain('Robowalk');
+  await selectAndLoadTrack(page, 'A', '21seiki Techno Shonen', 'Techno');
+  await selectAndLoadTrack(page, 'B', 'Robowalk', 'Techno');
   await playBoth(page);
   await pauseBoth(page);
   await seekPausedDeck(page, 'A', .25);
@@ -692,30 +826,30 @@ test('Pro tempo preserves PCM and independent genre track changes preserve effec
     expect(await page.evaluate(deck => Array.from(window.bitCheer.audio.waveforms[deck]), index)).toEqual(oldWaveform);
 
     const beforeTrack = await deckSnapshots(page);
-    const expectedTitle = beforeTrack[index].name.includes('Robowalk') ? '21seiki Techno Shonen' : 'Robowalk';
     await page.getByRole('button', { name: `Change track deck ${letter}`, exact: true }).click();
-    await expect.poll(async () => (await deckSnapshots(page))[index].name).toContain(expectedTitle);
+    await expect.poll(async () => (await deckSnapshots(page))[index].trackId).not.toBe(beforeTrack[index].trackId);
     const afterTrack = await deckSnapshots(page);
+    expect(playableTracks.find(track => track.id === afterTrack[index].trackId)?.genre).toBe('Techno');
+    await expect(page.getByLabel(`Deck ${letter} genre`, { exact: true })).toHaveValue('Techno');
     expect(afterTrack[1 - index]).toEqual(beforeTrack[1 - index]);
-    expect(afterTrack[index].effectiveBpm).toBeCloseTo(beforeTrack[index].effectiveBpm, 3);
+    expect(afterTrack[index].pitch).toBe(0);
+    expect(afterTrack[index].effectiveBpm).toBe(afterTrack[index].bpm);
     expect(afterTrack[index].source).toBe('pcm');
     expect(afterTrack[index].playing).toBe(false);
     expect(await page.evaluate(deck => Array.from(window.bitCheer.audio.waveforms[deck]), index)).not.toEqual(oldWaveform);
     expect(Number(await page.getByRole('slider', { name: `Deck ${letter} pitch`, exact: true }).inputValue())).toBeCloseTo(afterTrack[index].pitch, 2);
   }
-  // A new recording can require a wider fader range to retain the old audible
-  // tempo. The confirmed UI must not silently clamp the engine's correct rate.
-  await page.getByRole('button', { name: 'Load 21seiki Techno Shonen into deck A', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].name)).toContain('21seiki Techno Shonen');
-  await setRange(page, 'Deck A pitch', 8);
+  // A new recording starts at its own tempo, even after a large previous offset.
+  await selectAndLoadTrack(page, 'A', '21seiki Techno Shonen', 'Techno');
+  await page.getByLabel('Deck A pitch range', { exact: true }).selectOption('32');
+  await setRange(page, 'Deck A pitch', 23.11);
   const beforeWideChange = await deckSnapshots(page);
   await page.getByRole('button', { name: 'Change track deck A', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].name)).toContain('Robowalk');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].trackId)).not.toBe(beforeWideChange[0].trackId);
   const afterWideChange = await deckSnapshots(page);
-  expect(afterWideChange[0].effectiveBpm).toBeCloseTo(beforeWideChange[0].effectiveBpm, 3);
-  expect(afterWideChange[0].pitch).toBeGreaterThan(16);
-  await expect(page.getByLabel('Deck A pitch range', { exact: true })).toHaveValue('32');
-  expect(Number(await page.getByRole('slider', { name: 'Deck A pitch', exact: true }).inputValue())).toBeCloseTo(afterWideChange[0].pitch, 2);
+  expect(afterWideChange[0].pitch).toBe(0);
+  expect(afterWideChange[0].effectiveBpm).toBe(afterWideChange[0].bpm);
+  await expect(page.getByRole('slider', { name: 'Deck A pitch', exact: true })).toHaveValue('0');
   expect(afterWideChange[1]).toEqual(beforeWideChange[1]);
 });
 
@@ -836,44 +970,193 @@ test('CHAOS creates twelve to twenty actual voices on only the chosen deck witho
   for (const deck of [0, 1]) await expect.poll(() => page.evaluate(index => window.bitCheer.telemetry[index]?.peak || 0, deck)).toBeGreaterThan(.01);
 });
 
-test('deck focus hides the app and enlarges usable controls while wheel pitch stays independent', async ({ page }, testInfo) => {
+test('session focus shows only both decks pitch volume and playback and restores the workspace', async ({ page }, testInfo) => {
   await playBoth(page);
   await pauseBoth(page);
-  const normalWheel = await page.getByRole('slider', { name: 'Deck A jog wheel', exact: true }).boundingBox();
-  const normalPitch = await page.getByRole('slider', { name: 'Deck A pitch', exact: true }).boundingBox();
+  await openModule(page, 'jog', 'A');
+  await page.getByRole('button', { name: 'Hide Screen deck B', exact: true }).click();
+  await expect(moduleElement(page, 'screen', 'B')).toHaveClass(/is-collapsed/);
+  const normalLayout = await page.locator('.player-module').evaluateAll(nodes => nodes.map(node => [node.dataset.scope, node.dataset.module, node.classList.contains('is-collapsed')]));
+  await page.getByRole('button', { name: 'Focus session', exact: true }).click();
+  await expect(page.locator('.session-focus-view')).toBeVisible();
+  await expect(page.locator('.focus-channel')).toHaveCount(2);
+  await expect(page.getByRole('slider')).toHaveCount(4);
+  await expect(page.getByRole('button', { name: /^(Play|Pause) deck [AB]$/ })).toHaveCount(4);
+  await expect(page.locator('.player-module, .deck, .topbar, .sidebar, .coach-panel, .tap-panel, canvas, .jog-wheel, .composer-rack, .deck-screen, .module-titlebar, .headspace-transport')).toHaveCount(0);
+  const allowedButtons = await page.getByRole('button').evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label') || node.textContent.trim()));
+  expect(allowedButtons.every(label => /^(Exit session focus|(Play|Pause) deck [AB]|Fine (increase|decrease) deck [AB] pitch|0)$/.test(label))).toBe(true);
   for (const [index, letter] of ['A', 'B'].entries()) {
     const before = await deckSnapshots(page);
-    await page.getByRole('button', { name: `Focus deck ${letter}`, exact: true }).click();
-    await expect(page.locator('.app-shell')).toHaveAttribute('data-focused', String(index));
-    await expect(page.locator('.deck')).toHaveCount(1);
-    await expect(page.getByRole('region', { name: `Deck ${letter}`, exact: true })).toBeVisible();
-    await expect(page.locator('.topbar, .sidebar, .coach-panel, .tap-panel')).toHaveCount(0);
-    const wheel = await page.getByRole('slider', { name: `Deck ${letter} jog wheel`, exact: true }).boundingBox();
     const pitch = page.getByRole('slider', { name: `Deck ${letter} pitch`, exact: true });
-    const pitchBox = await pitch.boundingBox();
-    expect(wheel.width).toBeGreaterThan(normalWheel.width * 1.5);
-    expect(pitchBox.height).toBeGreaterThan(normalPitch.height * 1.5);
     await pitch.hover();
     await pitch.focus();
-    await page.mouse.wheel(0, -120);
+    await page.mouse.wheel(0, -100);
     await expect.poll(async () => (await deckSnapshots(page))[index].pitch).not.toBe(before[index].pitch);
     const after = await deckSnapshots(page);
     expect(after[1 - index]).toEqual(before[1 - index]);
     expect(after[index].source).toBe(before[index].source);
     expect(after[index].seed).toBe(before[index].seed);
     expect(Number(await pitch.inputValue())).toBeCloseTo(after[index].pitch, 2);
-    await page.screenshot({ path: testInfo.outputPath(`focus-${letter.toLowerCase()}-desktop.png`), fullPage: true });
-    await page.keyboard.press('Escape');
-    await expect(page.locator('.deck')).toHaveCount(2);
-    await expect(page.getByRole('button', { name: 'Skin studio', exact: true })).toBeVisible();
+    await setRange(page, `Deck ${letter} volume`, index === 0 ? .43 : .67);
+    await page.getByRole('button', { name: `Play deck ${letter}`, exact: true }).click();
+    await expect.poll(() => page.evaluate(deck => window.bitCheer.audio.state[deck].playing, index)).toBe(true);
+    await expect.poll(() => page.evaluate(deck => window.bitCheer.telemetry[deck].peak, index)).toBeGreaterThan(.001);
+    expect(await page.evaluate(deck => window.bitCheer.audio.state[deck].playing, 1 - index)).toBe(false);
+    await page.getByRole('button', { name: `Pause deck ${letter}`, exact: true }).click();
+    await expect.poll(() => page.evaluate(deck => window.bitCheer.telemetry[deck].playing, index)).toBe(false);
   }
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('button', { name: 'Focus deck B', exact: true }).click();
-  await expect(page.locator('.deck')).toHaveCount(1);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: testInfo.outputPath('focus-b-mobile.png'), fullPage: true });
-  await page.getByRole('button', { name: 'Exit deck focus', exact: true }).click();
+  expect(await page.evaluate(() => window.bitCheer.audio.volumes)).toEqual([.43, .67]);
+  await page.screenshot({ path: testInfo.outputPath('focus-session-desktop.png'), fullPage: true });
+  // The pitch input commonly retains focus after an adjustment; Space still
+  // controls both transports in this dedicated session view.
+  await page.getByRole('slider', { name: 'Deck A pitch', exact: true }).focus();
+  await page.keyboard.press('Space');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(deck => deck.playing))).toBe(true);
+  await page.keyboard.press('Escape');
   await expect(page.locator('.deck')).toHaveCount(2);
+  expect(await page.locator('.player-module').evaluateAll(nodes => nodes.map(node => [node.dataset.scope, node.dataset.module, node.classList.contains('is-collapsed')]))).toEqual(normalLayout);
+  expect(await page.evaluate(() => window.bitCheer.audio.state.every(deck => deck.playing))).toBe(true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: 'Focus session', exact: true }).click();
+  await expect(page.locator('.focus-channel')).toHaveCount(2);
+  const boxes = await page.locator('.focus-channel').evaluateAll(nodes => nodes.map(node => { const rect = node.getBoundingClientRect(); return { x: rect.x, y: rect.y, width: rect.width }; }));
+  expect(boxes[0].y).toBe(boxes[1].y);
+  expect(boxes[0].x + boxes[0].width).toBeLessThan(boxes[1].x);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('focus-session-mobile.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Exit session focus', exact: true }).click();
+  await expect(page.locator('.deck')).toHaveCount(2);
+});
+
+test('module hide remove and restore preserve audio and persist independently per mode and deck', async ({ page }) => {
+  await playBoth(page);
+  await setRange(page, 'Deck A volume', .37);
+  const source = await page.evaluate(() => window.bitCheer.audio.state.map(deck => ({ seed: deck.seed, source: deck.source, name: deck.name, bpm: deck.bpm, pitch: deck.pitch })));
+  await page.getByRole('button', { name: 'Hide Volume deck A', exact: true }).click();
+  await expect(moduleElement(page, 'volume', 'A')).toHaveClass(/is-collapsed/);
+  await expect(page.getByRole('slider', { name: 'Deck A volume', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('slider', { name: 'Deck B volume', exact: true })).toBeVisible();
+  await openModule(page, 'volume', 'A');
+  await expect(page.getByRole('slider', { name: 'Deck A volume', exact: true })).toHaveValue('0.37');
+  await page.getByRole('button', { name: 'Remove Volume deck A', exact: true }).click();
+  await expect(moduleElement(page, 'volume', 'A')).toHaveCount(0);
+  await openModule(page, 'volume', 'A');
+  await expect(page.getByRole('slider', { name: 'Deck A volume', exact: true })).toHaveValue('0.37');
+  await page.getByRole('button', { name: 'Hide Screen deck A', exact: true }).click();
+  await page.getByRole('button', { name: 'Remove Screen deck B', exact: true }).click();
+  await page.getByRole('button', { name: 'Hide Coach session', exact: true }).click();
+  await page.getByRole('button', { name: 'Remove Crossfader session', exact: true }).click();
+  await expect(moduleElement(page, 'coach')).toHaveClass(/is-collapsed/);
+  await expect(moduleElement(page, 'crossfader')).toHaveCount(0);
+  expect(await page.evaluate(() => window.bitCheer.audio.state.map(deck => ({ seed: deck.seed, source: deck.source, name: deck.name, bpm: deck.bpm, pitch: deck.pitch })))).toEqual(source);
+  expect(await page.evaluate(() => window.bitCheer.audio.state.every(deck => deck.playing))).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.bitCheer.telemetry[0].peak)).toBeGreaterThan(.001);
+  await page.getByRole('button', { name: /02 Loop builder/ }).click();
+  await expect(moduleElement(page, 'screen', 'A')).not.toHaveClass(/is-collapsed/);
+  await expect(moduleElement(page, 'screen', 'B')).toBeVisible();
+  await expect(moduleElement(page, 'composer', 'A')).toBeVisible();
+  await page.getByRole('button', { name: 'Remove Composer deck A', exact: true }).click();
+  await page.getByRole('button', { name: /01 Foundation/ }).click();
+  await expect(moduleElement(page, 'screen', 'A')).toHaveClass(/is-collapsed/);
+  await expect(moduleElement(page, 'screen', 'B')).toHaveCount(0);
+  await expect(moduleElement(page, 'coach')).toHaveClass(/is-collapsed/);
+  await expect(moduleElement(page, 'crossfader')).toHaveCount(0);
+  await expect(page.getByLabel('Add module to deck A', { exact: true }).locator('option[value="composer"]')).toHaveCount(0);
+  await page.reload();
+  await expect(moduleElement(page, 'screen', 'A')).toHaveClass(/is-collapsed/);
+  await expect(moduleElement(page, 'screen', 'B')).toHaveCount(0);
+  await expect(moduleElement(page, 'coach')).toHaveClass(/is-collapsed/);
+  await expect(moduleElement(page, 'crossfader')).toHaveCount(0);
+  await openModule(page, 'crossfader');
+  await expect(page.getByRole('slider', { name: 'Crossfader', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: /02 Loop builder/ }).click();
+  await expect(moduleElement(page, 'composer', 'A')).toHaveCount(0);
+  await expect(moduleElement(page, 'composer', 'B')).toBeVisible();
+  await openModule(page, 'composer', 'A');
+  await expect(page.getByLabel('Add instrument to deck A', { exact: true })).toBeVisible();
+  await playBoth(page);
+  const builderSource = await page.evaluate(() => window.bitCheer.audio.state.map(deck => ({ seed: deck.seed, source: deck.source, name: deck.name, elements: deck.elements })));
+  // Every optional module uses the same reversible window controls. Exercise
+  // each actual body, including canvas/jog/routing bodies with event bindings.
+  for (const [owner, ids] of [
+    ['A', ['screen', 'pitch', 'volume', 'jog', 'waveform', 'eq', 'vu', 'loop', 'composer']],
+    ['B', ['pitch', 'volume']],
+    ['session', ['crossfader', 'master', 'monitor', 'outputs', 'coach', 'tap', 'discovery']],
+  ]) {
+    const suffix = owner === 'session' ? 'session' : `deck ${owner}`;
+    for (const id of ids) {
+      await openModule(page, id, owner);
+      await page.getByRole('button', { name: `Hide ${moduleLabels[id]} ${suffix}`, exact: true }).click();
+      await expect(moduleElement(page, id, owner)).toHaveClass(/is-collapsed/);
+      await expect(moduleElement(page, id, owner).locator('.module-body')).toHaveCount(0);
+      await openModule(page, id, owner);
+      await page.getByRole('button', { name: `Remove ${moduleLabels[id]} ${suffix}`, exact: true }).click();
+      await expect(moduleElement(page, id, owner)).toHaveCount(0);
+      await openModule(page, id, owner);
+      await expect(moduleElement(page, id, owner).locator('.module-body')).toBeVisible();
+    }
+  }
+  expect(await page.evaluate(() => window.bitCheer.audio.state.map(deck => ({ seed: deck.seed, source: deck.source, name: deck.name, elements: deck.elements })))).toEqual(builderSource);
+  expect(await page.evaluate(() => window.bitCheer.audio.state.every(deck => deck.playing))).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.bitCheer.telemetry[0].peak)).toBeGreaterThan(.001);
+  // Transport is permanently integrated into each deck, even when every
+  // optional module has been removed from both sides.
+  for (const letter of ['A', 'B']) {
+    const modules = page.locator(`.player-module[data-scope="deck-${letter.toLowerCase()}"]`);
+    for (const id of await modules.evaluateAll(nodes => nodes.map(node => node.dataset.module))) {
+      await page.getByRole('button', { name: `Remove ${moduleLabels[id]} deck ${letter}`, exact: true }).click();
+      await expect(moduleElement(page, id, letter)).toHaveCount(0);
+    }
+    await expect(page.getByLabel(`Deck ${letter} transport`, { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: `Pause deck ${letter}`, exact: true }).click();
+    await expect.poll(() => page.evaluate(index => window.bitCheer.telemetry[index].playing, letter === 'A' ? 0 : 1)).toBe(false);
+    await page.getByRole('button', { name: `Play deck ${letter}`, exact: true }).click();
+    await expect.poll(() => page.evaluate(index => window.bitCheer.telemetry[index].playing, letter === 'A' ? 0 : 1)).toBe(true);
+  }
+});
+
+test('pitch sensitivity normalizes wheel modes preserves fine fractions and synchronizes the handle', async ({ page }) => {
+  await playBoth(page);
+  await pauseBoth(page);
+  const peer = (await deckSnapshots(page))[1];
+  const pitch = page.getByRole('slider', { name: 'Deck A pitch', exact: true });
+  const sensitivity = page.getByLabel('Deck A pitch sensitivity', { exact: true });
+  let expected = 0;
+  const assertPitch = async () => {
+    await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].pitch)).toBeCloseTo(expected, 6);
+    await expect.poll(async () => Number(await pitch.inputValue())).toBeCloseTo(expected, 6);
+    const handle = await pitch.evaluate(input => {
+      const track = input.closest('.pitch-track');
+      const marker = track.querySelector('.pitch-handle');
+      return { percent: parseFloat(getComputedStyle(track).getPropertyValue('--pitch-position')), expected: (Number(input.max) - Number(input.value)) / (Number(input.max) - Number(input.min)) * 100, top: marker.getBoundingClientRect().top, height: marker.getBoundingClientRect().height };
+    });
+    expect(handle.percent).toBeCloseTo(handle.expected, 6);
+    expect(handle.height).toBeGreaterThan(15);
+    expect((await deckSnapshots(page))[1]).toEqual(peer);
+  };
+  const wheel = async (deltaY, deltaMode, shiftKey = false, increment = .05) => {
+    await pitch.dispatchEvent('wheel', { deltaY, deltaMode, shiftKey, bubbles: true, cancelable: true });
+    expected = Math.round((expected + increment) * 1e6) / 1e6;
+    await assertPitch();
+  };
+  await sensitivity.selectOption('0.05');
+  for (const [delta, mode] of [[-100, 0], [-3, 1], [-1, 2]]) await wheel(delta, mode);
+  await wheel(-100, 0, true, .01);
+  await wheel(-20, 0, false, .01);
+  await wheel(-10, 0, false, .005);
+  await sensitivity.selectOption('0.25');
+  await wheel(-100, 0, false, .25);
+  await wheel(-100, 0, true, .01);
+  await pitch.focus();
+  await page.keyboard.press('ArrowUp'); expected += .25; await assertPitch();
+  await page.keyboard.press('Shift+ArrowDown'); expected -= .01; await assertPitch();
+  await page.keyboard.press('PageUp'); expected += 2.5; await assertPitch();
+  await sensitivity.selectOption('0.01');
+  await pitch.evaluate(input => { for (let i = 0; i < 100; i++) input.dispatchEvent(new WheelEvent('wheel', { deltaY: -1, deltaMode: 0, bubbles: true, cancelable: true })); });
+  expected += .01; await assertPitch();
+  await page.reload();
+  await expect(sensitivity).toHaveValue('0.01');
+  await expect(page.getByLabel('Deck B pitch sensitivity', { exact: true })).toHaveValue('0.05');
 });
 
 test('the expert lesson requires a timed handover before a matched real-track mix completes', async ({ page }) => {
@@ -882,8 +1165,7 @@ test('the expert lesson requires a timed handover before a matched real-track mi
   await page.getByRole('button', { name: 'Learning path', exact: true }).click();
   await page.locator('.lesson-card').last().getByRole('button', { name: /Start lesson/ }).click();
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(deck => deck.source === 'pcm'))).toBe(true);
-  await page.getByRole('button', { name: 'Load Selection into deck B', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[1].name)).toContain('Selection');
+  await selectAndLoadTrack(page, 'B', 'Selection', 'House');
   await playBoth(page);
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].position)).toBeGreaterThan(3.3);
   await page.getByRole('button', { name: /Check my match/ }).click();
@@ -897,4 +1179,114 @@ test('the expert lesson requires a timed handover before a matched real-track mi
   await page.getByRole('button', { name: /Check my match/ }).click();
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('bit-cheer-progress')).progress)).toContain(8);
   expect(Number(await page.locator('.score-circle strong').textContent())).toBeGreaterThanOrEqual(85);
+});
+
+test('configured hosting path serves the actual engine catalog skin bitmaps and credits', async ({ page }) => {
+  const hosting = new URL(page.url());
+  const prefix = hosting.pathname.endsWith('/') ? hosting.pathname : hosting.pathname.slice(0, hosting.pathname.lastIndexOf('/') + 1);
+  // Chromium omits AudioWorklet fetches from both Playwright request events and
+  // Resource Timing. Observe the real loader while preserving its implementation.
+  await page.evaluate(() => {
+    window.__loadedWorklets = [];
+    const addModule = AudioWorklet.prototype.addModule;
+    AudioWorklet.prototype.addModule = function(url, options) {
+      return addModule.call(this, url, options).then(result => {
+        window.__loadedWorklets.push(new URL(url, location.href).href);
+        return result;
+      });
+    };
+  });
+  await playBoth(page);
+  await expect.poll(() => page.evaluate(() => window.bitCheer.telemetry.every(deck => deck.peak > .001))).toBe(true);
+  await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
+  await expect.poll(() => page.locator('.skin-card img').evaluateAll(images => images.length === 5 && images.every(image => image.complete && image.naturalWidth > 0))).toBe(true);
+  for (const [id, name] of [['classic', 'Classic 2.91'], ['classified3', 'Winamp 3 Classified'], ['classified5', 'Winamp 5 Classified'], ['bento', 'Bento Classified'], ['alien', 'Headspace · Alien Lime']]) {
+    await page.locator('.skin-card').filter({ has: page.locator('.skin-card-copy strong', { hasText: name }) }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-skin', id);
+    await page.getByRole('button', { name: 'Practice', exact: true }).click();
+    await assertLcdSprites(page);
+    await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
+  }
+  await page.getByRole('button', { name: /Pro decks/ }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(deck => deck.source === 'pcm'))).toBe(true);
+  await playBoth(page);
+  for (const deck of [0, 1]) await expect.poll(() => page.evaluate(index => window.bitCheer.telemetry[index].peak, deck)).toBeGreaterThan(.001);
+  const creditsUrl = await page.getByRole('link', { name: /Credits & sources/ }).evaluate(link => link.href);
+  expect(new URL(creditsUrl).pathname).toBe(`${prefix}credits.html`);
+  const credits = await page.request.get(creditsUrl);
+  expect(credits.ok()).toBe(true);
+  expect(await credits.text()).toContain('creativecommons.org/licenses/by/3.0/');
+  const worklets = await page.evaluate(() => window.__loadedWorklets);
+  await page.goto(creditsUrl);
+  await expect.poll(() => page.locator('img').evaluateAll(images => images.length >= 4 && images.every(image => image.complete && image.naturalWidth > 0))).toBe(true);
+  const creditPaths = await page.locator('a[href], img[src]').evaluateAll(nodes => nodes.map(node => node.href || node.src).filter(value => new URL(value).origin === location.origin).map(value => new URL(value).pathname));
+  expect(creditPaths.filter(pathname => !pathname.startsWith(prefix)), 'Credits downloads, artwork and Back must retain the Pages base').toEqual([]);
+  const appRequests = [...page.__requests, ...worklets].map(url => new URL(url)).filter(url => url.origin === hosting.origin);
+  expect(appRequests.some(url => url.pathname.endsWith('/engine.wasm'))).toBe(true);
+  expect(appRequests.some(url => url.pathname.endsWith('/audio-worklet.js'))).toBe(true);
+  expect(appRequests.some(url => url.pathname.endsWith('/catalog.json'))).toBe(true);
+  expect(appRequests.some(url => /\/tracks\/.+\.mp3$/.test(url.pathname))).toBe(true);
+  expect(appRequests.filter(url => !url.pathname.startsWith(prefix)).map(url => url.pathname), 'Every same-origin asset must remain within the configured Pages subpath').toEqual([]);
+  expect(page.__badResponses).toEqual([]);
+});
+
+test('every bundled recording decodes to finite audible stereo with accurate catalog duration', async ({ page }) => {
+  test.setTimeout(120000);
+  const base = new URL('./', page.url()).pathname;
+  const response = await page.request.get(assetUrl('catalog.json', base));
+  expect(response.ok()).toBe(true);
+  const catalog = await response.json();
+  expect(catalog.tracks.length).toBeGreaterThanOrEqual(30);
+  expect(new Set(catalog.tracks.map(track => track.id)).size).toBe(catalog.tracks.length);
+  expect(new Set(catalog.tracks.map(track => track.url)).size).toBe(catalog.tracks.length);
+  expect(new Set(catalog.tracks.map(track => track.genre)).size).toBeGreaterThanOrEqual(8);
+  const origin = new URL(page.url()).origin;
+  const recordings = catalog.tracks.map(track => ({ ...track, url: new URL(assetUrl(track.url, base), origin).href }));
+  for (const recording of recordings) {
+    const url = new URL(recording.url);
+    expect(url.origin).toBe(origin);
+    expect(url.pathname.startsWith(base)).toBe(true);
+    expect(recording.bpm).toBeGreaterThan(40);
+    expect(recording.bpm).toBeLessThan(240);
+    expect(recording.duration).toBeGreaterThan(20);
+  }
+  await playBoth(page);
+  await pauseBoth(page);
+  const decoded = await page.evaluate(async tracks => {
+    const context = window.bitCheer.audio.context;
+    const result = [];
+    // Decode sequentially so forty full PCM buffers are never retained together.
+    for (const track of tracks) {
+      const response = await fetch(track.url);
+      if (!response.ok) throw new Error(`${track.id}: HTTP ${response.status}`);
+      const buffer = await context.decodeAudioData(await response.arrayBuffer());
+      const signal = Array.from({ length: buffer.numberOfChannels }, (_, channel) => {
+        const data = buffer.getChannelData(channel);
+        let sum = 0, peak = 0, count = 0, finite = true;
+        const quarters = Array.from({ length: 4 }, () => ({ sum: 0, count: 0 }));
+        for (let i = 0; i < data.length; i += 64) {
+          finite &&= Number.isFinite(data[i]);
+          sum += data[i] ** 2; peak = Math.max(peak, Math.abs(data[i])); count++;
+          const quarter = quarters[Math.min(3, Math.floor(i / data.length * 4))];
+          quarter.sum += data[i] ** 2; quarter.count++;
+        }
+        return { finite, peak, rms: Math.sqrt(sum / count), quarters: quarters.map(quarter => Math.sqrt(quarter.sum / quarter.count)) };
+      });
+      result.push({ id: track.id, duration: buffer.duration, channels: buffer.numberOfChannels, signal });
+    }
+    return result;
+  }, recordings);
+  const problems = [];
+  for (const [index, audio] of decoded.entries()) {
+    const record = recordings[index];
+    if (audio.channels !== 2) problems.push({ id: audio.id, issue: 'channel count', actual: audio.channels });
+    if (Math.abs(audio.duration - record.duration) >= .3) problems.push({ id: audio.id, issue: 'manifest duration', actual: audio.duration, expected: record.duration });
+    if (Math.abs(audio.duration - 128 * 60 / record.bpm) >= .3) problems.push({ id: audio.id, issue: '128-beat length', actual: audio.duration, expected: 128 * 60 / record.bpm });
+    for (const [index, channel] of audio.signal.entries()) {
+      if (!channel.finite || channel.rms <= .00001 || channel.peak <= .001) problems.push({ id: audio.id, issue: 'inaudible/nonfinite channel', channel: index, ...channel });
+      if (channel.quarters.some(rms => rms <= .00001)) problems.push({ id: audio.id, issue: 'silent section', channel: index, quarters: channel.quarters });
+    }
+  }
+  expect(problems, 'All recordings must have accurate duration and audible finite samples on both channels').toEqual([]);
+  expect(page.__badResponses).toEqual([]);
 });

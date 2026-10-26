@@ -1,0 +1,97 @@
+/* Optional windows dock into the original player chassis. Compact captions,
+   machined edges and skin-specific materials retain the desktop-player feel. */
+:root .app-shell .deck-module-grid{gap:6px;margin-top:7px}
+:root .app-shell .player-module{border-radius:0;box-shadow:inset 1px 1px #ffffff30,inset -1px -1px #0008,0 1px #ffffff24}
+:root .app-shell .deck-module-grid>.player-module{background:transparent}
+:root .app-shell .module-titlebar{min-height:21px;padding:1px 3px;border-radius:0;gap:5px;border-top:1px solid #ffffff5c;border-bottom:1px solid #080c15}
+:root .app-shell .module-titlebar>strong{font:bold 9px Tahoma,Arial,sans-serif;letter-spacing:.6px;text-transform:uppercase;flex-shrink:1}
+:root .app-shell .module-titlebar:after{content:'';order:1;flex:1;min-width:4px;height:5px;background:repeating-linear-gradient(to bottom,#ffffff66 0 1px,#0005 1px 2px);box-shadow:0 1px #0008}
+:root .app-shell .module-window-actions{order:2;gap:2px}
+:root .app-shell .module-titlebar button{min-height:16px;height:16px;min-width:17px;padding:0 3px;font:9px/14px Tahoma,Arial,sans-serif;border-radius:0;border:1px solid #121a29;box-shadow:inset 1px 1px #fff9,inset -1px -1px #3337;text-shadow:0 1px #fff8}
+:root .app-shell .module-titlebar button:last-child{font-size:13px;line-height:12px;font-weight:bold}
+:root .app-shell .module-titlebar button:active{box-shadow:inset 1px 1px #0008}
+:root .app-shell .module-body{padding:6px}
+:root .app-shell .module-screen .module-body{padding:3px}
+:root .app-shell .module-volume .module-body{padding:9px 7px}
+:root .app-shell .module-pitch .module-body{padding:4px}
+:root .app-shell .module-pitch .pitch-section{background-color:transparent}
+:root .app-shell .add-module-menu{margin-top:6px;padding:5px 2px 2px;gap:8px}
+:root .app-shell .add-module-menu select{font:10px Tahoma,Arial,sans-serif;padding:3px 5px;border-width:1px}
+:root .app-shell .add-module-menu small{font:9px Tahoma,Arial,sans-serif}
+:root .app-shell .deck-transport .transport{background:none;border:0;box-shadow:none;border-radius:0;padding:1px 3px}
+:root .app-shell .deck-transport .deck-actions{background:none;border:0;box-shadow:none;border-radius:0;padding:0;gap:5px}
+:root .app-shell .deck-transport .deck-action-hint{font:9px Tahoma,Arial,sans-serif}
+:root .app-shell .deck-module-grid>.deck-transport{grid-column:1;grid-template-columns:minmax(0,1fr);gap:4px;padding:4px 2px 6px;align-self:start;min-width:0}
+:root .app-shell .global-module-grid>.player-module:last-child:nth-child(odd){grid-column:1/-1}
+:root .app-shell .module-volume .deck-volume-row{display:flex;gap:7px;align-items:center}
+:root .app-shell .module-volume .deck-volume-row>label{flex:1;min-width:0}
+:root .app-shell .module-volume .deck-volume-row>strong{font:10px 'Courier New',monospace}
+/* Keep the full fader travel, with compact controls beside its steel rail. */
+:root .app-shell:not(.session-focus-view) .pitch-section{display:grid;grid-template-columns:minmax(0,1fr) minmax(58px,1fr);column-gap:4px;row-gap:7px;align-items:center;padding:4px}
+:root .app-shell:not(.session-focus-view) .pitch-section>.control-label{grid-column:1/-1;justify-self:center;margin:0}
+:root .app-shell:not(.session-focus-view) .pitch-track{grid-column:1;grid-row:2/span 5;width:100%;max-width:none}
+:root .app-shell:not(.session-focus-view) .pitch-value{grid-column:2;font-size:12px;width:100%;padding:5px 1px;align-self:end;justify-self:center}
+:root .app-shell:not(.session-focus-view) .pitch-fine{grid-column:2;display:flex;justify-content:center;gap:2px;margin:0;align-self:center}
+:root .app-shell:not(.session-focus-view) .pitch-fine button{min-width:16px;width:18px;height:23px;font:11px Tahoma,Arial,sans-serif;padding:1px}
+:root .app-shell:not(.session-focus-view) .pitch-range,:root .app-shell:not(.session-focus-view) .pitch-sensitivity{grid-column:2;min-width:0;width:100%;font-size:9px;padding:4px 0}
+:root .app-shell:not(.session-focus-view) .pitch-section>label{grid-column:2;font-size:8px;min-width:0}
+:root .app-shell:not(.session-focus-view) .pitch-wheel-hint{grid-column:2;font-size:8px;max-width:none;line-height:1.4;align-self:start}
+:root .app-shell:not(.session-focus-view) .pitch-handle{width:48px;border-radius:2px;box-shadow:0 2px 2px #0009,inset 0 0 0 1px #fff5}
+:root .app-shell:not(.session-focus-view) .pitch-handle:before,:root .app-shell:not(.session-focus-view) .pitch-handle:after{left:5px;right:5px}
+:root .app-shell .track-picker .picker-current{border-width:2px;font:11px/1.5 'Courier New',monospace}
+:root .app-shell .track-picker button{min-height:27px;padding:4px 8px;font:10px Tahoma,Arial,sans-serif}
+
+/* Classic: violet case, gold engraved strips and green phosphor screens. */
+:root[data-layout=classic] .app-shell .player-module{border:2px groove #827c97}
+:root[data-layout=classic] .app-shell .module-titlebar{background:linear-gradient(#56526b,#29283e 45%,#191a2c 51%,#3a3650);color:#e6d497;text-shadow:1px 1px #080917;border-top-color:#bcae6d}
+:root[data-layout=classic] .app-shell .module-titlebar button{background:linear-gradient(#d8cc98,#a29463 50%,#c0b077);color:#252035}
+:root[data-layout=classic] .app-shell .global-module-grid>.player-module,:root[data-layout=classic] .app-shell .pro-track-pickers .player-module{background:linear-gradient(110deg,#39384e,#25263a)}
+
+/* Classified 3: champagne cast metal and square dark-purple window strips. */
+:root[data-layout=classified3] .app-shell .player-module{border:2px groove #b5aa92}
+:root[data-layout=classified3] .app-shell .module-titlebar{background:linear-gradient(#534c5b,#25202d 47%,#15121d 51%,#3b3443);color:#f6e0a3;border-top-color:#e1c67e}
+:root[data-layout=classified3] .app-shell .module-titlebar button{background:linear-gradient(#f4e9cf,#a29784 48%,#d3c8b1);color:#28222b}
+
+/* Classified 5: original blue inset displays framed by continuous silver alloy. */
+:root[data-skin=classified5] .app-shell:not(.session-focus-view){background:linear-gradient(110deg,#263a55,#14233b 62%,#2d425d)}
+:root[data-layout=classified5] .app-shell .player-module{border:2px ridge #859ab3;border-radius:2px}
+:root[data-layout=classified5] .app-shell .module-titlebar{background:linear-gradient(#728ba8 0%,#2c4668 34%,#101e35 48%,#0b1529 55%,#263954 100%);color:#e9f4ff;text-shadow:1px 1px #020815;border-top:1px solid #d4e3f5;border-radius:1px 1px 0 0}
+:root[data-layout=classified5] .app-shell .module-titlebar button{background:linear-gradient(#fff,#bccadc 45%,#8192aa 51%,#d7e3f2);color:#122037;border-color:#101c30}
+:root[data-layout=classified5] .app-shell .module-screen .deck-screen{border-radius:6px 6px 3px 3px}
+:root[data-layout=classified5] .app-shell .module-pitch .pitch-section{background-image:var(--skin-pitch),repeating-linear-gradient(0deg,#ffffff0c 0 1px,#64758a08 1px 2px),linear-gradient(90deg,#8997a84a,#ffffff6b 28%,#f7faff35 70%,#667b9255)}
+:root[data-layout=classified5] .app-shell .module-volume input{background:#14263f;border:1px inset #8294ac;box-shadow:0 1px #fff9}
+:root[data-layout=classified5] .app-shell .pro-track-pickers .track-picker select{background:#183f77;color:#eaf6ff;font-family:Tahoma,Arial,sans-serif}
+:root[data-layout=classified5] .app-shell .track-picker button{background:linear-gradient(#fff,#c9d7e5 44%,#8b9eb5 51%,#dde6ef);color:#1b2f49;border:1px solid #526981;box-shadow:inset 0 1px #fff;border-radius:9px}
+:root[data-layout=classified5] .app-shell .track-picker .load-track-button{background:linear-gradient(#4b78a9,#173d6a 50%,#0e294b 54%,#305780);color:#f1f8ff;border-color:#172a43}
+:root[data-layout=classified5] .app-shell .focus-transport button{border-radius:18px;background:linear-gradient(#fff,#d0deec 40%,#7c91aa 48%,#c5d5e8 56%,#8fa3bb);color:#142943;border:2px outset #cedbea;text-shadow:0 1px #fff}
+:root[data-layout=classified5] .app-shell .focus-transport button.engaged{background:linear-gradient(#3f7db6,#10355f);color:#fff;text-shadow:1px 1px #051a30}
+:root[data-layout=classified5] .app-shell:not(.session-focus-view) .pitch-handle{background:linear-gradient(#e4e8ed,#afb9c5 37%,#657387 46%,#d3dae3 53%,#929eae);border-top-color:#f6fbff;border-left-color:#d5e1eb}
+
+/* Bento stays flat and industrial; Headspace keeps its organic purple trim. */
+:root[data-layout=bento] .app-shell .module-titlebar{background:linear-gradient(#687981,#35434c 40%,#202b33 46%,#34434d);color:#d7e4eb;border-top-color:#a6b4bd}
+:root[data-layout=bento] .app-shell .module-titlebar button{background:linear-gradient(#b3c0c6,#637780);color:#11212a}
+:root[data-layout=alien] .app-shell .player-module{border:2px ridge #8dab39;border-radius:8px 8px 4px 4px}
+:root[data-layout=alien] .app-shell .module-titlebar{background:linear-gradient(#a887bc,#68477b 40%,#3a234b 48%,#78568b);color:#e5ffb6;border-radius:6px 6px 0 0;border-top-color:#d5b5e7}
+:root[data-layout=alien] .app-shell .module-titlebar button{background:linear-gradient(#e4cbef,#9f7bb3 50%,#c0a0d0);color:#311640;border-radius:4px}
+:root[data-layout=alien] .app-shell .module-titlebar:after{background:repeating-linear-gradient(to bottom,#c5e78c66 0 1px,#2b103855 1px 2px)}
+
+/* User artwork always stays above the native material treatment. */
+:root[data-artwork~=pitch] .app-shell .module-pitch .pitch-section{background-image:var(--skin-pitch);background-size:100% 100%;background-repeat:no-repeat}
+@media(max-width:760px){
+  :root .app-shell .deck-module-grid{gap:5px}
+  :root .app-shell .deck-module-grid>.deck-transport{grid-column:1/-1;grid-row:1}
+  :root .app-shell .deck-module-grid.has-pitch>.module-pitch:not(.is-collapsed){grid-row:2/span 7}
+  :root .app-shell:not(.session-focus-view) .pitch-section{grid-template-columns:minmax(0,1fr) 54px;column-gap:2px;padding:3px 1px}
+  :root .app-shell:not(.session-focus-view) .pitch-value{font-size:11px}
+  :root .app-shell:not(.session-focus-view) .pitch-handle{width:37px}
+  :root .app-shell:not(.session-focus-view) .pitch-fine button{min-width:15px;width:16px}
+  :root .app-shell:not(.session-focus-view) .pitch-section select{font-size:8px}
+  :root[data-layout=alien] .app-shell .deck-module-grid.has-pitch>.module-screen{grid-column:1/-1;grid-row:2}
+  :root[data-layout=alien] .app-shell .deck-module-grid.has-pitch>.module-pitch:not(.is-collapsed){grid-row:3/span 7}
+  :root .app-shell .module-titlebar{min-height:25px;padding:1px 3px}
+  :root .app-shell .module-titlebar>strong{font-size:8px;letter-spacing:0}
+  :root .app-shell .module-titlebar button{height:21px;min-height:21px;min-width:21px;font-size:9px;line-height:19px}
+  :root .app-shell .module-titlebar button:last-child{font-size:14px}
+  :root .app-shell .add-module-menu small{font-size:8px}
+  :root .app-shell .focus-transport button{font-size:11px;padding:7px 3px}
+}

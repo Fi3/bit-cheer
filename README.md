@@ -25,12 +25,14 @@ Install Chromium with `npx playwright install chromium` if needed. The test conf
 
 Serve `dist/` on HTTPS or localhost. AudioWorklet and optional microphone access require a secure context. Double-clicking `index.html` is insufficient. No server API or account is needed for local use.
 
+For a GitHub Pages project site, follow [the deployment guide](docs/GITHUB-PAGES.md). The included workflow builds the static app with the repository subpath; audio, workers, tracks, skins and credits use that same base path. Adding the workflow does not publish or push a repository automatically.
+
 ## Practice
 
 - **Foundation:** two kick drums, initially 120 and 124 BPM. Play both; move a pitch fader until drift stops, then nudge the beats together.
 - **Loop builder:** start with kick and closed hat, then independently compose twenty instruments: kick, closed/open hats, snare, clap, bass, percussion, synth, shaker, ride, crash, rim, low/high toms, cowbell, conga, acid, chord, noise, and zap. Every active voice has level, pan, solo, and an editable sixteen-step pattern. **CHAOS!** builds a dense twelve-to-twenty-voice arrangement on that deck only.
 - **By ear:** hide tempo, elapsed time, waveforms, and beat lights. Adjust pitch using your hearing.
-- **Pro decks:** four licensed House/Techno practice recordings, local audio imports, editable source BPM, cue points, manual downbeat grid, looping, waveform seeking and zoom. Browse 574 original Beatmatch PRO catalog links by genre and obtain tracks from their artists before importing them.
+- **Pro decks:** two independent track pickers sit below the decks. Choose a genre and playable recording for each deck, then load it explicitly; option labels show track titles without BPM hints. Forty licensed practice recordings span House, Techno, Trance, Drum & Bass, Breakbeat, Electro, Dubstep, Hip Hop, Downtempo and Hardcore. Each is a 128-beat stereo excerpt, with an estimated BPM and source credit. Import your own audio once and reuse it from either deck's library during the session. Optional controls provide source BPM, cue points, beat-grid calibration, looping and waveform navigation. The secondary discovery section links to 574 original Beatmatch PRO catalog entries; obtain those recordings from their artists before importing them.
 - **Learning path:** eight sequential lessons from clean kicks through layered rhythms, hidden-BPM practice, and real-track transitions. A score of 85 unlocks the next lesson; the final lesson additionally requires a crossfader handover lasting at least three seconds while both decks play. Completion and the last 50 checks persist locally.
 - **Training:** tempo-only, phase, blind, and 16-beat phrase drills. Phase/phrase challenges begin at equal tempos with a deliberate offset. Scores use recent playback history rather than a single coincidental alignment.
 
@@ -38,15 +40,19 @@ Scores measure BPM and beat-grid alignment; they do not evaluate musical taste o
 
 ### Deck controls
 
-Each deck has separate **Randomize tempo** and **Change track** buttons. Tempo changes keep its material and musical position; track changes preserve its effective BPM. Neither action alters the other deck. In Pro, Change track selects another eligible recording in the chosen genre. Fixed-tempo drills disable tempo randomization and provide a separate New challenge action.
+Each deck has permanently integrated transport controls: play/pause, cue and the other deck actions remain available even when every optional module is removed. Each deck also has separate **Randomize tempo** and **Change track** buttons. Tempo changes keep its material and musical position. Change track, Next, Previous, Load and import reset pitch to 0%, so the new track plays at its own native BPM. Neither action alters the other deck. In Pro, Change track selects another recording in the chosen genre; Next/Previous browse the same genre. Change/Next/Previous retain playing or paused state, while explicit Load/import starts paused. Fixed-tempo drills disable tempo randomization and provide a separate New challenge action.
 
-Each deck has a large vertical pitch fader with ±2/4/8/16/32/50% ranges, 0.01% fine adjustment, temporary nudging, a jog wheel, play/pause, saved cue, volume, optional three-band EQ, waveform zoom, and actual signal-level meters. Foundation deliberately hides the composer and EQ. Master output has an equal-power crossfader, volume, a limiter, and split cue (A left, B right).
+Each deck supports a large vertical pitch fader with ±2/4/8/16/32/50% ranges, fine adjustment, temporary nudging, a jog wheel, play/pause, saved cue, volume, three-band EQ, waveform zoom, and actual signal-level meters. Foundation remains a kick-only exercise. Optional master modules provide an equal-power crossfader, volume, and split cue (A left, B right); the audio output includes a limiter.
 
-Hover or focus the pitch fader and scroll to adjust it; hold Shift for fine increments. **Focus deck A/B** opens only that deck with enlarged controls and requests native fullscreen where supported. Escape or Exit deck focus returns to both decks without resetting playback.
+Hover or focus a pitch fader and scroll to adjust it. Fine, Normal and Coarse sensitivity use 0.01, 0.05 and 0.25 percentage-point wheel/key increments. Pixel, line and page wheel events are normalized; fractional trackpad movement is retained. Shift always uses a 0.01-point increment. Arrow keys adjust by one increment and Page Up/Down by ten. **Focus** shows both decks with only pitch, volume and separate, clearly labeled Play and Pause buttons, and requests native fullscreen where supported. Escape or Exit restores the normal workspace without resetting playback or the saved module layout.
+
+### Build your workspace
+
+The initial layout keeps the essentials visible. Use each module's **Hide/Open** control to collapse or expand it, **×** to remove it, and the **Add** menu to restore it. Each deck has separate screen, pitch, waveform, jog, volume, VU, composer, EQ, loop and track picker modules where appropriate to its mode. Crossfader, master, monitor, audio outputs, coach, tap tempo and external discovery are shared modules. Each mode remembers its own collapsed/removed choices on this device. Transport stays fixed; Foundation starts with screen, pitch and volume modules on each deck; Builder/By ear add the composer, and Pro adds its track picker. Crossfader, master and coach are the shared defaults. Hiding or removing a control changes the layout without resetting its settings or stopping its audio.
 
 **Scroll a jog wheel** to temporarily accelerate/decelerate its deck. It returns to the pitch setting after 160 ms. **Drag a jog wheel** to scrub in source time; horizontal/right or upward movement moves forward. Arrow keys nudge a focused jog wheel; Home/End move to the start/end. Click/drag a waveform to seek; wheel or ± buttons zoom. Audio uses classic varispeed, so changing tempo also changes musical pitch.
 
-Keyboard: Space plays/pauses both decks, or just the selected deck in focus view; A/B control a deck; left/right nudge B; T taps tempo. Input fields, native controls, modifier combinations, and focused jog wheels keep their own keyboard behavior. The help dialog supports Tab/Shift+Tab and Escape.
+Keyboard: Space plays/pauses both decks, including in Focus; A/B control a deck; left/right nudge B; T taps tempo. Input fields, native controls, modifier combinations, and focused jog wheels keep their own keyboard behavior. The help dialog supports Tab/Shift+Tab and Escape.
 
 Tap tempo uses recent tap intervals and resets after a long pause. Optional microphone BPM uses continuous, downsampled audio captured by a separate AudioWorklet, analyzed locally in six-second windows. It never monitors the microphone to speakers, uploads audio, or starts without a click and browser permission.
 
@@ -77,7 +83,7 @@ See [engine/README.md](engine/README.md) for the complete ABI and performance be
 
 ## Separate hardware outputs
 
-Open **Audio outputs** below the mixer to inspect the channel count reported by the current browser/audio device. Choose:
+Choose **Audio outputs** from **Add session module** to inspect the channel count reported by the current browser/audio device. Choose:
 
 - **Stereo mix:** the usual software crossfader, stereo master, and optional split cue.
 - **Separate mono channels:** choose one physical channel for A and a different channel for B (two or more exposed outputs). Each stereo deck is downmixed to mono.
@@ -90,6 +96,8 @@ Where supported, choose an output device in the panel or use the browser's devic
 ## Skins
 
 The five native themes include the museum's first four entries as observed on 26 October 2026: **base-2.91**, **Winamp3_Classified_v5.5**, **Winamp5_Classified_v5.5**, and **Bento_Classified**. **Headspace · Alien Lime** recreates the supplied green-face reference using the HeadAMP adaptation's graphics. It was originally a Windows Media Player design.
+
+Fresh sessions use **Winamp 5 Classified**. A previously chosen built-in or custom skin is restored on reload.
 
 The skins use original bitmap number fonts, transport buttons and title strips, with distinct native housings: Classic violet/gold bevels, square champagne Classified 3, rounded chrome/blue Classified 5, compact charcoal Bento, and Headspace's large green face with purple controls. These are functional two-deck adaptations. Skin studio shows the original previews and keeps author credits.
 
@@ -127,6 +135,6 @@ Import a standalone `.toml`, a ZIP containing `skin.toml` plus PNG/JPEG/WebP/BMP
 
 ## Reference materials and licenses
 
-See [docs/REFERENCES.md](docs/REFERENCES.md) and the app's [credits page](public/credits.html) for sources, authors, track licenses, excerpt changes, and the exact skin selection. Beatmatch PRO recordings are not redistributed: its catalog links are reused, while the four included playable excerpts are separately licensed CC BY 3.0 recordings. Original skin assets retain their original copyrights. Bundled Google Fonts use the SIL Open Font License; license texts are in `public/fonts/`.
+See [docs/REFERENCES.md](docs/REFERENCES.md) and the app's [credits page](public/credits.html) for sources, authors, track licenses, excerpt changes, and the exact skin selection. Beatmatch PRO recordings are not redistributed: its catalog links are reused, while the forty included playable excerpts are separately licensed CC BY 3.0 recordings. Each excerpt is phase-aligned where possible and re-encoded to 160 kbps stereo MP3. BPMs and beat grids are estimates, with confidence/manual-calibration flags in the catalog; they are not artist-verified tempo guarantees. Original skin assets retain their original copyrights. Bundled Google Fonts use the SIL Open Font License; license texts are in `public/fonts/`.
 
 Original application code is MIT licensed. Imported media belongs to its respective owner.

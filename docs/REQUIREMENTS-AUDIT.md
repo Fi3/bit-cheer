@@ -1,16 +1,91 @@
 # Requirements audit
 
 Audit date: 26 October 2026. Scope: the original Bit Cheer request, the subsequent
-physical-output request, and the clarified independent deck actions and mode
-distinctions. This records observable acceptance criteria, source locations, and
+physical-output request, independent deck actions, twenty-voice composer,
+configurable workspace, minimal two-deck focus, and native-tempo track changes. This records observable acceptance criteria, source locations, and
 limits; it does not treat a passing build as evidence that every product behavior
 is correct.
 
-The latest expansion additionally requests a large focused pitch/jog control,
-single-deck fullscreen, twenty individually controllable instruments with
-sixteen-step sequences, gain/pan/solo per voice, and per-deck CHAOS generation.
-The acceptance criteria for that expansion appear separately below; earlier
-seven-voice evidence is not evidence for the expanded bank.
+## Latest revision: minimal two-deck focus and configurable modules
+
+The latest request replaces the earlier single-deck focus design. All 26 updated
+production browser cases now pass, plus two additional project-Pages checks. The
+earlier 22-case result below is retained only as historical review evidence.
+
+- **Focus:** both decks remain visible, showing only pitch, volume and separate labeled
+  Play/Pause buttons for each deck, plus an exit. Screens, waveform, jog, composer, EQ, loop, meters,
+  crossfader, master, monitoring, routing, coach, tap and navigation are absent.
+  Entering/exiting focus preserves playback, loaded material and the normal
+  module layout. Both decks remain independently controllable; Escape exits.
+- **Modules:** screen, pitch, waveform, jog, volume, VU, composer, EQ
+  and loop are individually configurable per deck. Transport is permanently
+  integrated in each deck and is never collapsible, removable or listed in Add.
+  Shared crossfader, master,
+  monitor, outputs, coach and tap follow the same interaction model. Hide
+  collapses a module while retaining its header/Open control; × removes it;
+  Add restores it. Collapsed/removed state persists locally, and restoring a
+  module does not reset its control values or alter audio.
+- **Sparse defaults and mode changes:** the initial workspace shows the essential
+  controls: permanent transport plus screen, pitch and volume modules. Optional
+  editing/monitoring modules are discoverable in the Add menu.
+  Foundation remains kick-only; Builder and Pro retain their source-specific
+  capabilities. Mode/focus round trips retain saved layout preferences without
+  unexpectedly opening every optional module.
+- **Pitch sensitivity:** a per-deck sensitivity selector controls wheel increments
+  and survives relevant UI updates. Pixel-, line- and page-mode wheel events are
+  normalized; Fine/Normal/Coarse use 0.01/0.05/0.25 percentage points per wheel
+  detent, and Shift always uses 0.01. Fractional trackpad motion is preserved;
+  only the targeted deck changes and the native slider, handle and engine agree.
+- **Playable library:** two independent Pro track pickers sit below the decks,
+  outside their module grids. Each has a genre selector, actual playable track
+  selector with titles only (no BPM suffix), explicit Load/Change actions and local import. An imported file is
+  reusable from either deck's selector within the session without asking for the
+  file again. Filtering or merely selecting an option does not load audio until
+  requested. Loading/changing one deck preserves the other. Bandcamp discovery
+  is secondary and collapsed initially, and is not mislabeled as playable audio.
+- **Native tempo on track changes:** generated Change track keeps the source BPM
+  but resets any pitch offset to 0%. Pro Change/Next/Previous use the new file's
+  own BPM at 0% pitch and retain the selected deck's playing/paused state. Explicit
+  Load/import starts paused at 0%. Tempo randomization remains a separate action,
+  and the other deck is unchanged.
+- **Default skin:** a fresh session uses Winamp 5 Classified throughout startup.
+  An explicit saved built-in or custom selection takes precedence and survives
+  reload; an invalid import retains the current skin.
+
+The implementation is in `src/Main.elm` (module/focus/picker views and layout
+updates), `src/session.css` (module and focus layout), `src/module-skins.css` (compact
+Winamp window strips and continuous player housings), `src/layout.js` (persisted
+layout validation), `src/pitch-control.js` (wheel/key normalization),
+`src/library.js` (session library and independent byte copies), and `src/main.js`
+(audio/UI integration). `tests/e2e.spec.js` exercises actual production controls,
+Web Audio and local file decoding.
+
+The later deployment request adds `.github/workflows/deploy.yml`, Vite base-path
+configuration, and [GitHub Pages setup instructions](GITHUB-PAGES.md). Acceptance
+requires a real `/bit-cheer/` production build to load the engine/worklets, play
+PCM, display all five skins, and open credits with every local asset/link under
+that prefix. This is deployment preparation and local validation; creating a
+GitHub repository, pushing code and performing a hosted GitHub deployment are
+separate actions and have not been claimed.
+
+The expanded playable catalog has forty entries across House (4), Techno (4),
+Trance (5), Drum & Bass (5), Breakbeat (4), Electro (3), Dubstep (3), Hip Hop (4),
+Downtempo (4) and Hardcore (4). Browser acceptance decodes every bundled file,
+checks finite audible stereo channels, unique IDs/URLs, matching manifest
+durations, 128-beat length and local hosting paths. Tempo estimates retain
+confidence and manual-grid guidance rather than claiming exact artist metadata.
+All 26 production cases passed in 1.3 minutes; all eight rendering/control cases
+affected by the final compact Winamp layout passed again in 26.2 seconds. Twenty-two
+final all-theme desktop/mobile normal/focus and Pro captures have no horizontal overflow.
+The hosting and full-catalog
+checks also passed against `/bit-cheer/` in 14.9 seconds; detailed evidence and
+verification limits are recorded in [VALIDATION.md](VALIDATION.md).
+
+The earlier single-deck focus request has been superseded by the minimal
+two-deck focus above. The twenty-instrument, sixteen-step, gain/pan/solo and
+per-deck CHAOS requirements remain active. The latest track-change correction
+requires every new track to reset pitch to 0% at its native BPM; prior
+preservation-of-effective-tempo assertions have been replaced.
 
 ## Original request
 
@@ -21,12 +96,12 @@ seven-voice evidence is not evidence for the expanded bank.
 | Several modes with a beginner-to-expert path | `modeElements`, `practiceView`, `lessons`, `learningView`, `trainingView` in `src/Main.elm`; scoring in `src/training.js`. Four practice modes, eight sequential lessons, four drills, persisted completion/history. | Foundation remains kick-only; Builder exposes layering; By ear hides visual timing aids; Pro plays PCM. Completing an eligible lesson unlocks the next and survives reload. See the curriculum observations below. |
 | Very simple AI-generated kick tracks, with richer generated tracks | `engine/src/rhythm_model.rs`, `engine/src/rhythm_weights.rs`, `docs/rhythm-corpus.json`, `scripts/train-rhythm-model.py`. A reproducible local learned statistical model generates rhythms; Rust synthesizes voices. | Seeded output is reproducible, different seeds vary audible material, and the beginner kick remains a steady quarter-note reference. No remote neural model is implied. |
 | Add instruments such as kick and hi-hat | Twenty instrument bits in `engine/src/lib.rs`; per-deck composer controls in `src/Main.elm`. | Builder starts with kick/closed hat and can independently add/remove any of the twenty voices. Every active voice has a sixteen-step sequence, gain, pan and solo. A convenience action can add to both; Foundation stays kick-only. |
-| Separate tempo randomization and track changes | Browser bridge `src/main.js`, engine methods `src/audio.js`, deck actions in `src/Main.elm`. Mirrored A/B browser acceptance passes for generated and PCM sources. | Random tempo changes only the selected deck's audible playback tempo; Change track changes selected material while preserving effective BPM. Neither action changes the other deck. |
-| Pro mode with real tracks and genre selection | `libraryView` and `referenceCrate` in `src/Main.elm`; `loadTrack` in `src/main.js`; `public/catalog.json`, `public/tracks/`. Four playable CC BY excerpts across House/Techno, local import, 574 original catalog links with genre filters. | Play real decoded PCM; filter library/discovery by genre; import a local file; change one deck to a different eligible track in the selected genre. Audio unavailable for redistribution is linked, not represented as bundled. |
+| Separate tempo randomization and track changes | Browser bridge `src/main.js`, engine methods `src/audio.js`, deck actions in `src/Main.elm`. Mirrored A/B browser acceptance passes for generated and PCM sources. | Random tempo changes only the selected deck's audible playback tempo; Change track changes selected material and resets pitch to 0% at its native BPM. Neither action changes the other deck. |
+| Pro mode with real tracks and genre selection | `trackPickerView` and `referenceCrate` in `src/Main.elm`; `loadTrack` in `src/main.js`; `public/catalog.json`, `public/tracks/`. Forty playable CC BY 3.0 excerpts across ten genres, local import, 574 original catalog links with genre filters. Each excerpt spans 128 beats at its estimated native BPM. | Play real decoded PCM; filter library/discovery by genre; import a local file; change one deck to a different eligible track in the selected genre. Audio unavailable for redistribution is linked, not represented as bundled. |
 | Reuse the Beatmatch PRO practice selection | Original public catalog retained in `public/catalog.json` under `referenceTracks`; provenance in `docs/REFERENCES.md`. | Discovery links lead to the original artist pages and retain genre membership. Direct streaming of Beatmatch PRO's protected recordings is an explicit limit below. |
-| Two pitch sliders and rich player instrumentation | `deckView`, `vuMeter`, `mixerView`, `focusView` in `src/Main.elm`; Rust DSP and browser graph. Includes pitch ranges/fine steps, actual peak meters, waveform seek/zoom, jog, nudge, cue, EQ, volume, crossfader, split cue and deck focus/fullscreen. | Real analyser samples respond to playback/mixing; pitch changes actual tempo; cue returns to the saved position paused; waveform/jog/wheel interactions alter only their deck. The fader range expands when preserving a new recording's effective BPM requires more than 16% pitch. |
+| Two pitch sliders and rich player instrumentation | `deckView`, `vuMeter`, `mixerView`, `focusView` in `src/Main.elm`; Rust DSP and browser graph. Includes pitch ranges/fine steps, actual peak meters, waveform seek/zoom, jog, nudge, cue, EQ, volume, crossfader, split cue and minimal two-deck session focus/fullscreen. | Real analyser samples respond to playback/mixing; pitch changes actual tempo; cue returns to the saved position paused; waveform/jog/wheel interactions alter only their deck. Native range values remain synchronized with DSP pitch, including fractional wheel input and Shift adjustments. |
 | DJcompanion-inspired training features | Reviewed [DJcompanion's published feature list](https://www.djcompanion.app/): dual decks, waveform navigation, vertical pitch/ranges, temporary rate adjustment, EQ, microphone BPM and local import. Implementations are in `src/Main.elm`, `src/main.js`, `src/audio.js`, `src/training.js`, `public/mic-worklet.js`. | Exercise transport, pitch, seek/zoom, jog bend, EQ, tap tempo and local import. Unit/worker tests verify continuous local microphone capture and tempo estimation; microphone use requires an explicit click. |
-| Early-2000s interchangeable skins, including supplied image | `src/skins.js`, `src/winamp.css`, `src/skin-variants.css`, original assets in `public/skins/`. Four museum designs plus Headspace / Alien Lime. Exact image identification and author credits in `docs/REFERENCES.md`. | Select all five themes; confirm their respective original previews, materials, structural layouts and graphics/palettes; selection survives reload. These are native two-deck adaptations rather than pixel-for-pixel Winamp window replicas. |
+| Early-2000s interchangeable skins, including supplied image | `src/skins.js`, `src/winamp.css`, `src/skin-variants.css`, `src/session.css`, `src/module-skins.css`, original assets in `public/skins/`. Four museum designs plus Headspace / Alien Lime. Exact image identification and author credits in `docs/REFERENCES.md`. | Select all five themes; confirm their respective original previews, materials, structural layouts and graphics/palettes; selection survives reload. These are native two-deck adaptations rather than pixel-for-pixel Winamp window replicas. |
 | Implement the museum's first four skins | Snapshot identifiers and original `.wsz` archives in `public/skins/museum.json`, `public/skins/`, `docs/REFERENCES.md`. | Classic 2.91, Winamp 3 Classified, Winamp 5 Classified and Bento Classified have their original preview/titlebar assets and separate selectable themes. Museum ordering is a dated snapshot. |
 | User-defined skin files with graphic elements | `validateSkin`, `importSkin`, `applySkin`, `skinTemplate`, `downloadTemplate` in `src/skins.js`; TOML supports five structural bases and eight artwork slots: panel, titlebar, background, frame, buttons, numbers, platter and pitch. | Import standalone TOML, TOML+PNG ZIP, and classic WSZ. Assert colors, structural inheritance and actual rendered graphics apply and persist; every base honors every custom slot. Invalid colors/paths/oversized archives fail without replacing the active skin. |
 | Tap tempo | `tapTempo` in `src/training.js`, `tapView` in `src/Main.elm`. | Repeated taps approximately 500 ms apart produce approximately 120 BPM; stale tap sessions reset. |
@@ -44,12 +119,13 @@ effective BPM, element mask, position, source type, track name, and waveform.
    seconds rescale with source BPM; PCM retains exact source seconds/cue and its
    loaded waveform, changing playback rate rather than just relabeling source BPM.
 2. **Change track A/B, generated:** change the selected deck's seed and audible
-   waveform/material; retain its effective BPM. Builder/By-ear changes may vary
+   waveform/material; reset pitch to 0% and retain its native source BPM. Builder/By-ear changes may vary
    the selected instrument combination; Foundation remains kick-only. The other
    deck's complete snapshot must remain unchanged.
 3. **Change track A/B, Pro:** choose a different eligible real recording from the
-   current genre, retain effective BPM via playback rate, and leave the other deck
-   unchanged. A genre with no playable recording reports that state without
+   current genre, reset pitch to 0% at the new recording's native BPM, and leave
+   the other deck unchanged. Next/Previous follow the same rule. Explicit Load
+   and import also reset pitch; selecting/filtering a track alone does not load it. A genre with no playable recording reports that state without
    silently loading a different genre or replacing PCM with generated audio.
 4. **Foundation versus Builder:** Foundation exposes only kick practice and no
    layer controls; Builder starts with a richer loop and allows independent
@@ -85,7 +161,7 @@ These checks passed in the prior 15-case production suite.
 
 The twenty-voice engine, bridge and Elm controls are implemented. The expanded
 production suite passed all 22 browser cases in 44.8 seconds, including actual
-voice audio, independent deck actions, CHAOS, mode reset, enlarged focus and the
+voice audio, independent deck actions, CHAOS, mode reset, the then-current focus and the
 expert handover. Thirty views across all five skins at desktop/mobile sizes had
 no horizontal overflow or uncaught browser errors. All six affected regressions
 passed again after the final artwork-slot and visual fixes, in 12.3 seconds.
@@ -94,8 +170,7 @@ These checks are distinct from the previously tested seven-voice UI.
 
 | Requested behavior | Concrete acceptance |
 | --- | --- |
-| Large wheel/control when focused | Focusing the appropriate deck control visibly enlarges its usable interaction area; drag/wheel/keyboard interaction continues controlling only that deck. A return action restores the normal two-deck layout. |
-| Fullscreen per deck, hiding the rest of the app | Either A or B can enter deck focus/fullscreen. Only that selected deck and its controls remain visible; navigation, other deck and unrelated app panels are hidden. Exit/Escape restores the app without changing playback or source material. |
+| Minimal session focus (supersedes prior single-deck focus) | Both decks remain visible side by side, with only pitch controls, volume and separate Play/Pause buttons. Four range sliders control the two decks independently. Exit/Escape restores the saved normal module layout and retains playback/material. |
 | Twenty instruments | Builder exposes twenty distinct named instrument controls for each deck. Every voice has a corresponding real DSP implementation, rather than being a label or alias for a muted channel. Native/WASM tests render each enabled voice to finite, nonzero audio. |
 | Sixteen-step sequencer per voice | Each selected instrument has sixteen independently togglable steps. Editing A changes A's corresponding pattern only, is reflected in the UI, and changes the rendered rhythm. An all-off sequence silences that voice; restoring a step restores its hit. |
 | Per-instrument gain and pan | Gain and pan controls affect the selected voice only. Gain zero silences it; hard left/right affects the appropriate stereo channel. Deck/master controls retain their documented effect. |
@@ -145,7 +220,8 @@ expanded browser suite checks this mode round trip with actual output samples.
 - The initial focused layout enlarged the jog from 110 to 140 pixels and the
   pitch fader from 310 to 410 pixels. The test's explicit enlargement criterion
   was 1.5 times the normal size, so that case failed. The final desktop layout
-  uses a 220-pixel jog and 500-pixel fader and passes the focus interaction test.
+  used a 220-pixel jog and 500-pixel fader and passed the prior focus test. The
+  later minimal two-deck focus replaces that view and intentionally omits jogs.
 - Screenshot review found that numeric text content was correct but the bitmap
   BPM display visibly showed zeros. Elm's `style "--digit"` assignment did not
   create a CSS custom property: computed `--digit` was empty and every sprite
@@ -160,14 +236,16 @@ expanded browser suite checks this mode round trip with actual output samples.
   silver coach/tap/mixer labels have readable contrast, titlebar bitmaps retain
   their aspect ratio, and built-in pitch/platter decoration no longer tiles
   unrelated graphics. Headspace's original forehead controls now operate the
-  actual transport and focus view. No outstanding implementation issue remains
-  from this audit; the external verification limits below still apply.
+  actual transport and focus view. The external verification limits below
+  still apply; the latest revision is validated separately above.
 
 ## Explicit limits
 
 - **Protected catalog audio:** the public Beatmatch PRO track links are reused;
   its gated/proxied audio is not mirrored. No redistribution license was available.
-  Four separately licensed recordings are bundled and personal import is usable.
+  Forty separately licensed recordings are bundled and personal import is usable.
+  Estimated BPM/grid confidence and manual-calibration flags are retained; artist-
+  verified exact tempos are not claimed.
   See [reference evidence](REFERENCES.md).
 - **Hardware verification:** real Web Audio graph rendering and browser audio
   analysis are tested. No physical multichannel USB interface, cable, external

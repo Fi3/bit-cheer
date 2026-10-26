@@ -4,6 +4,7 @@ import Bitwise
 import Browser
 import Browser.Dom
 import Browser.Events
+import Dict exposing (Dict)
 import Html exposing (Html, a, article, aside, button, canvas, div, footer, h1, h2, h3, header, img, input, label, li, main_, nav, option, p, section, select, small, span, strong, text, ul)
 import Html.Attributes as A exposing (alt, attribute, checked, class, classList, disabled, href, id, selected, src, step, style, target, title, type_, value)
 import Html.Events exposing (custom, on, onCheck, onClick, onInput, targetValue)
@@ -59,6 +60,9 @@ type alias Deck =
     , source : String
     , voices : List Voice
     , solo : Int
+    , sensitivity : Float
+    , genre : String
+    , selectedTrack : String
     }
 
 
@@ -90,8 +94,21 @@ type alias OutputRouting =
     }
 
 
+type alias PlayerModule =
+    { id : String, collapsed : Bool }
+
+
+type alias ModuleLayout =
+    { a : List PlayerModule, b : List PlayerModule, global : List PlayerModule }
+
+
+type alias Flags =
+    { basePath : String }
+
+
 type alias Model =
     { page : Page
+    , basePath : String
     , mode : String
     , a : Deck
     , b : Deck
@@ -122,7 +139,8 @@ type alias Model =
     , referencePage : Int
     , genre : String
     , help : Bool
-    , focused : Maybe Int
+    , focused : Bool
+    , layouts : Dict String ModuleLayout
     }
 
 
@@ -153,7 +171,16 @@ type Msg
     | ResetVoicePattern Int Int
     | SoloVoice Int Int
     | Chaos Int
-    | FocusDeck Int
+    | FocusSession Bool
+    | ToggleModule Int String
+    | RemoveModule Int String
+    | AddModule Int String
+    | Sensitivity Int String
+    | DeckGenre Int String
+    | SelectTrack Int String
+    | LoadSelectedTrack Int
+    | PreviousTrack Int
+    | NextTrack Int
     | DeckValue Int String String
     | Mixer String String
     | SplitCue Bool
@@ -186,19 +213,20 @@ type Msg
     | NoOp
 
 
-main : Program () Model Msg
+main : Program Flags Model Msg
 main =
     Browser.element { init = init, update = update, view = view, subscriptions = subscriptions }
 
 
 initialDeck : String -> Float -> Deck
 initialDeck name bpm =
-    { name = name, bpm = bpm, pitch = 0, playing = False, position = 0, duration = 32 * 60 / bpm, beat = 0, peak = 0, elements = [ 0 ], volume = 0.8, low = 0, mid = 0, high = 0, range = 8, loop = True, source = "generated", voices = List.repeat 20 defaultVoice, solo = -1 }
+    { name = name, bpm = bpm, pitch = 0, playing = False, position = 0, duration = 32 * 60 / bpm, beat = 0, peak = 0, elements = [ 0 ], volume = 0.8, low = 0, mid = 0, high = 0, range = 8, loop = True, source = "generated", voices = List.repeat 20 defaultVoice, solo = -1, sensitivity = 0.05, genre = "All genres", selectedTrack = "" }
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
+init : Flags -> ( Model, Cmd Msg )
+init flags =
     ( { page = Practice
+      , basePath = flags.basePath
       , mode = "foundation"
       , a = initialDeck "Four to the floor · 01" 120
       , b = initialDeck "Four to the floor · 02" 124
@@ -217,8 +245,8 @@ init _ =
       , taps = 0
       , micBpm = 0
       , micActive = False
-      , skin = "classic"
-      , skinName = "Classic 2.91"
+      , skin = "classified5"
+      , skinName = "Winamp5_Classified_v5.5"
       , progress = []
       , history = []
       , currentLesson = Just 1
@@ -229,7 +257,8 @@ init _ =
       , referencePage = 0
       , genre = "All genres"
       , help = False
-      , focused = Nothing
+      , focused = False
+      , layouts = Dict.fromList (List.map (\mode -> ( mode, defaultModuleLayout mode )) [ "foundation", "builder", "blind", "pro" ])
       }
     , send "init" []
     )
@@ -436,7 +465,7 @@ update msg model =
             ( model, send "randomizeTempo" [ ( "deck", E.int deck ), ( "mode", E.string model.mode ) ] )
 
         ChangeTrack deck ->
-            ( model, send "changeTrack" [ ( "deck", E.int deck ), ( "mode", E.string model.mode ), ( "genre", E.string model.genre ) ] )
+            ( model, send "changeTrack" [ ( "deck", E.int deck ), ( "mode", E.string model.mode ), ( "genre", E.string (getDeck deck model).genre ) ] )
 
         NewChallenge ->
             ( { model | result = Nothing }, send "newChallenge" [ ( "mode", E.string model.mode ), ( "elements", E.int (mask model.a.elements) ), ( "drill", E.string model.drill ) ] )
@@ -508,17 +537,80 @@ update msg model =
         Chaos deck ->
             ( model, send "chaos" [ ( "deck", E.int deck ) ] )
 
-        FocusDeck deck ->
-            ( { model
-                | focused =
-                    if deck == 0 || deck == 1 then
-                        Just deck
+        FocusSession active ->
+            ( { model | focused = active }, send "focusSession" [ ( "active", E.bool active ) ] )
 
-                    else
-                        Nothing
-              }
-            , send "focusDeck" [ ( "deck", E.int deck ) ]
-            )
+        ToggleModule scope moduleId ->
+            changeModules scope
+                (List.map
+                    (\item ->
+                        if item.id == moduleId then
+                            { item | collapsed = not item.collapsed }
+
+                        else
+                            item
+                    )
+                )
+                model
+
+        RemoveModule scope moduleId ->
+            changeModules scope (List.filter (\item -> item.id /= moduleId)) model
+
+        AddModule scope moduleId ->
+            if List.member moduleId (List.map Tuple.first (availableModules scope model)) then
+                changeModules scope
+                    (\items ->
+                        if List.any (\item -> item.id == moduleId) items then
+                            items
+
+                        else
+                            items ++ [ { id = moduleId, collapsed = moduleId == "discovery" } ]
+                    )
+                    model
+
+            else
+                ( model, Cmd.none )
+
+        Sensitivity deck raw ->
+            let
+                val =
+                    asFloat 0.05 raw
+
+                next =
+                    mapDeck deck
+                        (\current ->
+                            { current
+                                | sensitivity =
+                                    if List.member val [ 0.01, 0.05, 0.25 ] then
+                                        val
+
+                                    else
+                                        0.05
+                            }
+                        )
+                        model
+            in
+            ( next, Cmd.batch [ send "sensitivity" [ ( "deck", E.int deck ), ( "value", E.float (getDeck deck next).sensitivity ) ], persistLayout next ] )
+
+        DeckGenre deck genre ->
+            ( mapDeck deck (\current -> { current | genre = genre, selectedTrack = "" }) model, Cmd.none )
+
+        SelectTrack deck trackId ->
+            ( mapDeck deck (\current -> { current | selectedTrack = trackId }) model, Cmd.none )
+
+        LoadSelectedTrack deck ->
+            case selectedPlayable model (getDeck deck model) of
+                Just track ->
+                    ( model, send "loadTrack" [ ( "deck", E.int deck ), ( "track", E.string track.id ) ] )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        PreviousTrack deck ->
+            ( model, send "previousTrack" [ ( "deck", E.int deck ), ( "genre", E.string (getDeck deck model).genre ) ] )
+
+        NextTrack deck ->
+            ( model, send "nextTrack" [ ( "deck", E.int deck ), ( "genre", E.string (getDeck deck model).genre ) ] )
 
         DeckValue deck param raw ->
             let
@@ -708,19 +800,14 @@ update msg model =
         Key key ->
             case String.toLower key of
                 "escape" ->
-                    if model.focused /= Nothing then
-                        update (FocusDeck -1) model
+                    if model.focused then
+                        update (FocusSession False) model
 
                     else
                         ( { model | help = False }, Task.attempt (\_ -> NoOp) (Browser.Dom.focus "help-open") )
 
                 " " ->
-                    case model.focused of
-                        Just deck ->
-                            update (Play deck) model
-
-                        Nothing ->
-                            update PlayBoth model
+                    update PlayBoth model
 
                 "t" ->
                     update Tap model
@@ -732,10 +819,10 @@ update msg model =
                     update (Play 1) model
 
                 "arrowleft" ->
-                    update (Nudge (Maybe.withDefault 1 model.focused) -0.04) model
+                    update (Nudge 1 -0.04) model
 
                 "arrowright" ->
-                    update (Nudge (Maybe.withDefault 1 model.focused) 0.04) model
+                    update (Nudge 1 0.04) model
 
                 _ ->
                     ( model, Cmd.none )
@@ -892,21 +979,34 @@ receive data model =
             in
             ( { model | a = apply 0 model.a, b = apply 1 model.b }, Cmd.none )
 
-        "focus" ->
+        "restoreLayout" ->
+            let
+                layoutData =
+                    field "layout" D.value E.null data
+
+                modes =
+                    field "modes" (D.dict moduleLayoutDecoder) model.layouts layoutData
+
+                sensitivities =
+                    field "sensitivity" (D.list D.float) [ 0.05, 0.05 ] layoutData
+
+                sensitivity index =
+                    List.head (List.drop index sensitivities) |> Maybe.withDefault 0.05
+
+                next =
+                    { model | layouts = modes }
+            in
+            ( mapDeck 0 (\deck -> { deck | sensitivity = sensitivity 0 }) next |> mapDeck 1 (\deck -> { deck | sensitivity = sensitivity 1 }), Cmd.none )
+
+        "trackSelection" ->
             let
                 deck =
-                    field "deck" D.int -1 data
+                    field "deck" D.int 0 data
             in
-            ( { model
-                | focused =
-                    if deck == 0 || deck == 1 then
-                        Just deck
+            ( mapDeck deck (\current -> { current | selectedTrack = field "track" D.string current.selectedTrack data, genre = field "genre" D.string current.genre data }) model, Cmd.none )
 
-                    else
-                        Nothing
-              }
-            , Cmd.none
-            )
+        "focus" ->
+            ( { model | focused = field "active" D.bool (field "deck" D.int -1 data >= 0) data }, Cmd.none )
 
         "pitchChanged" ->
             let
@@ -961,6 +1061,7 @@ receive data model =
                         , playing = field "playing" D.bool current.playing data
                         , voices = field "voices" (D.list voiceDecoder) current.voices data
                         , solo = field "solo" D.int current.solo data
+                        , selectedTrack = field "trackId" D.string current.selectedTrack data
                     }
             in
             ( mapDeck deck change { model | result = Nothing }, Cmd.none )
@@ -973,7 +1074,7 @@ receive data model =
                 bpm =
                     field "bpm" D.float 120 data
             in
-            ( mapDeck deck (\d -> { d | name = field "name" D.string d.name data, bpm = bpm, duration = field "duration" D.float (32 * 60 / bpm) data, pitch = 0, position = 0, playing = False, source = "pcm" }) model, Cmd.none )
+            ( mapDeck deck (\d -> { d | name = field "name" D.string d.name data, bpm = bpm, duration = field "duration" D.float (32 * 60 / bpm) data, pitch = 0, position = 0, playing = False, source = "pcm", selectedTrack = field "trackId" D.string d.selectedTrack data }) model, Cmd.none )
 
         "randomized" ->
             let
@@ -1090,14 +1191,25 @@ subscriptions model =
                             D.field "key" D.string
                                 |> D.andThen
                                     (\key ->
-                                        if key == "Escape" && model.focused /= Nothing then
+                                        if key == "Escape" && model.focused then
                                             D.succeed (Key key)
 
                                         else
                                             D.field "target" (D.map2 Tuple.pair (D.field "tagName" D.string) (D.oneOf [ D.field "role" D.string, D.succeed "" ]))
                                                 |> D.andThen
                                                     (\( tag, role ) ->
-                                                        if List.member tag [ "INPUT", "SELECT", "TEXTAREA", "BUTTON" ] || role == "slider" then
+                                                        if model.focused && key == " " && tag == "INPUT" then
+                                                            D.at [ "target", "type" ] D.string
+                                                                |> D.andThen
+                                                                    (\inputType ->
+                                                                        if inputType == "range" then
+                                                                            D.succeed (Key key)
+
+                                                                        else
+                                                                            D.fail "Native control handles keyboard"
+                                                                    )
+
+                                                        else if List.member tag [ "INPUT", "SELECT", "TEXTAREA", "BUTTON" ] || role == "slider" then
                                                             D.fail "Native control handles keyboard"
 
                                                         else
@@ -1111,36 +1223,48 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    case model.focused of
-        Just deck ->
-            focusView model deck
+    if model.focused then
+        focusView model
 
-        Nothing ->
-            normalView model
+    else
+        normalView model
 
 
-focusView : Model -> Int -> Html Msg
-focusView model deck =
-    let
-        letter =
-            if deck == 0 then
-                "A"
-
-            else
-                "B"
-    in
-    div [ class "app-shell deck-focus-view", attribute "data-mode" model.mode, attribute "data-focused" (String.fromInt deck) ]
+focusView : Model -> Html Msg
+focusView model =
+    div [ class "app-shell session-focus-view", attribute "data-mode" model.mode ]
         [ header [ class "focus-toolbar" ]
-            [ h1 [] [ text ("BIT.CHEER // DECK " ++ letter) ]
-            , small [] [ text "SPACE TO PLAY · ESC TO EXIT" ]
-            , button [ class "exit-focus-button", onClick (FocusDeck -1), attribute "aria-label" "Exit deck focus" ] [ text "Exit focus ✕" ]
+            [ h1 [] [ text "BIT.CHEER // FOCUS SESSION" ]
+            , small [] [ text "SPACE PLAYS BOTH · ESC EXITS" ]
+            , button [ class "exit-focus-button", onClick (FocusSession False), attribute "aria-label" "Exit session focus" ] [ text "Exit focus ✕" ]
             ]
         , if model.error && not (String.isEmpty model.notice) then
             noticeView model
 
           else
             text ""
-        , main_ [ class "focused-deck", id "main-content" ] [ deckView model deck (getDeck deck model) ]
+        , main_ [ class "focus-decks", id "main-content" ]
+            (List.map
+                (\number ->
+                    let
+                        deck =
+                            getDeck number model
+
+                        letter =
+                            deckLetter number
+                    in
+                    section [ class "focus-channel", attribute "data-deck" (String.fromInt number), attribute "aria-label" ("Deck " ++ letter) ]
+                        [ h2 [] [ text ("DECK " ++ letter) ]
+                        , div [ class "focus-transport" ]
+                            [ button [ classList [ ( "focus-play-button", True ), ( "engaged", deck.playing ) ], onClick (Play number), disabled deck.playing, attribute "aria-label" ("Play deck " ++ letter) ] [ text "▶ Play" ]
+                            , button [ class "focus-pause-button", onClick (Play number), disabled (not deck.playing), attribute "aria-label" ("Pause deck " ++ letter) ] [ text "Ⅱ Pause" ]
+                            ]
+                        , pitchView number deck
+                        , volumeView number deck
+                        ]
+                )
+                [ 0, 1 ]
+            )
         ]
 
 
@@ -1168,7 +1292,7 @@ normalView model =
             ]
         , footer [ class "footer" ]
             [ span [] [ span [ class "status-dot" ] [], text " Built for the ears. Inspired by the era." ]
-            , span [] [ text "ELM + RUST / WASM", span [ class "footer-separator" ] [ text "·" ], text "BIT.CHEER v1.0", span [ class "footer-separator" ] [ text "·" ], a [ href "/credits.html", target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Credits & sources ↗" ] ]
+            , span [] [ text "ELM + RUST / WASM", span [ class "footer-separator" ] [ text "·" ], text "BIT.CHEER v1.0", span [ class "footer-separator" ] [ text "·" ], a [ href (model.basePath ++ "credits.html"), target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Credits & sources ↗" ] ]
             ]
         , if model.help then
             helpView
@@ -1341,12 +1465,8 @@ practiceView model =
                     ]
                 ]
             , div [ class "toolbar-actions" ]
-                [ toggle "Hide BPM" model.hideBpm HideBpm
-                , if model.mode /= "foundation" then
-                    toggle "Show EQ" model.advanced Advanced
-
-                  else
-                    text ""
+                [ button [ class "session-focus-button", onClick (FocusSession True), attribute "aria-label" "Focus session" ] [ text "Focus session ⛶" ]
+                , toggle "Hide BPM" model.hideBpm HideBpm
                 , if not (String.isEmpty model.drill) then
                     button [ class "small-button", onClick NewChallenge, title "Start a new drill with both decks reset" ] [ text "New challenge" ]
 
@@ -1362,8 +1482,8 @@ practiceView model =
         , div [ class "deck-rack" ]
             [ div [ class "rack-title" ] [ span [] [ text "BIT.CHEER / DUAL DECK SYSTEM" ], span [ class "rack-grip" ] [ text "▥ ▥ ▥ ▥ ▥ ▥ ▥" ], span [] [ text "STEREO · 32-BIT FLOAT" ] ]
             , div [ class "decks" ] [ deckView model 0 model.a, deckView model 1 model.b ]
-            , mixerView model
-            , routingView model
+            , proTrackPickers model
+            , globalModulesView model
             , div [ class "rack-footer" ] [ span [] [ text "● RUST DSP / WEBASSEMBLY" ], span [] [ text "OUTPUT RATE FOLLOWS YOUR AUDIO DEVICE" ], span [] [ text "NO SYNC. ALL YOU." ] ]
             ]
         , div [ class "under-decks" ]
@@ -1386,12 +1506,6 @@ practiceView model =
               else
                 span [ class "muted" ] [ text "Drag the waveforms to seek. Scroll to zoom." ]
             ]
-        , if model.mode == "pro" then
-            libraryView model
-
-          else
-            text ""
-        , div [ class "lower-grid" ] [ coachView model, tapView model ]
         , div [ class "practice-tip" ] [ span [] [ text "A LITTLE POINTER" ], text "Match the speed first. Then use nudge to bring the kicks into the same moment." ]
         ]
 
@@ -1405,23 +1519,276 @@ foundationGuide =
         ]
 
 
+deckModuleNames : List ( String, String )
+deckModuleNames =
+    [ ( "screen", "Screen" ), ( "pitch", "Pitch fader" ), ( "volume", "Volume" ), ( "jog", "Jog wheel" ), ( "waveform", "Waveform" ), ( "eq", "Equalizer" ), ( "vu", "VU meter" ), ( "loop", "Loop" ), ( "composer", "Composer" ), ( "picker", "Track picker" ) ]
+
+
+globalModuleNames : List ( String, String )
+globalModuleNames =
+    [ ( "crossfader", "Crossfader" ), ( "master", "Master volume" ), ( "monitor", "Monitor" ), ( "outputs", "Audio outputs" ), ( "coach", "Coach" ), ( "tap", "Tap tempo" ), ( "discovery", "External track discovery" ) ]
+
+
+defaultModuleLayout : String -> ModuleLayout
+defaultModuleLayout mode =
+    let
+        ids =
+            if mode == "pro" then
+                [ "screen", "pitch", "volume", "picker" ]
+
+            else if mode == "builder" || mode == "blind" then
+                [ "screen", "pitch", "volume", "composer" ]
+
+            else
+                [ "screen", "pitch", "volume" ]
+
+        modules names =
+            List.map (\name -> { id = name, collapsed = False }) names
+    in
+    { a = modules ids, b = modules ids, global = modules [ "crossfader", "master", "coach" ] }
+
+
+activeLayout : Model -> ModuleLayout
+activeLayout model =
+    Dict.get model.mode model.layouts |> Maybe.withDefault (defaultModuleLayout model.mode)
+
+
+scopeModules : Int -> ModuleLayout -> List PlayerModule
+scopeModules scope layout =
+    if scope == 0 then
+        layout.a
+
+    else if scope == 1 then
+        layout.b
+
+    else
+        layout.global
+
+
+availableModules : Int -> Model -> List ( String, String )
+availableModules scope model =
+    if scope == -1 then
+        globalModuleNames
+
+    else
+        deckModuleNames
+            |> List.filter
+                (\( name, _ ) ->
+                    if name == "composer" then
+                        model.mode == "builder" || model.mode == "blind"
+
+                    else if name == "picker" then
+                        model.mode == "pro"
+
+                    else
+                        True
+                )
+
+
+changeModules : Int -> (List PlayerModule -> List PlayerModule) -> Model -> ( Model, Cmd Msg )
+changeModules scope change model =
+    let
+        layout =
+            activeLayout model
+
+        changed =
+            if scope == 0 then
+                { layout | a = change layout.a }
+
+            else if scope == 1 then
+                { layout | b = change layout.b }
+
+            else
+                { layout | global = change layout.global }
+
+        next =
+            { model | layouts = Dict.insert model.mode changed model.layouts }
+    in
+    ( next
+    , Cmd.batch
+        [ persistLayout next
+        , if scope == -1 && List.any (\item -> item.id == "outputs" && not item.collapsed) changed.global && not (List.any (\item -> item.id == "outputs" && not item.collapsed) layout.global) then
+            send "refreshOutputs" []
+
+          else
+            Cmd.none
+        ]
+    )
+
+
+persistLayout : Model -> Cmd Msg
+persistLayout model =
+    let
+        encodeModule item =
+            E.object [ ( "id", E.string item.id ), ( "collapsed", E.bool item.collapsed ) ]
+
+        encodeMode layout =
+            E.object [ ( "decks", E.list (E.list encodeModule) [ layout.a, layout.b ] ), ( "global", E.list encodeModule layout.global ) ]
+    in
+    send "layout" [ ( "layout", E.object [ ( "modes", E.object (List.map (\( mode, layout ) -> ( mode, encodeMode layout )) (Dict.toList model.layouts)) ), ( "sensitivity", E.list E.float [ model.a.sensitivity, model.b.sensitivity ] ) ] ) ]
+
+
+moduleLayoutDecoder : D.Decoder ModuleLayout
+moduleLayoutDecoder =
+    let
+        itemDecoder =
+            D.map2 PlayerModule (D.field "id" D.string) (D.oneOf [ D.field "collapsed" D.bool, D.succeed False ])
+
+        clean allowed items =
+            List.foldl
+                (\item acc ->
+                    if List.member item.id (List.map Tuple.first allowed) && not (List.any (\entry -> entry.id == item.id) acc) then
+                        acc ++ [ item ]
+
+                    else
+                        acc
+                )
+                []
+                items
+    in
+    D.map2 (\decks globals -> { a = List.head decks |> Maybe.withDefault [] |> clean deckModuleNames, b = List.head (List.drop 1 decks) |> Maybe.withDefault [] |> clean deckModuleNames, global = clean globalModuleNames globals })
+        (D.field "decks" (D.list (D.list itemDecoder)))
+        (D.field "global" (D.list itemDecoder))
+
+
+deckLetter : Int -> String
+deckLetter number =
+    if number == 0 then
+        "A"
+
+    else
+        "B"
+
+
+moduleLabel : String -> String
+moduleLabel moduleId =
+    List.filter (\( name, _ ) -> name == moduleId) (deckModuleNames ++ globalModuleNames) |> List.head |> Maybe.map Tuple.second |> Maybe.withDefault moduleId
+
+
+playerModule : Int -> PlayerModule -> Html Msg -> Html Msg
+playerModule scope item content =
+    let
+        labelText =
+            moduleLabel item.id
+
+        destination =
+            if scope == -1 then
+                "session"
+
+            else
+                "deck " ++ deckLetter scope
+
+        scopeName =
+            if scope == -1 then
+                "session"
+
+            else
+                "deck-" ++ String.toLower (deckLetter scope)
+    in
+    section [ classList [ ( "player-module", True ), ( "module-" ++ item.id, True ), ( "module-output", item.id == "outputs" ), ( "is-collapsed", item.collapsed ) ], attribute "data-module" item.id, attribute "data-scope" scopeName, attribute "aria-label" (labelText ++ " module " ++ destination) ]
+        [ div [ class "module-titlebar" ]
+            [ strong []
+                [ text
+                    (if item.id == "picker" && scope >= 0 then
+                        "Deck " ++ deckLetter scope ++ " — " ++ labelText
+
+                     else
+                        labelText
+                    )
+                ]
+            , div [ class "module-window-actions" ]
+                [ button
+                    [ class "module-collapse"
+                    , onClick (ToggleModule scope item.id)
+                    , attribute "aria-expanded"
+                        (if item.collapsed then
+                            "false"
+
+                         else
+                            "true"
+                        )
+                    , attribute "aria-label"
+                        ((if item.collapsed then
+                            "Open "
+
+                          else
+                            "Hide "
+                         )
+                            ++ labelText
+                            ++ " "
+                            ++ destination
+                        )
+                    ]
+                    [ text
+                        (if item.collapsed then
+                            "Open"
+
+                         else
+                            "Hide"
+                        )
+                    ]
+                , button [ class "module-remove", onClick (RemoveModule scope item.id), attribute "aria-label" ("Remove " ++ labelText ++ " " ++ destination), title "Remove this module; restore it from Add module" ] [ text "×" ]
+                ]
+            ]
+        , if item.collapsed then
+            text ""
+
+          else
+            div [ class "module-body" ] [ content ]
+        ]
+
+
+addModuleMenu : Model -> Int -> Html Msg
+addModuleMenu model scope =
+    let
+        modules =
+            scopeModules scope (activeLayout model)
+
+        available =
+            availableModules scope model |> List.filter (\( name, _ ) -> not (List.any (\item -> item.id == name) modules))
+
+        labelText =
+            if scope == -1 then
+                "Add session module"
+
+            else
+                "Add module to deck " ++ deckLetter scope
+    in
+    div [ class "add-module-menu" ]
+        [ Keyed.node "span"
+            [ style "display" "contents" ]
+            [ ( String.join "|" (List.map .id modules)
+              , select [ onInput (AddModule scope), disabled (List.isEmpty available), attribute "aria-label" labelText ]
+                    (option [ attribute "value" "", selected True, disabled True ]
+                        [ text
+                            (if List.isEmpty available then
+                                "All modules added"
+
+                             else
+                                "+ Add module…"
+                            )
+                        ]
+                        :: List.map (\( name, labelText_ ) -> option [ value name ] [ text labelText_ ]) available
+                    )
+              )
+            ]
+        , small [] [ text "Hide to fold. × to remove. Audio keeps playing." ]
+        ]
+
+
 deckView : Model -> Int -> Deck -> Html Msg
 deckView model number deck =
     let
         letter =
-            if number == 0 then
-                "A"
+            deckLetter number
 
-            else
-                "B"
+        modules =
+            scopeModules number (activeLayout model) |> List.filter (\item -> item.id /= "picker")
 
-        visible =
-            not model.hideBpm
-
-        effective =
-            deck.bpm * (1 + deck.pitch / 100)
+        hasPitch =
+            List.any (\item -> item.id == "pitch" && not item.collapsed) modules
     in
-    section [ class ("deck deck-" ++ String.toLower letter), attribute "aria-label" ("Deck " ++ letter) ]
+    section [ class ("deck deck-" ++ String.toLower letter), attribute "data-deck" (String.fromInt number), attribute "aria-label" ("Deck " ++ letter) ]
         [ div [ class "deck-heading" ]
             [ span [ class "deck-label" ]
                 [ span [ class "deck-letter" ] [ text letter ]
@@ -1447,153 +1814,218 @@ deckView model number deck =
                     )
                 ]
             ]
-        , if model.focused == Nothing then
-            button [ class "deck-focus-button", onClick (FocusDeck number), attribute "aria-label" ("Focus deck " ++ letter) ] [ text ("Focus deck " ++ letter ++ " ⛶") ]
+        , div [ classList [ ( "deck-module-grid", True ), ( "has-pitch", hasPitch ) ] ]
+            (List.map (\item -> playerModule number item (deckModuleContent model number deck item.id)) (List.filter (\item -> item.id == "screen") modules)
+                ++ [ transportView model number deck ]
+                ++ List.map (\item -> playerModule number item (deckModuleContent model number deck item.id)) (List.filter (\item -> item.id /= "screen") modules)
+            )
+        , if List.isEmpty modules then
+            p [ class "empty-deck" ] [ text "Add a module to build this deck." ]
 
           else
             text ""
-        , div [ class "deck-screen" ]
-            [ div [ class "headspace-transport" ]
-                [ button [ onClick (Cue number), attribute "aria-label" ("Previous cue deck " ++ letter), title "Return to the saved cue point" ] [ text "◀" ]
-                , button
-                    [ onClick (Play number)
-                    , attribute "aria-label" ("Headspace play/pause deck " ++ letter)
-                    , attribute "aria-pressed"
-                        (if deck.playing then
-                            "true"
+        , addModuleMenu model number
+        ]
 
-                         else
-                            "false"
-                        )
-                    , title
-                        (if deck.playing then
-                            "Pause this deck"
 
-                         else
-                            "Play this deck"
-                        )
-                    ]
-                    [ text
-                        (if deck.playing then
-                            "Ⅱ"
+deckModuleContent : Model -> Int -> Deck -> String -> Html Msg
+deckModuleContent model number deck moduleId =
+    case moduleId of
+        "screen" ->
+            screenView model number deck
 
-                         else
-                            "▶"
-                        )
-                    ]
-                , button [ onClick (Cue number), attribute "aria-label" ("Stop to cue deck " ++ letter), title "Stop and return to the cue point" ] [ text "■" ]
-                , button [ onClick (Nudge number 0.04), attribute "aria-label" ("Headspace nudge forward deck " ++ letter), title "Nudge forward 0.04 beats" ] [ text "▶│" ]
-                , button
-                    [ onClick
-                        (FocusDeck
-                            (if model.focused == Just number then
-                                -1
+        "pitch" ->
+            pitchView number deck
 
-                             else
-                                number
-                            )
-                        )
+        "volume" ->
+            volumeView number deck
+
+        "jog" ->
+            jogView number deck
+
+        "waveform" ->
+            waveformView number deck
+
+        "eq" ->
+            equalizerView number deck
+
+        "vu" ->
+            vuMeter deck.peak
+
+        "loop" ->
+            div [ class "loop-module" ] [ toggle "Loop" deck.loop (Loop number), small [] [ text "Repeat at the end of this track." ] ]
+
+        "composer" ->
+            composerView number deck
+
+        "picker" ->
+            trackPickerView model number deck
+
+        _ ->
+            text ""
+
+
+screenView : Model -> Int -> Deck -> Html Msg
+screenView model number deck =
+    let
+        letter =
+            deckLetter number
+
+        effective =
+            deck.bpm * (1 + deck.pitch / 100)
+    in
+    div [ class "deck-screen" ]
+        [ div [ class "headspace-transport" ]
+            [ button [ onClick (Cue number), attribute "aria-label" ("Previous cue deck " ++ letter), title "Return to the saved cue point" ] [ text "◀" ]
+            , button [ onClick (Play number), attribute "aria-label" ("Headspace play/pause deck " ++ letter), title "Play or pause this deck" ]
+                [ text
+                    (if deck.playing then
+                        "Ⅱ"
+
+                     else
+                        "▶"
+                    )
+                ]
+            , button [ onClick (Cue number), attribute "aria-label" ("Stop to cue deck " ++ letter), title "Stop and return to cue" ] [ text "■" ]
+            , button [ onClick (Nudge number 0.04), attribute "aria-label" ("Headspace nudge forward deck " ++ letter), title "Nudge forward" ] [ text "▶│" ]
+            , button [ onClick (FocusSession True), attribute "aria-label" ("Headspace focus session from deck " ++ letter), title "Focus on both decks' pitch, volume, and playback" ] [ text "☼" ]
+            ]
+        , div [ class "track-title" ]
+            [ span [] [ text "♫" ]
+            , strong [] [ text deck.name ]
+            , span [ class "loop-badge" ]
+                [ text
+                    (if model.mode == "foundation" then
+                        "KICK-ONLY"
+
+                     else if deck.source == "pcm" then
+                        "TRACK"
+
+                     else
+                        "LAYERED LOOP"
+                    )
+                ]
+            ]
+        , div [ class "lcd-row" ]
+            [ div [ class "lcd bpm-display" ]
+                [ span
+                    [ class "lcd-number"
+                    , attribute "data-testid" ("bpm-" ++ String.toLower letter)
+                    , attribute "role" "img"
                     , attribute "aria-label"
-                        (if model.focused == Just number then
-                            "Headspace exit focus"
+                        (if model.hideBpm then
+                            "BPM hidden"
 
                          else
-                            "Headspace focus deck " ++ letter
-                        )
-                    , title
-                        (if model.focused == Just number then
-                            "Exit deck focus"
-
-                         else
-                            "Focus this deck"
+                            fixed 2 effective ++ " BPM"
                         )
                     ]
-                    [ text "☼" ]
+                    (lcdDigits
+                        (if model.hideBpm then
+                            "---.--"
+
+                         else
+                            fixed 2 effective
+                        )
+                    )
+                , small [] [ text "BPM" ]
                 ]
-            , div [ class "track-title" ]
-                [ span [] [ text "♫" ]
-                , strong [] [ text deck.name ]
-                , span [ class "loop-badge" ]
+            , div [ class "time-display" ]
+                [ span [ class "lcd-time" ] [ text (timeDisplay deck.position) ]
+                , small []
                     [ text
-                        (if model.mode == "foundation" then
-                            "KICK-ONLY"
-
-                         else if deck.source == "pcm" then
-                            "TRACK"
+                        (if model.hideBpm then
+                            "LISTEN. DON'T LOOK."
 
                          else
-                            "LAYERED LOOP"
-                        )
-                    ]
-                ]
-            , div [ class "lcd-row" ]
-                [ div [ class "lcd bpm-display" ]
-                    [ span
-                        [ class "lcd-number"
-                        , attribute "data-testid" ("bpm-" ++ String.toLower letter)
-                        , attribute "role" "img"
-                        , attribute "aria-label"
-                            (if visible then
-                                fixed 2 effective ++ " BPM"
-
-                             else
-                                "BPM hidden"
-                            )
-                        ]
-                        (lcdDigits
-                            (if visible then
-                                fixed 2 effective
-
-                             else
-                                "---.--"
-                            )
-                        )
-                    , small [] [ text "BPM" ]
-                    ]
-                , div [ class "time-display" ]
-                    [ span [ class "lcd-time" ] [ text (timeDisplay deck.position) ]
-                    , small []
-                        [ text
-                            (if visible then
-                                "SOURCE " ++ fixed 1 deck.bpm ++ " BPM"
-
-                             else
-                                "LISTEN. DON'T LOOK."
-                            )
-                        ]
-                    ]
-                ]
-            , div [ class "waveform-wrap" ]
-                [ canvas [ id ("waveform-" ++ String.toLower letter), class "waveform", attribute "width" "600", attribute "height" "88", attribute "aria-label" ("Deck " ++ letter ++ " waveform: drag to seek, scroll to zoom") ] []
-                , div [ class "waveform-playhead" ] []
-                , span [ class "waveform-label" ]
-                    [ text
-                        (if deck.source == "pcm" then
-                            "SEEK / SCROLL TO ZOOM"
-
-                         else
-                            "32-BEAT LOOP"
-                        )
-                    ]
-                ]
-            , div [ class "beat-row" ]
-                [ div [ class "beat-indicators", attribute "aria-hidden" "true" ]
-                    (List.map (\i -> span [ classList [ ( "beat-dot", True ), ( "on", deck.playing && modBy 4 (floor deck.beat) == i ) ] ] [ text (String.fromInt (i + 1)) ]) (List.range 0 3))
-                , span [] [ text "4 / 4" ]
-                , span []
-                    [ text
-                        (if visible then
-                            "BAR " ++ pad2 (modBy 8 (floor deck.beat // 4) + 1)
-
-                         else
-                            "BY EAR"
+                            "SOURCE " ++ fixed 1 deck.bpm ++ " BPM"
                         )
                     ]
                 ]
             ]
+        ]
+
+
+waveformView : Int -> Deck -> Html Msg
+waveformView number deck =
+    let
+        letter =
+            deckLetter number
+    in
+    div [ class "waveform-module" ]
+        [ div [ class "waveform-wrap" ]
+            [ canvas [ id ("waveform-" ++ String.toLower letter), class "waveform", attribute "width" "600", attribute "height" "88", attribute "aria-label" ("Deck " ++ letter ++ " waveform: drag to seek, scroll to zoom") ] []
+            , span [ class "waveform-label" ]
+                [ text
+                    (if deck.source == "pcm" then
+                        "SEEK / SCROLL TO ZOOM"
+
+                     else
+                        "32-BEAT LOOP"
+                    )
+                ]
+            ]
+        , div [ class "beat-row" ]
+            [ div [ class "beat-indicators", attribute "aria-hidden" "true" ] (List.map (\i -> span [ classList [ ( "beat-dot", True ), ( "on", deck.playing && modBy 4 (floor deck.beat) == i ) ] ] [ text (String.fromInt (i + 1)) ]) (List.range 0 3))
+            , span [] [ text "4 / 4" ]
+            , div [ class "zoom-controls" ] [ button [ class "small-button", onClick (Zoom number 0.5), attribute "aria-label" ("Zoom out deck " ++ letter ++ " waveform") ] [ text "−" ], span [] [ text "ZOOM" ], button [ class "small-button", onClick (Zoom number 2), attribute "aria-label" ("Zoom in deck " ++ letter ++ " waveform") ] [ text "+" ] ]
+            ]
+        ]
+
+
+playButton : Int -> Deck -> Html Msg
+playButton number deck =
+    button
+        [ classList [ ( "transport-play", True ), ( "engaged", deck.playing ) ]
+        , onClick (Play number)
+        , attribute "aria-label"
+            ((if deck.playing then
+                "Pause"
+
+              else
+                "Play"
+             )
+                ++ " deck "
+                ++ deckLetter number
+            )
+        , title
+            (if deck.playing then
+                "Pause"
+
+             else
+                "Play"
+            )
+        ]
+        [ text
+            (if deck.playing then
+                "Ⅱ"
+
+             else
+                "▶"
+            )
+        ]
+
+
+transportView : Model -> Int -> Deck -> Html Msg
+transportView model number deck =
+    let
+        letter =
+            deckLetter number
+    in
+    div [ class "deck-transport", attribute "role" "group", attribute "aria-label" ("Deck " ++ letter ++ " transport") ]
+        [ div [ class "transport" ]
+            [ playButton number deck
+            , button [ class "transport-cue", onClick (Cue number), title "Return to the saved cue point" ] [ text "CUE" ]
+            , button [ class "set-cue", onClick (SetCue number), attribute "aria-label" ("Set cue deck " ++ letter), title "Save the current position as cue" ] [ text "SET" ]
+            , div [ class "nudge-controls" ] [ button [ onClick (Nudge number -0.04), attribute "aria-label" ("Nudge deck " ++ letter ++ " backward") ] [ text "−" ], span [] [ text "NUDGE" ], button [ onClick (Nudge number 0.04), attribute "aria-label" ("Nudge deck " ++ letter ++ " forward") ] [ text "+" ] ]
+            ]
         , div [ class "deck-actions" ]
             [ button [ class "deck-action tempo-action", onClick (RandomizeTempo number), disabled (model.drill == "phase" || model.drill == "phrase"), attribute "aria-label" ("Randomize tempo deck " ++ letter) ] [ text "Randomize tempo" ]
-            , button [ class "deck-action track-action", onClick (ChangeTrack number), attribute "aria-label" ("Change track deck " ++ letter) ] [ text "Change track" ]
+            , if model.mode /= "pro" then
+                button [ class "deck-action track-action", onClick (ChangeTrack number), attribute "aria-label" ("Change track deck " ++ letter) ] [ text "Change track" ]
+
+              else
+                text ""
             ]
         , small [ class "deck-action-hint" ]
             [ text
@@ -1601,123 +2033,295 @@ deckView model number deck =
                     "Tempo is fixed for this drill. New challenge resets both decks."
 
                  else if model.mode == "foundation" then
-                    "Tempo changes the speed. Track changes the kick voice."
+                    "Tempo changes speed. Track changes the kick voice."
 
                  else
-                    "Change the tempo or choose a new track independently."
+                    "Change this deck independently."
                 )
             ]
-        , div [ class "deck-controls" ]
-            [ div [ class "deck-main-controls" ]
-                [ div [ class "jog-row" ]
-                    [ div [ id ("jog-" ++ String.toLower letter), class "jog-wheel", attribute "tabindex" "0", attribute "role" "slider", attribute "aria-label" ("Deck " ++ letter ++ " jog wheel"), attribute "aria-valuemin" "0", attribute "aria-valuemax" (String.fromFloat deck.duration), attribute "aria-valuenow" (String.fromFloat deck.position), attribute "data-deck" (String.fromInt number) ]
-                        [ div [ class "jog-grooves" ] [], div [ class "jog-label" ] [ strong [] [ text letter ], small [] [ text "BIT.CHEER" ] ], span [ class "jog-marker" ] [] ]
-                    , div [ class "jog-description" ] [ strong [] [ text "FEEL THE GROOVE" ], small [] [ text "Scroll to nudge" ], small [] [ text "Drag to scrub" ], div [ class "zoom-controls" ] [ button [ class "small-button", onClick (Zoom number 0.5), attribute "aria-label" ("Zoom out deck " ++ letter ++ " waveform") ] [ text "−" ], span [] [ text "WAVE" ], button [ class "small-button", onClick (Zoom number 2), attribute "aria-label" ("Zoom in deck " ++ letter ++ " waveform") ] [ text "+" ] ] ]
-                    ]
-                , div [ class "transport" ]
-                    [ button
-                        [ classList [ ( "transport-play", True ), ( "engaged", deck.playing ) ]
-                        , onClick (Play number)
-                        , attribute "aria-label"
-                            ((if deck.playing then
-                                "Pause"
+        ]
 
-                              else
-                                "Play"
-                             )
-                                ++ " deck "
-                                ++ letter
-                            )
-                        ]
-                        [ text
-                            (if deck.playing then
-                                "Ⅱ"
 
-                             else
-                                "▶"
-                            )
-                        ]
-                    , button [ class "transport-cue", onClick (Cue number), title "Return to cue point and pause" ] [ text "CUE" ]
-                    , button [ class "set-cue", onClick (SetCue number), title "Save current position as cue point", attribute "aria-label" ("Set cue deck " ++ letter) ] [ text "SET" ]
-                    , div [ class "nudge-controls" ]
-                        [ button [ onClick (Nudge number -0.04), attribute "aria-label" ("Nudge deck " ++ letter ++ " backward"), title "Nudge back 0.04 beats" ] [ text "−" ]
-                        , span [] [ text "NUDGE" ]
-                        , button [ onClick (Nudge number 0.04), attribute "aria-label" ("Nudge deck " ++ letter ++ " forward"), title "Nudge forward 0.04 beats" ] [ text "+" ]
-                        ]
-                    ]
-                , if model.mode == "foundation" then
-                    div [ class "foundation-deck-note" ]
-                        [ strong [] [ text "KICK-ONLY" ]
-                        , small [] [ text "One clean hit on every beat. Focus on speed and timing." ]
-                        ]
+pitchView : Int -> Deck -> Html Msg
+pitchView number deck =
+    let
+        letter =
+            deckLetter number
 
-                  else if deck.source == "generated" && model.mode /= "pro" then
-                    div [ class "element-panel" ]
-                        [ div [ class "control-label" ] [ span [] [ text "COMPOSER / 20-VOICE BANK" ], small [] [ text (String.fromInt (List.length deck.elements) ++ " / 20 ACTIVE") ] ]
-                        , div [ class "composer-actions" ]
-                            [ confirmedSelect (mask deck.elements)
-                                [ class "instrument-selector", onInput (AddInstrument number), disabled (List.length deck.elements == 20), attribute "aria-label" ("Add instrument to deck " ++ letter) ]
-                                (option [ attribute "value" "", selected True, disabled True ] [ text "+ Add instrument…" ]
-                                    :: (List.indexedMap Tuple.pair voiceNames
-                                            |> List.filter (\( index, _ ) -> not (List.member index deck.elements))
-                                            |> List.map (\( index, name ) -> option [ value (String.fromInt index) ] [ text name ])
-                                       )
-                                )
-                            , button [ class "deck-add-element", onClick (AddElement number), disabled (List.length deck.elements == 20), attribute "aria-label" ("Add an element to deck " ++ letter) ] [ text "+ Add next" ]
-                            , button [ class "chaos-button", onClick (Chaos number), attribute "aria-label" ("Chaos deck " ++ letter), title "Create a dense, unpredictable arrangement on this deck only" ] [ text "CHAOS!" ]
-                            ]
-                        , div [ class "elements composer-rack" ]
-                            (List.indexedMap Tuple.pair voiceNames
-                                |> List.filter (\( index, _ ) -> List.member index deck.elements)
-                                |> List.map (\( index, name ) -> voiceView number deck index name)
-                            )
-                        , if List.isEmpty deck.elements then
-                            p [ class "composer-empty" ] [ text "Your canvas is quiet. Add an instrument to build a rhythm." ]
-
-                          else
-                            small [ class "composer-help" ] [ text "16 steps = one bar. Click to write a pattern; Generate pattern returns it to AUTO. Solo auditions one voice." ]
-                        ]
-
-                  else
-                    div [ class "track-import" ] [ button [ class "small-button", onClick (ImportTrack number) ] [ text ("↥ Load a track into " ++ letter) ], small [] [ text "MP3, WAV, OGG, FLAC* · stays on your device" ] ]
-                , if model.advanced && model.mode /= "foundation" then
-                    div [ class "eq-controls" ]
-                        (List.map (\( param, val ) -> label [ class "eq-control" ] [ span [] [ text (String.toUpper param) ], input [ type_ "range", A.min "-24", A.max "12", step "0.5", value (String.fromFloat val), onInput (DeckValue number param), attribute "aria-label" ("Deck " ++ letter ++ " " ++ param ++ " EQ") ] [], small [] [ text (signed 1 val ++ " dB") ] ]) [ ( "low", deck.low ), ( "mid", deck.mid ), ( "high", deck.high ) ])
-
-                  else
-                    text ""
-                , div [ class "deck-options" ]
-                    [ toggle "Loop" deck.loop (Loop number)
-                    , if deck.source == "pcm" then
-                        div [ class "source-settings" ]
-                            [ if visible then
-                                label [ class "source-bpm" ] [ span [] [ text "SOURCE BPM" ], input [ type_ "number", A.min "40", A.max "300", step "0.01", value (fixed 2 deck.bpm), on "change" (D.map (SourceBpm number) targetValue), attribute "aria-label" ("Deck " ++ letter ++ " source BPM") ] [] ]
-
-                              else
-                                text ""
-                            , button [ class "small-button", onClick (SetGrid number), title "Mark current position as the downbeat for phase and phrase checking", attribute "aria-label" ("Set beat grid deck " ++ letter) ] [ text "SET GRID" ]
-                            ]
-
-                      else
-                        text ""
-                    ]
-                , div [ class "deck-volume-row" ]
-                    [ label [] [ text "VOL", input [ type_ "range", A.min "0", A.max "1", step "0.01", value (String.fromFloat deck.volume), onInput (DeckValue number "volume"), attribute "aria-label" ("Deck " ++ letter ++ " volume") ] [] ]
-                    , vuMeter deck.peak
-                    ]
-                ]
-            , div [ class "pitch-section" ]
-                [ div [ class "control-label" ] [ text "PITCH" ]
-                , div [ class "pitch-track" ]
-                    [ div [ class "pitch-ticks" ] [ span [] [ text ("+" ++ String.fromFloat deck.range) ], span [] [ text "0" ], span [] [ text ("−" ++ String.fromFloat deck.range) ] ]
-                    , input [ class "vertical-fader", type_ "range", A.min (String.fromFloat -deck.range), A.max (String.fromFloat deck.range), step "0.01", value (String.fromFloat deck.pitch), onInput (Pitch number), attribute "aria-label" ("Deck " ++ letter ++ " pitch"), attribute "orient" "vertical" ] []
-                    ]
-                , small [ class "pitch-wheel-hint" ] [ text "Wheel to adjust · Shift for fine" ]
-                , div [ class "pitch-value" ] [ text (signed 2 deck.pitch ++ "%") ]
-                , div [ class "pitch-fine" ] [ button [ onClick (PitchStep number -0.01), attribute "aria-label" ("Fine decrease deck " ++ letter ++ " pitch") ] [ text "−" ], button [ onClick (Pitch number "0"), title "Reset pitch" ] [ text "0" ], button [ onClick (PitchStep number 0.01), attribute "aria-label" ("Fine increase deck " ++ letter ++ " pitch") ] [ text "+" ] ]
-                , select [ class "pitch-range", onInput (Range number), attribute "aria-label" ("Deck " ++ letter ++ " pitch range") ] (List.map (\r -> option [ value (String.fromInt r), selected (toFloat r == deck.range) ] [ text ("±" ++ String.fromInt r ++ "%") ]) [ 2, 4, 8, 16, 32, 50 ])
-                ]
+        position =
+            (deck.range - deck.pitch) / (2 * deck.range) * 100 |> clamp 0 100
+    in
+    div [ class "pitch-section", attribute "data-deck" (String.fromInt number) ]
+        [ div [ class "control-label" ] [ text "PITCH" ]
+        , div [ class "pitch-track", attribute "style" ("--pitch-position: " ++ String.fromFloat position ++ "%;") ]
+            [ div [ class "pitch-rail" ] []
+            , div [ class "pitch-ticks" ] [ span [] [ text ("+" ++ String.fromFloat deck.range) ], span [] [ text "0" ], span [] [ text ("−" ++ String.fromFloat deck.range) ] ]
+            , div [ class "pitch-marker-layer", attribute "aria-hidden" "true" ] [ div [ class "pitch-handle" ] [ span [ class "pitch-handle-line" ] [] ] ]
+            , input [ class "vertical-fader", type_ "range", A.min (String.fromFloat -deck.range), A.max (String.fromFloat deck.range), step "any", value (String.fromFloat deck.pitch), onInput (Pitch number), attribute "aria-label" ("Deck " ++ letter ++ " pitch"), attribute "orient" "vertical", attribute "data-deck" (String.fromInt number), attribute "data-pitch-sensitivity" (String.fromFloat deck.sensitivity) ] []
             ]
+        , div [ class "pitch-value" ] [ text (signed 2 deck.pitch ++ "%") ]
+        , div [ class "pitch-fine" ] [ button [ onClick (PitchStep number -0.01), attribute "aria-label" ("Fine decrease deck " ++ letter ++ " pitch") ] [ text "−" ], button [ onClick (Pitch number "0"), title "Reset pitch" ] [ text "0" ], button [ onClick (PitchStep number 0.01), attribute "aria-label" ("Fine increase deck " ++ letter ++ " pitch") ] [ text "+" ] ]
+        , select [ class "pitch-range", onInput (Range number), attribute "aria-label" ("Deck " ++ letter ++ " pitch range") ] (List.map (\r -> option [ value (String.fromInt r), selected (toFloat r == deck.range) ] [ text ("±" ++ String.fromInt r ++ "%") ]) [ 2, 4, 8, 16, 32, 50 ])
+        , label [ class "pitch-sensitivity" ] [ span [] [ text "Wheel / keys" ], select [ onInput (Sensitivity number), attribute "aria-label" ("Deck " ++ letter ++ " pitch sensitivity") ] (List.map (\( val, name ) -> option [ value (String.fromFloat val), selected (val == deck.sensitivity) ] [ text name ]) [ ( 0.01, "Fine" ), ( 0.05, "Normal" ), ( 0.25, "Coarse" ) ]) ]
+        , small [ class "pitch-wheel-hint" ] [ text "Wheel or keys · Shift for fine" ]
+        ]
+
+
+volumeView : Int -> Deck -> Html Msg
+volumeView number deck =
+    div [ class "deck-volume-row" ] [ label [] [ text ("DECK " ++ deckLetter number ++ " VOLUME"), input [ type_ "range", A.min "0", A.max "1", step "0.01", value (String.fromFloat deck.volume), onInput (DeckValue number "volume"), attribute "aria-label" ("Deck " ++ deckLetter number ++ " volume") ] [] ], strong [] [ text (fixed 0 (deck.volume * 100) ++ "%") ] ]
+
+
+jogView : Int -> Deck -> Html Msg
+jogView number deck =
+    let
+        letter =
+            deckLetter number
+    in
+    div [ class "jog-row" ]
+        [ div [ id ("jog-" ++ String.toLower letter), class "jog-wheel", attribute "tabindex" "0", attribute "role" "slider", attribute "aria-label" ("Deck " ++ letter ++ " jog wheel"), attribute "aria-valuemin" "0", attribute "aria-valuemax" (String.fromFloat deck.duration), attribute "aria-valuenow" (String.fromFloat deck.position), attribute "data-deck" (String.fromInt number) ] [ div [ class "jog-grooves" ] [], div [ class "jog-label" ] [ strong [] [ text letter ], small [] [ text "BIT.CHEER" ] ], span [ class "jog-marker" ] [] ]
+        , div [ class "jog-description" ] [ strong [] [ text "FEEL THE GROOVE" ], small [] [ text "Scroll to nudge" ], small [] [ text "Drag to scrub" ] ]
+        ]
+
+
+equalizerView : Int -> Deck -> Html Msg
+equalizerView number deck =
+    div [ class "eq-controls" ] (List.map (\( param, val ) -> label [ class "eq-control" ] [ span [] [ text (String.toUpper param) ], input [ type_ "range", A.min "-24", A.max "12", step "0.5", value (String.fromFloat val), onInput (DeckValue number param), attribute "aria-label" ("Deck " ++ deckLetter number ++ " " ++ param ++ " EQ") ] [], small [] [ text (signed 1 val ++ " dB") ] ]) [ ( "low", deck.low ), ( "mid", deck.mid ), ( "high", deck.high ) ])
+
+
+composerView : Int -> Deck -> Html Msg
+composerView number deck =
+    let
+        letter =
+            deckLetter number
+    in
+    div [ class "element-panel" ]
+        [ div [ class "control-label" ] [ span [] [ text "COMPOSER / 20-VOICE BANK" ], small [] [ text (String.fromInt (List.length deck.elements) ++ " / 20 ACTIVE") ] ]
+        , div [ class "composer-actions" ]
+            [ confirmedSelect (mask deck.elements)
+                [ class "instrument-selector", onInput (AddInstrument number), disabled (List.length deck.elements == 20), attribute "aria-label" ("Add instrument to deck " ++ letter) ]
+                (option [ attribute "value" "", selected True, disabled True ] [ text "+ Add instrument…" ] :: (List.indexedMap Tuple.pair voiceNames |> List.filter (\( index, _ ) -> not (List.member index deck.elements)) |> List.map (\( index, name ) -> option [ value (String.fromInt index) ] [ text name ])))
+            , button [ class "deck-add-element", onClick (AddElement number), disabled (List.length deck.elements == 20), attribute "aria-label" ("Add an element to deck " ++ letter) ] [ text "+ Add next" ]
+            , button [ class "chaos-button", onClick (Chaos number), attribute "aria-label" ("Chaos deck " ++ letter), title "Create a dense arrangement on this deck only" ] [ text "CHAOS!" ]
+            ]
+        , div [ class "elements composer-rack" ] (List.indexedMap Tuple.pair voiceNames |> List.filter (\( index, _ ) -> List.member index deck.elements) |> List.map (\( index, name ) -> voiceView number deck index name))
+        , if List.isEmpty deck.elements then
+            p [ class "composer-empty" ] [ text "Add an instrument to start your rhythm." ]
+
+          else
+            small [ class "composer-help" ] [ text "16 steps = one bar. Click to edit; Generate pattern restores AUTO." ]
+        ]
+
+
+playableTracks : Model -> Deck -> List Track
+playableTracks model deck =
+    List.filter (\track -> deck.genre == "All genres" || track.genre == deck.genre) model.tracks
+
+
+selectedPlayable : Model -> Deck -> Maybe Track
+selectedPlayable model deck =
+    let
+        tracks =
+            playableTracks model deck
+    in
+    case List.head (List.filter (\track -> track.id == deck.selectedTrack) tracks) of
+        Just track ->
+            Just track
+
+        Nothing ->
+            List.head tracks
+
+
+trackPickerView : Model -> Int -> Deck -> Html Msg
+trackPickerView model number deck =
+    let
+        letter =
+            deckLetter number
+
+        genres =
+            List.foldl
+                (\track acc ->
+                    if List.member track.genre acc then
+                        acc
+
+                    else
+                        acc ++ [ track.genre ]
+                )
+                [ "All genres" ]
+                model.tracks
+
+        tracks =
+            playableTracks model deck
+
+        chosen =
+            selectedPlayable model deck |> Maybe.map .id |> Maybe.withDefault ""
+    in
+    div [ class "track-picker" ]
+        [ label [ class "track-picker-genre" ] [ span [] [ text "GENRE" ], select [ onInput (DeckGenre number), attribute "aria-label" ("Deck " ++ letter ++ " genre") ] (List.map (\genre -> option [ value genre, selected (genre == deck.genre) ] [ text genre ]) genres) ]
+        , small [ class "library-count", attribute "aria-label" ("Deck " ++ letter ++ " library size") ]
+            [ text
+                (if List.isEmpty model.tracks then
+                    "Loading playable library…"
+
+                 else if deck.genre == "All genres" then
+                    String.fromInt (List.length model.tracks) ++ " playable tracks · " ++ String.fromInt (List.length genres - 1) ++ " genres"
+
+                 else
+                    String.fromInt (List.length tracks)
+                        ++ (if List.length tracks == 1 then
+                                " track shown · "
+
+                            else
+                                " tracks shown · "
+                           )
+                        ++ String.fromInt (List.length model.tracks)
+                        ++ " in library"
+                )
+            ]
+        , label [ class "track-picker-selection" ]
+            [ span [] [ text "PLAYABLE TRACK" ]
+            , select [ onInput (SelectTrack number), disabled (List.isEmpty tracks), attribute "aria-label" ("Deck " ++ letter ++ " track") ]
+                (if List.isEmpty tracks then
+                    [ option [] [ text "Import a track to get started" ] ]
+
+                 else
+                    List.map (\track -> option [ value track.id, selected (track.id == chosen) ] [ text track.name ]) tracks
+                )
+            ]
+        , div [ class "track-picker-actions" ]
+            [ button [ class "primary-button load-track-button", onClick (LoadSelectedTrack number), disabled (List.isEmpty tracks), attribute "aria-label" ("Load selected track deck " ++ letter) ] [ text "Load" ]
+            , button [ class "small-button", onClick (PreviousTrack number), disabled (List.isEmpty tracks), attribute "aria-label" ("Previous track deck " ++ letter) ] [ text "◀ Previous" ]
+            , button [ class "small-button", onClick (NextTrack number), disabled (List.isEmpty tracks), attribute "aria-label" ("Next track deck " ++ letter) ] [ text "Next ▶" ]
+            , button [ class "small-button", onClick (ChangeTrack number), disabled (List.isEmpty tracks), attribute "aria-label" ("Change track deck " ++ letter) ] [ text "Change track" ]
+            , button [ class "small-button", onClick (ImportTrack number), attribute "aria-label" ("Import track into deck " ++ letter) ] [ text "↥ Import" ]
+            ]
+        , div [ class "picker-current" ] [ strong [] [ text "LOADED" ], span [] [ text deck.name ] ]
+        , small [] [ text "These tracks play inside Bit Cheer. Imports stay on this device for this session." ]
+        , div [ class "source-settings" ]
+            [ if model.hideBpm then
+                text ""
+
+              else
+                label [ class "source-bpm" ] [ span [] [ text "SOURCE BPM" ], input [ type_ "number", A.min "40", A.max "300", step "0.01", value (fixed 2 deck.bpm), on "change" (D.map (SourceBpm number) targetValue), attribute "aria-label" ("Deck " ++ letter ++ " source BPM") ] [] ]
+            , button [ class "small-button", onClick (SetGrid number), attribute "aria-label" ("Set beat grid deck " ++ letter), title "Mark the current position as beat one" ] [ text "SET GRID" ]
+            ]
+        ]
+
+
+proTrackPickers : Model -> Html Msg
+proTrackPickers model =
+    if model.mode == "pro" then
+        div [ class "pro-track-pickers", attribute "aria-label" "Pro track selection" ]
+            (List.concatMap
+                (\number ->
+                    scopeModules number (activeLayout model)
+                        |> List.filter (\item -> item.id == "picker")
+                        |> List.map (\item -> playerModule number item (trackPickerView model number (getDeck number model)))
+                )
+                [ 0, 1 ]
+            )
+
+    else
+        text ""
+
+
+globalModulesView : Model -> Html Msg
+globalModulesView model =
+    div [ class "session-modules" ]
+        [ div [ class "global-module-grid" ] (List.map (\item -> playerModule -1 item (globalModuleContent model item.id)) (activeLayout model).global)
+        , addModuleMenu model -1
+        ]
+
+
+globalModuleContent : Model -> String -> Html Msg
+globalModuleContent model moduleId =
+    case moduleId of
+        "crossfader" ->
+            crossfaderView model
+
+        "master" ->
+            masterView model
+
+        "monitor" ->
+            monitorView model
+
+        "outputs" ->
+            routingView model
+
+        "coach" ->
+            coachView model
+
+        "tap" ->
+            tapView model
+
+        "discovery" ->
+            discoveryView model
+
+        _ ->
+            text ""
+
+
+crossfaderView : Model -> Html Msg
+crossfaderView model =
+    div [ class "crossfader" ]
+        [ div [ class "crossfader-labels" ]
+            [ strong [] [ text "A" ]
+            , span []
+                [ text
+                    (if model.routing.mode == "mix" then
+                        "CROSSFADER"
+
+                     else
+                        "EXTERNAL MIX"
+                    )
+                ]
+            , strong [] [ text "B" ]
+            ]
+        , input [ type_ "range", A.min "0", A.max "1", step "0.01", value (String.fromFloat model.crossfade), onInput (Mixer "crossfade"), attribute "aria-label" "Crossfader", disabled (model.routing.mode /= "mix") ] []
+        , div [ class "fader-scale" ] [ span [] [ text "╵ ╵ ╵ ╵ ╵" ], span [] [ text "│" ], span [] [ text "╵ ╵ ╵ ╵ ╵" ] ]
+        ]
+
+
+masterView : Model -> Html Msg
+masterView model =
+    label [ class "master-volume" ] [ span [ class "control-label" ] [ text "MASTER", strong [] [ text (fixed 0 (model.master * 100) ++ "%") ] ], input [ type_ "range", A.min "0", A.max "1", step "0.01", value (String.fromFloat model.master), onInput (Mixer "master"), attribute "aria-label" "Master volume" ] [] ]
+
+
+monitorView : Model -> Html Msg
+monitorView model =
+    div [ class "mixer-monitor" ]
+        [ toggleDisabled (model.routing.mode /= "mix") "Split cue" model.splitCue SplitCue
+        , small []
+            [ text
+                (if model.routing.mode == "mix" then
+                    "A → left / B → right"
+
+                 else
+                    "External output routing active"
+                )
+            ]
+        ]
+
+
+discoveryView : Model -> Html Msg
+discoveryView model =
+    let
+        genres =
+            List.foldl
+                (\track acc ->
+                    if List.member track.genre acc then
+                        acc
+
+                    else
+                        acc ++ [ track.genre ]
+                )
+                [ "All genres" ]
+                model.referenceTracks
+    in
+    div [ class "external-discovery" ]
+        [ p [] [ text "External artist links from the Beatmatch PRO catalog. These links do not stream inside Bit Cheer; obtain a track from its artist, then import it into a deck." ]
+        , select [ onInput Genre, attribute "aria-label" "External discovery genre" ] (List.map (\genre -> option [ value genre, selected (genre == model.genre) ] [ text genre ]) genres)
+        , referenceLibraryView model
         ]
 
 
@@ -1921,114 +2525,85 @@ routingView model =
             else
                 "A → " ++ channelLabel routing.mode routing.a ++ " / B → " ++ channelLabel routing.mode routing.b
     in
-    section [ classList [ ( "output-routing", True ), ( "expanded", model.routingOpen ) ], attribute "aria-label" "Audio output routing" ]
-        [ div [ class "routing-heading" ]
-            [ button
-                [ class "routing-toggle"
-                , onClick ToggleRouting
-                , attribute "aria-expanded"
-                    (if model.routingOpen then
-                        "true"
-
-                     else
-                        "false"
-                    )
-                , attribute "aria-controls" "routing-panel"
-                ]
-                [ text "Audio outputs"
-                , span [ attribute "aria-hidden" "true" ]
+    section [ class "output-routing expanded", attribute "aria-label" "Audio output routing" ]
+        [ div [ class "routing-heading" ] [ small [] [ text summary ] ]
+        , div [ id "routing-panel", class "routing-panel" ]
+            [ div [ class "routing-status" ]
+                [ span [ class "status-dot" ] []
+                , strong []
                     [ text
-                        (if model.routingOpen then
-                            " −"
+                        (if routing.maxChannels > 0 then
+                            String.fromInt routing.maxChannels ++ " channels exposed by browser"
 
                          else
-                            " +"
+                            "Detecting available output channels…"
                         )
                     ]
+                , button [ class "small-button", onClick RefreshOutputs ] [ text "Refresh outputs" ]
                 ]
-            , small [] [ text summary ]
-            ]
-        , if model.routingOpen then
-            div [ id "routing-panel", class "routing-panel" ]
-                [ div [ class "routing-status" ]
-                    [ span [ class "status-dot" ] []
-                    , strong []
-                        [ text
-                            (if routing.maxChannels > 0 then
-                                String.fromInt routing.maxChannels ++ " channels exposed by browser"
-
-                             else
-                                "Detecting available output channels…"
-                            )
+            , div [ class "routing-controls" ]
+                [ label [ class "routing-control" ]
+                    [ span [] [ text "OUTPUT MODE" ]
+                    , confirmedSelect model.routingRevision
+                        [ value routing.mode, onInput RoutingMode, attribute "aria-label" "Output mode" ]
+                        [ option [ value "mix", selected (routing.mode == "mix") ] [ text "Stereo mix" ]
+                        , option [ value "mono", selected (routing.mode == "mono"), disabled (routing.maxChannels < 2) ] [ text "Separate mono channels" ]
+                        , option [ value "stereo", selected (routing.mode == "stereo"), disabled (routing.maxChannels < 4) ] [ text "Separate stereo pairs" ]
                         ]
-                    , button [ class "small-button", onClick RefreshOutputs ] [ text "Refresh outputs" ]
                     ]
-                , div [ class "routing-controls" ]
-                    [ label [ class "routing-control" ]
-                        [ span [] [ text "OUTPUT MODE" ]
-                        , confirmedSelect model.routingRevision
-                            [ value routing.mode, onInput RoutingMode, attribute "aria-label" "Output mode" ]
-                            [ option [ value "mix", selected (routing.mode == "mix") ] [ text "Stereo mix" ]
-                            , option [ value "mono", selected (routing.mode == "mono"), disabled (routing.maxChannels < 2) ] [ text "Separate mono channels" ]
-                            , option [ value "stereo", selected (routing.mode == "stereo"), disabled (routing.maxChannels < 4) ] [ text "Separate stereo pairs" ]
-                            ]
+                , if routing.mode /= "mix" then
+                    div [ class "routing-decks" ]
+                        [ routingDeckSelect model.routingRevision routing 0
+                        , routingDeckSelect model.routingRevision routing 1
+                        , button [ class "small-button", onClick SwapRouting, title "Swap both decks without overlapping channels" ] [ text "Swap A / B" ]
                         ]
-                    , if routing.mode /= "mix" then
-                        div [ class "routing-decks" ]
-                            [ routingDeckSelect model.routingRevision routing 0
-                            , routingDeckSelect model.routingRevision routing 1
-                            , button [ class "small-button", onClick SwapRouting, title "Swap both decks without overlapping channels" ] [ text "Swap A / B" ]
+
+                  else
+                    p [ class "routing-mix-note" ] [ text "Both decks share the stereo master. Use the crossfader to blend them or split cue to monitor each side." ]
+                ]
+            , if routing.canChooseOutput || routing.canPickOutput then
+                div [ class "output-device" ]
+                    [ if routing.canChooseOutput then
+                        label [ class "routing-control" ]
+                            [ span [] [ text "OUTPUT DEVICE" ]
+                            , confirmedSelect model.routingRevision
+                                [ value routing.deviceId, onInput AudioOutput, attribute "aria-label" "Output device" ]
+                                (List.map (\device -> option [ value device.id, selected (device.id == routing.deviceId) ] [ text device.label ])
+                                    (if List.isEmpty routing.devices then
+                                        [ { id = "default", label = "System default" } ]
+
+                                     else
+                                        routing.devices
+                                    )
+                                )
                             ]
 
                       else
-                        p [ class "routing-mix-note" ] [ text "Both decks share the stereo master. Use the crossfader to blend them or split cue to monitor each side." ]
+                        text ""
+                    , if routing.canPickOutput then
+                        button [ class "small-button", onClick PickOutput ] [ text "Choose an output device…" ]
+
+                      else
+                        text ""
                     ]
-                , if routing.canChooseOutput || routing.canPickOutput then
-                    div [ class "output-device" ]
-                        [ if routing.canChooseOutput then
-                            label [ class "routing-control" ]
-                                [ span [] [ text "OUTPUT DEVICE" ]
-                                , confirmedSelect model.routingRevision
-                                    [ value routing.deviceId, onInput AudioOutput, attribute "aria-label" "Output device" ]
-                                    (List.map (\device -> option [ value device.id, selected (device.id == routing.deviceId) ] [ text device.label ])
-                                        (if List.isEmpty routing.devices then
-                                            [ { id = "default", label = "System default" } ]
 
-                                         else
-                                            routing.devices
-                                        )
-                                    )
-                                ]
+              else
+                p [ class "routing-device-note" ] [ text "This browser uses the system output device. Choose your audio interface in your operating system, then refresh outputs." ]
+            , p [ class "routing-explanation" ]
+                [ text
+                    (if routing.mode == "mix" then
+                        "Separate mono sends each deck to one physical channel. Separate stereo sends each deck to its own adjacent channel pair and requires at least four channels exposed by the browser."
 
-                          else
-                            text ""
-                        , if routing.canPickOutput then
-                            button [ class "small-button", onClick PickOutput ] [ text "Choose an output device…" ]
-
-                          else
-                            text ""
-                        ]
-
-                  else
-                    p [ class "routing-device-note" ] [ text "This browser uses the system output device. Choose your audio interface in your operating system, then refresh outputs." ]
-                , p [ class "routing-explanation" ]
-                    [ text
-                        (if routing.mode == "mix" then
-                            "Separate mono sends each deck to one physical channel. Separate stereo sends each deck to its own adjacent channel pair and requires at least four channels exposed by the browser."
-
-                         else
-                            "Separate outputs bypass the software crossfader and split cue so you can mix externally. Deck volume, EQ, and master volume still work."
-                        )
-                    ]
-                , if routing.maxChannels > 0 && routing.maxChannels < 4 then
-                    small [ class "routing-limitation" ] [ text "The browser exposes fewer than four channels. Select your multichannel interface in OS audio settings, then refresh. Stereo pairs need four exposed outputs." ]
-
-                  else
-                    text ""
+                     else
+                        "Separate outputs bypass the software crossfader and split cue so you can mix externally. Deck volume, EQ, and master volume still work."
+                    )
                 ]
+            , if routing.maxChannels > 0 && routing.maxChannels < 4 then
+                small [ class "routing-limitation" ] [ text "The browser exposes fewer than four channels. Select your multichannel interface in OS audio settings, then refresh. Stereo pairs need four exposed outputs." ]
 
-          else
-            text ""
+              else
+                text ""
+            ]
         ]
 
 
@@ -2268,7 +2843,7 @@ libraryView model =
                     tracks
                 )
         , referenceLibraryView model
-        , small [ class "library-note" ] [ text "Imported tracks stay on your device. BPM estimates can be half or double time. *File support depends on your browser. ", a [ href "/credits.html", target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Music credits & licenses ↗" ] ]
+        , small [ class "library-note" ] [ text "Imported tracks stay on your device. BPM estimates can be half or double time. *File support depends on your browser. ", a [ href (model.basePath ++ "credits.html"), target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Music credits & licenses ↗" ] ]
         ]
 
 
@@ -2308,7 +2883,7 @@ lessons =
     , { number = 2, name = "Catch the drift", label = "TEMPO", description = "Learn which deck is faster and close the gap.", instruction = "Lesson 2: Use Randomize tempo on one deck, listen for drift, and move its pitch in tiny steps. Score 85+ to complete.", mode = "foundation", elements = [ 0 ] }
     , { number = 3, name = "Find the pocket", label = "PHASE", description = "Use a gentle nudge to align each transient.", instruction = "Lesson 3: Get the tempos close, then tap the nudge controls until the two kicks sound like one.", mode = "builder", elements = [ 0, 1 ] }
     , { number = 4, name = "Build the groove", label = "RHYTHM", description = "Add hats, snares, and percussion without losing the beat.", instruction = "Lesson 4: Match the groove with hats and snares. Add more elements as your ears settle in.", mode = "builder", elements = [ 0, 1, 2, 5 ] }
-    , { number = 5, name = "Under the surface", label = "FOCUS", description = "Keep the kick in focus through bass and melody.", instruction = "Lesson 5: Use the EQ to isolate the rhythm inside a full loop. Match both decks and score 85+.", mode = "builder", elements = [ 0, 1, 2, 3, 4, 5, 6 ] }
+    , { number = 5, name = "Under the surface", label = "FOCUS", description = "Keep the kick in focus through bass and melody.", instruction = "Lesson 5: Add an Equalizer module to isolate the rhythm inside a full loop. Match both decks and score 85+.", mode = "builder", elements = [ 0, 1, 2, 3, 4, 5, 6 ] }
     , { number = 6, name = "Eyes closed, ears open", label = "BY EAR", description = "Let go of the BPM display. Trust your hearing.", instruction = "Lesson 6: BPM is hidden. Listen for the direction of drift, adjust the pitch, then nudge.", mode = "blind", elements = [ 0, 1, 2, 4 ] }
     , { number = 7, name = "Into the real world", label = "PRO DECKS", description = "Bring two real tracks together with cue points and EQ.", instruction = "Lesson 7: Load two tracks, find their first kicks, save cue points, then match by ear. Check to finish.", mode = "pro", elements = [ 0, 1, 2, 4 ] }
     , { number = 8, name = "Own the transition", label = "EXPERT", description = "Balance two tracks and make a confident handover.", instruction = "Lesson 8: Load two tracks, hide the BPM, and match their tempo and phase. Move the crossfader from one end to the other over at least 3 seconds while matched, then check.", mode = "pro", elements = [ 0, 1, 2, 4 ] }
@@ -2441,7 +3016,7 @@ skinsView model =
                             )
                         ]
                         [ div [ class ("skin-preview skin-preview-" ++ skin) ]
-                            [ img [ class "skin-original-image", src ("/skins/" ++ skin ++ ".png"), alt (name ++ " original skin preview") ] []
+                            [ img [ class "skin-original-image", src (model.basePath ++ "skins/" ++ skin ++ ".png"), alt (name ++ " original skin preview") ] []
                             ]
                         , div [ class "skin-card-copy" ]
                             [ strong [] [ text name ]
@@ -2470,7 +3045,7 @@ skinsView model =
             , div [] [ div [ class "eyebrow" ] [ text "BUILT TO BE YOURS" ], h2 [] [ text "Make a skin of your own." ], p [] [ text "Choose a base layout in skin.toml, change its colors, and replace the frame, buttons, digits, or platter artwork. Import your ZIP to use it on this device." ], small [] [ text "TOML, ZIP skin pack, or classic Winamp WSZ · validated before applying" ] ]
             , div [ class "skin-import-actions" ] [ button [ class "primary-button", onClick ImportSkin ] [ text "↥ Import a skin" ], button [ class "secondary-button", onClick ExportSkin ] [ text "↓ Download template" ] ]
             ]
-        , p [ class "skin-attribution" ] [ text "The early web had personality. Explore the originals at the ", a [ href "https://skins.webamp.org/", target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Winamp Skin Museum ↗" ], text ". These are native Bit Cheer adaptations of the original skins. ", a [ href "/credits.html", target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Skin credits ↗" ] ]
+        , p [ class "skin-attribution" ] [ text "The early web had personality. Explore the originals at the ", a [ href "https://skins.webamp.org/", target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Winamp Skin Museum ↗" ], text ". These are native Bit Cheer adaptations of the original skins. ", a [ href (model.basePath ++ "credits.html"), target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Skin credits ↗" ] ]
         ]
 
 
@@ -2480,7 +3055,7 @@ helpView =
         [ section [ class "help-modal", attribute "role" "dialog", attribute "aria-modal" "true", attribute "aria-labelledby" "help-title", custom "keydown" helpKeyDecoder ]
             [ div [ class "section-heading" ] [ h2 [ id "help-title" ] [ text "Hands on. Ears open." ], button [ id "help-close", class "help-button", onClick ToggleHelp, attribute "aria-label" "Close help" ] [ text "×" ] ]
             , p [] [ text "Match the tempo with pitch, then align the beats with nudge. Cue returns a deck to its saved starting point." ]
-            , ul [ class "shortcut-list" ] (List.map (\( key, action ) -> li [] [ strong [] [ text key ], span [] [ text action ] ]) [ ( "SPACE", "Play / pause both decks; only the selected deck in focus view" ), ( "A / B", "Play / pause one deck" ), ( "← / →", "Nudge deck B" ), ( "T", "Tap tempo" ) ])
+            , ul [ class "shortcut-list" ] (List.map (\( key, action ) -> li [] [ strong [] [ text key ], span [] [ text action ] ]) [ ( "SPACE", "Play / pause both decks (also in focus)" ), ( "A / B", "Play / pause one deck" ), ( "← / →", "Nudge deck B" ), ( "T", "Tap tempo" ) ])
             , p [] [ text "Pitch changes playback speed and musical pitch, just like a classic turntable. Split cue sends deck A left and deck B right. Waveforms support dragging and wheel zoom." ]
             , button [ id "help-return", class "primary-button", onClick ToggleHelp ] [ text "Back to the groove" ]
             ]
