@@ -1,9 +1,42 @@
+# Dependencies and build caches
 node_modules/
-dist/
 elm-stuff/
-engine/target/
-test-results/
-playwright-report/
-public/elm.js
-public/engine.wasm
+/.cache/
+.vite/
+/target/
+/engine/target/
+
+# Production output and compiled Elm / Rust WebAssembly
+/dist/
+/public/elm.js
+/public/engine.wasm
+/public/tracks/*.part.mp3
+
+# Test reports and coverage
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/coverage/
+
+# Python maintenance scripts
+__pycache__/
+*.py[cod]
+.venv/
+
+# Local environment files; keep shareable examples
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.sample
+
+# Logs and editor / OS temporary files
+*.log
+*.swp
+*.swo
+*~
+.idea/
 .DS_Store
+Thumbs.db
+Desktop.ini
