@@ -1519,7 +1519,7 @@ modeDescription mode =
             "The numbers are off. Listen for the drift and bring two rhythms together."
 
         "star" ->
-            "Just like real turntables, these decks drift off speed whenever they feel like it. Keep them locked for 60 seconds. The rating counts how long and how tight you held it. No sync button. Just you and your nerves."
+            "Just like real turntables, these decks drift off speed whenever they feel like it. Heads up: the BPM screen and pitch fader won't show the drift. Only your ears will. Keep them locked for 60 seconds. The rating counts how long and how tight you held it. No sync button. Just you and your nerves."
 
         "pro" ->
             "Pick a genre or bring your own tracks. This is where practice meets the dance floor."
@@ -2942,7 +2942,7 @@ starMeter run =
             , div [ class "star-synced", style "width" (pct run.synced) ] []
             ]
         , p [] [ text ("In sync " ++ fixed 1 run.synced ++ " s · streak " ++ fixed 1 run.streak ++ " s · best " ++ fixed 1 run.best ++ " s") ]
-        , small [] [ text "Your decks had three espressos. Ride the pitch, tap the nudge, stay cool." ]
+        , small [] [ text "Your decks had three espressos. The BPM screen won't snitch on the drift, so trust your ears. Ride the pitch, tap the nudge, stay cool." ]
         ]
 
 
