@@ -75,7 +75,11 @@ type alias ReferenceTrack =
 
 
 type alias Result =
-    { score : Int, tempoError : Float, phaseError : Float, message : String }
+    { score : Int, tempoError : Float, phaseError : Float, message : String, summary : String }
+
+
+type alias StarRun =
+    { elapsed : Float, length : Float, synced : Float, streak : Float, best : Float, inSync : Bool, done : Bool }
 
 
 type alias OutputDevice =
@@ -139,6 +143,7 @@ type alias Model =
     , currentLesson : Maybe Int
     , drill : String
     , result : Maybe Result
+    , star : Maybe StarRun
     , tracks : List Track
     , referenceTracks : List ReferenceTrack
     , referencePage : Int
@@ -265,6 +270,7 @@ init flags =
       , currentLesson = Just 1
       , drill = ""
       , result = Nothing
+      , star = Nothing
       , tracks = []
       , referenceTracks = []
       , referencePage = 0
@@ -356,7 +362,7 @@ update msg model =
                         nextDeck
 
                 next =
-                    { model | mode = mode, a = prepare model.a, b = prepare model.b, hideBpm = mode == "blind", advanced = mode /= "foundation" && model.advanced, result = Nothing, drill = "", currentLesson = Nothing, page = Practice }
+                    { model | mode = mode, a = prepare model.a, b = prepare model.b, hideBpm = mode == "blind", advanced = mode /= "foundation" && model.advanced, result = Nothing, star = Nothing, drill = "", currentLesson = Nothing, page = Practice }
             in
             ( next, send "mode" [ ( "mode", E.string mode ), ( "elements", E.int (mask elements) ) ] )
 
@@ -481,7 +487,7 @@ update msg model =
             ( model, send "changeTrack" [ ( "deck", E.int deck ), ( "mode", E.string model.mode ), ( "genre", E.string (getDeck deck model).genre ) ] )
 
         NewChallenge ->
-            ( { model | result = Nothing }, send "newChallenge" [ ( "mode", E.string model.mode ), ( "elements", E.int (mask model.a.elements) ), ( "drill", E.string model.drill ) ] )
+            ( { model | result = Nothing, star = Nothing }, send "newChallenge" [ ( "mode", E.string model.mode ), ( "elements", E.int (mask model.a.elements) ), ( "drill", E.string model.drill ) ] )
 
         AddInstrument deck raw ->
             case String.toInt raw of
@@ -1158,6 +1164,22 @@ receive data model =
                     _ ->
                         ( model, Cmd.none )
 
+        "star" ->
+            ( { model
+                | star =
+                    Just
+                        { elapsed = field "elapsed" D.float 0 data
+                        , length = field "length" D.float 60 data
+                        , synced = field "synced" D.float 0 data
+                        , streak = field "streak" D.float 0 data
+                        , best = field "best" D.float 0 data
+                        , inSync = field "inSync" D.bool False data
+                        , done = field "done" D.bool False data
+                        }
+              }
+            , Cmd.none
+            )
+
         "tap" ->
             ( { model | tapBpm = field "bpm" D.float 0 data, taps = field "taps" D.int 0 data }, Cmd.none )
 
@@ -1186,6 +1208,7 @@ receive data model =
                     , tempoError = field "tempoError" D.float 0 data
                     , phaseError = field "phaseError" D.float 0 data
                     , message = field "message" D.string "Keep listening and adjusting." data
+                    , summary = field "summary" D.string "" data
                     }
 
                 progress =
@@ -2782,36 +2805,36 @@ coachView model =
                                 )
                             ]
                         , p [] [ text result.message ]
-                        , small [] [ text ("Tempo: " ++ fixed 2 result.tempoError ++ " BPM apart · Phase: " ++ fixed 0 result.phaseError ++ " ms") ]
+                        , small []
+                            [ text
+                                (if String.isEmpty result.summary then
+                                    "Tempo: " ++ fixed 2 result.tempoError ++ " BPM apart · Phase: " ++ fixed 0 result.phaseError ++ " ms"
+
+                                 else
+                                    result.summary
+                                )
+                            ]
                         ]
                     ]
 
             Nothing ->
-                div [ class "coach-copy" ]
-                    [ h3 []
-                        [ text
-                            (if model.mode == "pro" then
-                                "Find the downbeat."
+                case ( model.drill, model.star ) of
+                    ( "star", Just run ) ->
+                        starMeter run
 
-                             else if model.currentLesson /= Nothing then
-                                "Start with the kick."
-
-                             else
-                                "Listen for the double hit."
-                            )
-                        ]
-                    , p []
-                        [ text
-                            (if String.isEmpty model.drill then
-                                "Play both decks, then move deck B's pitch fader until the beats stop drifting. Nudge them into place."
-
-                             else
-                                drillInstruction model.drill
-                            )
-                        ]
-                    ]
+                    _ ->
+                        coachCopy model
         , div [ class "coach-bottom" ]
-            [ button [ class "primary-button", onClick Check ] [ text "Check my match", span [] [ text "↗" ] ]
+            [ button [ class "primary-button", onClick Check ]
+                [ text
+                    (if model.drill == "star" then
+                        "Finish the run"
+
+                     else
+                        "Check my match"
+                    )
+                , span [] [ text "↗" ]
+                ]
             , span []
                 [ text
                     (if List.isEmpty model.history then
@@ -2822,6 +2845,65 @@ coachView model =
                     )
                 ]
             ]
+        ]
+
+
+coachCopy : Model -> Html Msg
+coachCopy model =
+    div [ class "coach-copy" ]
+        [ h3 []
+            [ text
+                (if model.mode == "pro" then
+                    "Find the downbeat."
+
+                 else if model.currentLesson /= Nothing then
+                    "Start with the kick."
+
+                 else
+                    "Listen for the double hit."
+                )
+            ]
+        , p []
+            [ text
+                (if String.isEmpty model.drill then
+                    "Play both decks, then move deck B's pitch fader until the beats stop drifting. Nudge them into place."
+
+                 else
+                    drillInstruction model.drill
+                )
+            ]
+        ]
+
+
+starMeter : StarRun -> Html Msg
+starMeter run =
+    let
+        pct value =
+            String.fromFloat (clamp 0 100 (value / Basics.max 1 run.length * 100)) ++ "%"
+    in
+    div [ classList [ ( "star-meter", True ), ( "is-synced", run.inSync ) ] ]
+        [ div [ class "star-status" ]
+            [ span [ class "star-icon" ] [ text "★" ]
+            , strong []
+                [ text
+                    (if run.elapsed <= 0 then
+                        "Press play on both decks"
+
+                     else if run.inSync then
+                        "LOCKED"
+
+                     else
+                        "DRIFTING"
+                    )
+                ]
+            , small [] [ text (fixed 0 (Basics.max 0 (run.length - run.elapsed)) ++ " s left") ]
+            ]
+        , div [ class "star-track", attribute "role" "progressbar", attribute "aria-label" "Run progress", attribute "aria-valuenow" (fixed 0 run.elapsed), attribute "aria-valuemax" (fixed 0 run.length) ]
+            [ div [ class "star-elapsed", style "width" (pct run.elapsed) ] []
+            , div [ class "star-synced", style "width" (pct run.synced) ] []
+            ]
+        , p [] [ text ("In sync " ++ fixed 1 run.synced ++ " s · streak " ++ fixed 1 run.streak ++ " s · best " ++ fixed 1 run.best ++ " s") ]
+        , small [] [ text "The decks drift on their own, like real turntables. Keep correcting with pitch and nudge." ]
         ]
 
 
@@ -3036,6 +3118,7 @@ trainingView model =
                 , ( "phase", ( "◎", "Lock the phase", "The tempos start matched. Use tiny nudges to bring the kicks into the very same moment." ) )
                 , ( "blind", ( "◒", "Trust your ears", "No numbers to lean on. Learn to recognize drift, choose a direction, and hold the groove." ) )
                 , ( "phrase", ( "▥", "Find the one", "Align the start of each four-bar phrase. Listen beyond individual kicks and feel the larger pattern." ) )
+                , ( "star", ( "★", "Star mode", "Like real turntables, each deck's speed slowly wanders. Keep them locked for 60 seconds: your rating counts how long and how tightly you held the sync." ) )
                 ]
             )
         , section [ class "history-panel" ]
@@ -3060,6 +3143,9 @@ drillInstruction drill =
 
         "phrase" ->
             "Phrase drill: line up beat one of each 16-beat phrase. Use cue and nudge, then check your alignment."
+
+        "star" ->
+            "Star mode: press Space to start both decks. Their speeds drift slightly over the 60-second run, so keep correcting with pitch and nudge to stay locked."
 
         _ ->
             "Blind drill: keep BPM hidden. Listen carefully to the direction of drift, then correct it by ear."
