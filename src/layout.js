@@ -13,7 +13,7 @@ export function validateLayout(layout) {
     return clean;
   };
   const modes = {};
-  for (const mode of ['foundation', 'builder', 'blind', 'pro']) {
+  for (const mode of ['foundation', 'builder', 'blind', 'star', 'pro']) {
     const value = layout.modes[mode];
     if (!value || !Array.isArray(value.decks) || value.decks.length !== 2) continue;
     const decks = value.decks.map(items => modules(items, DECK_MODULES));

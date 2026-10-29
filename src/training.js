@@ -74,3 +74,58 @@ export function generatedWaveform(mask, seed, count = 640) {
     return Math.min(1, kick + hat + snare + other);
   });
 }
+
+// Star mode: like real turntables, each deck's speed wanders a little during
+// the run. The player keeps the decks in sync; the rating measures how long
+// and how closely they held it.
+export const STAR = Object.freeze({ length: 60, maxDrift: 1, driftRate: .2, syncMs: 25, syncBpm: .3 });
+
+export function createStar(random = Math.random) {
+  return { random, elapsed: 0, synced: 0, streak: 0, best: 0, closenessSum: 0, phaseSum: 0, tempoSum: 0, inSync: false, done: false, drift: [0, 0], target: [0, 0], hold: [1.5, 3] };
+}
+
+// Move each deck's hidden speed offset toward a randomly chosen target.
+// The wobble starts small and grows to the full range over the first half.
+export function stepDrift(star, dt) {
+  const amplitude = STAR.maxDrift * clamp(.4 + star.elapsed / STAR.length * 1.2, .4, 1);
+  for (let i = 0; i < 2; i++) {
+    star.hold[i] -= dt;
+    if (star.hold[i] <= 0) {
+      star.target[i] = (star.random() * 2 - 1) * amplitude;
+      star.hold[i] = 3 + star.random() * 5;
+    }
+    const gap = star.target[i] - star.drift[i], step = STAR.driftRate * dt;
+    star.drift[i] += clamp(gap, -step, step);
+  }
+  return star.drift;
+}
+
+const phaseMs = decks => {
+  const p = Math.abs(((decks[0].beat - decks[1].beat) % 1 + 1) % 1);
+  return Math.min(p, 1 - p) * 60000 / Math.max(1, decks[0].bpm);
+};
+
+export function stepScore(star, decks, dt) {
+  const tempo = Math.abs(decks[0].bpm - decks[1].bpm), phase = phaseMs(decks);
+  star.elapsed += dt;
+  star.tempoSum += tempo * dt;
+  star.phaseSum += phase * dt;
+  star.closenessSum += clamp(1 - phase / 80, 0, 1) * clamp(1 - tempo / 1.5, 0, 1) * dt;
+  star.inSync = phase <= STAR.syncMs && tempo <= STAR.syncBpm;
+  if (star.inSync) { star.synced += dt; star.streak += dt; star.best = Math.max(star.best, star.streak); }
+  else star.streak = 0;
+  return star;
+}
+
+export const starStats = star => ({ type: 'star', elapsed: star.elapsed, length: STAR.length, synced: star.synced, streak: star.streak, best: star.best, inSync: star.inSync, done: star.done });
+
+export function starResult(star) {
+  const time = Math.max(.001, star.elapsed), ratio = star.synced / time, closeness = star.closenessSum / time;
+  const score = Math.round(clamp(100 * (.6 * ratio + .4 * closeness), 0, 100));
+  const phaseError = Math.round(star.phaseSum / time), tempoError = Math.round(star.tempoSum / time * 100) / 100;
+  const message = score >= 85 ? 'Star run. The dancefloor didn\'t notice a thing, and that\'s the whole point.'
+    : ratio < .3 && tempoError > .3 ? 'The decks wandered off like two dogs in a park. Catch the drift sooner with tiny pitch moves the moment the kicks start to flam.'
+    : 'Speeds were tight, but the beats slipped. A quick nudge the second they separate, and nobody has to know.';
+  const summary = `In sync ${star.synced.toFixed(1)} s of ${star.elapsed.toFixed(0)} s · longest lock ${star.best.toFixed(1)} s · ${phaseError} ms apart on average`;
+  return { type: 'result', score, tempoError, phaseError, message, summary };
+}

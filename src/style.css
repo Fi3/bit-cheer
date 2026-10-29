@@ -20,3 +20,17 @@
 @media(max-width:700px){.output-routing{padding:11px}.routing-controls{grid-template-columns:1fr 1fr;gap:14px}.routing-controls>label:first-child{grid-column:1/-1}.routing-header>span,.routing-summary{font-size:6px}.routing-header>button{font-size:8px}.output-device{flex-wrap:wrap}.output-device>label{min-width:100%;max-width:100%}.routing-note,.routing-help{font-size:9px}.routing-controls select,.output-device select{font-size:10px;padding:9px 6px}}
 .routing-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.routing-toggle{background:none;border:0;padding:3px 0;font:9px 'IBM Plex Mono',monospace;color:var(--text)}.routing-toggle>span{color:var(--accent);margin-left:5px}.routing-heading>small{font:7px 'IBM Plex Mono',monospace;color:var(--muted)}.routing-panel{padding-top:12px}.routing-status{display:flex;align-items:center;gap:8px;border-top:1px solid #ffffff12;padding-top:14px}.routing-status .status-dot{background:var(--accent)}.routing-status strong{font:9px 'IBM Plex Mono',monospace;color:var(--accent);font-weight:400}.routing-status button{margin-left:auto;font-size:9px}.routing-control{display:flex;flex-direction:column;gap:7px;font:7px 'IBM Plex Mono',monospace;color:var(--muted);min-width:0}.routing-decks{display:flex;gap:12px;align-items:flex-end;grid-column:2/-1}.routing-decks .routing-control{flex:1}.routing-decks button{font-size:9px;height:32px}.routing-mix-note{grid-column:2/-1;font-size:10px;line-height:1.7;padding-bottom:4px;max-width:400px}.routing-device-note,.routing-explanation{font-size:9px;line-height:1.7;color:var(--muted);margin-top:9px}.routing-limitation{display:block;font:8px/1.8 'IBM Plex Mono',monospace;color:var(--secondary);margin-top:9px}.routing-explanation{margin-bottom:5px}
 @media(max-width:700px){.routing-status{flex-wrap:wrap;gap:10px}.routing-status strong{font-size:8px}.routing-status button{font-size:8px}.routing-controls{grid-template-columns:1fr}.routing-decks{grid-column:1/-1;flex-wrap:wrap}.routing-decks .routing-control{min-width:40%}.routing-decks button{margin-top:3px}.routing-mix-note{grid-column:1/-1}.routing-heading>small{font-size:6px}.routing-limitation{font-size:7px}}
+/* Star mode live meter */
+.star-meter{display:grid;gap:10px;padding:14px 0}
+.star-status{display:flex;align-items:center;gap:10px}
+.star-status strong{font:600 18px/1 'IBM Plex Mono',monospace;letter-spacing:1px;color:#e0662f;transition:color .15s}
+.star-status small{margin-left:auto;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+.star-icon{font-size:22px;color:var(--muted);transition:color .15s,transform .15s}
+.star-meter.is-synced .star-status strong,.star-meter.is-synced .star-icon{color:#2fa860}
+.star-meter.is-synced .star-icon{transform:scale(1.15)}
+.star-track{position:relative;height:10px;border-radius:5px;background:#ffffff14;overflow:hidden;border:1px solid var(--border)}
+.star-track>div{position:absolute;inset:0 auto 0 0}
+.star-elapsed{background:#7f8a9a73}
+.star-synced{background:#2fa860}
+.star-meter p{font-family:'IBM Plex Mono',monospace;font-size:12px}
+.star-meter>small{color:var(--muted)}

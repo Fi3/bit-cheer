@@ -358,6 +358,8 @@ struct Deck {
     bpm: f64,
     pitch: f64,
     bend: f64,
+    // Hidden platter speed wobble (percent) used by Star mode; never shown as pitch.
+    drift: f64,
     position: f64,
     playing: bool,
     elements: u32,
@@ -381,6 +383,7 @@ impl Deck {
             bpm,
             pitch: 0.0,
             bend: 0.0,
+            drift: 0.0,
             position: 0.0,
             playing: false,
             elements: 1,
@@ -409,7 +412,7 @@ impl Deck {
         (self.position - self.beat_offset) * self.bpm / 60.0
     }
     fn effective_bpm(&self) -> f64 {
-        self.bpm * (1.0 + (self.pitch + self.bend) / 100.0)
+        self.bpm * (1.0 + (self.pitch + self.bend + self.drift) / 100.0)
     }
     fn seek(&mut self, seconds: f64) {
         self.position = seconds.max(0.0).min(self.duration());
@@ -461,6 +464,7 @@ impl Deck {
             13 => self.looping = value != 0.0,
             14 => self.beat_offset = value.clamp(0.0, self.duration()),
             15 => self.bend = value.clamp(-20.0, 20.0),
+            16 => self.drift = value.clamp(-10.0, 10.0),
             _ => {}
         }
     }
@@ -555,7 +559,7 @@ impl Deck {
             self.peak = self.peak.max(value.abs());
         }
         if self.playing {
-            self.position += (1.0 + (self.pitch + self.bend) / 100.0) / self.rate;
+            self.position += (1.0 + (self.pitch + self.bend + self.drift) / 100.0) / self.rate;
             if self.position >= self.duration() {
                 if self.looping {
                     self.position %= self.duration().max(0.001);
@@ -865,6 +869,20 @@ mod tests {
         assert!((e.decks[0].effective_bpm() - 138.0).abs() < 1e-8);
         e.decks[0].set(15, 0.0);
         assert_eq!(e.decks[0].effective_bpm(), 126.0);
+    }
+    #[test]
+    fn drift_changes_transport_and_survives_bend_release() {
+        let mut e = Engine::new(48000.0);
+        e.decks[0].set(0, 1.0);
+        e.decks[0].set(16, 2.0);
+        e.decks[0].set(15, 4.0);
+        e.decks[0].set(15, 0.0);
+        advance(&mut e, 48000);
+        assert!((e.decks[0].position - 1.02).abs() < 1e-8);
+        assert_eq!(e.decks[0].pitch, 0.0);
+        assert!((e.decks[0].effective_bpm() - 122.4).abs() < 1e-8);
+        e.decks[0].set(16, 99.0);
+        assert_eq!(e.decks[0].drift, 10.0);
     }
     #[test]
     fn beat_offset_changes_grid_without_seeking() {

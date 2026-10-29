@@ -8,7 +8,7 @@ import './skin-studio.css';
 import './wsz.css';
 import { AudioEngine } from './audio.js';
 import { assetUrl, BASE_PATH } from './assets.js';
-import { clamp, tapTempo, matchScore, estimateTempo } from './training.js';
+import { clamp, tapTempo, matchScore, estimateTempo, STAR, createStar, stepDrift, stepScore, starStats, starResult } from './training.js';
 import { applySkin, importSkin, importSkinFromUrl, downloadTemplate, skinPicture, SELECTABLE_SKINS, DEFAULT_SKIN } from './skins.js';
 import { SessionLibrary, DeckSelections } from './library.js';
 import { adjustedPitch, wheelPitchDelta, keyPitchDelta, pitchSensitivity } from './pitch-control.js';
@@ -90,10 +90,10 @@ function primaryGenre(tags) {
   return 'Electronic';
 }
 async function constrainDrill() {
-  if(drill!=='phase'&&drill!=='phrase')return;
+  if(drill!=='phase'&&drill!=='phrase'&&mode!=='star')return;
   const bpm=engine.state[0].bpm;
   await engine.set(1,'bpm',bpm);
-  await engine.set(1,'seek',(drill==='phase'?.28:4)*60/bpm);
+  if(mode!=='star')await engine.set(1,'seek',(drill==='phase'?.28:4)*60/bpm);
   send({type:'randomized',bpms:[bpm,bpm],names:engine.state.map(d=>d.name)});
 }
 async function configure(command) {
@@ -101,7 +101,7 @@ async function configure(command) {
   const requestedMode=command.mode||'foundation';mode=requestedMode;recent=[];lastStart=performance.now();zoom=[1,1];
   await engine.ensure();
   if(version!==configVersion)return;
-  for(let i=0;i<2;i++){await engine.set(i,'play',0);await engine.set(i,'pitch',0);await engine.set(i,'loop',1);await engine.set(i,'bend',0);if(requestedMode==='foundation'){for(const band of ['low','mid','high'])await engine.set(i,band,0);await engine.setVoice(i,0,'gain',1);await engine.setVoice(i,0,'pan',0);}}
+  for(let i=0;i<2;i++){await engine.set(i,'play',0);await engine.set(i,'pitch',0);await engine.set(i,'loop',1);await engine.set(i,'bend',0);await engine.set(i,'drift',0);if(requestedMode==='foundation'){for(const band of ['low','mid','high'])await engine.set(i,band,0);await engine.setVoice(i,0,'gain',1);await engine.setVoice(i,0,'pan',0);}}
   if(version!==configVersion)return;
   if(requestedMode==='pro') {
     if(catalog.tracks.length>=2){await loadTrack(0,catalog.tracks[0].id);if(version!==configVersion)return;await loadTrack(1,catalog.tracks[1].id);}
@@ -111,6 +111,29 @@ async function configure(command) {
     await constrainDrill();
   }
   recent=[];lastStart=performance.now();
+}
+// Star mode: the run clock and the drift only advance while both decks play.
+let star=null,starTimer=null,starLast=0;
+function startStar(){
+  stopStar();star=createStar();starLast=performance.now();
+  starTimer=setInterval(tickStar,100);send(starStats(star));
+}
+function stopStar(){
+  clearInterval(starTimer);starTimer=null;star=null;
+  if(engine.node)for(let i=0;i<2;i++)engine.set(i,'drift',0).catch(()=>{});
+}
+function tickStar(){
+  const now=performance.now(),dt=Math.min(.25,(now-starLast)/1000);starLast=now;
+  if(!star||star.done||telemetry.length!==2||!telemetry.every(d=>d.playing))return;
+  const drift=stepDrift(star,dt);
+  for(let i=0;i<2;i++)engine.set(i,'drift',drift[i]).catch(()=>{});
+  stepScore(star,telemetry,dt);
+  if(star.elapsed>=STAR.length)finishStar();else send(starStats(star));
+}
+function finishStar(){
+  star.done=true;clearInterval(starTimer);starTimer=null;
+  for(let i=0;i<2;i++)engine.set(i,'drift',0).catch(()=>{});
+  send(starStats(star));send(starResult(star));
 }
 async function handle(command) {
   const {type,deck,param,value}=command;
@@ -130,7 +153,7 @@ async function handle(command) {
     case 'zoom': zoom[deck]=clamp(zoom[deck] * value,1,16);break;
     case 'grid': await engine.set(deck,'beatOffset',engine.state[deck].position);recent=[];lastStart=performance.now();notice('Current position marked as beat one. Grid checks now use this downbeat.');break;
     case 'randomizeTempo':
-      if(drill==='phase'||drill==='phrase'){notice('This drill keeps tempos equal. Use New challenge for a fresh offset.');break;}
+      if(drill==='phase'||drill==='phrase'||mode==='star'){notice('This drill keeps tempos equal. Use New challenge for a fresh offset.');break;}
       await engine.randomizeTempo(deck,mode);recent=[];lastStart=performance.now();break;
     case 'changeTrack': {
       if(mode==='pro')await navigateTrack(deck,command.genre,'random');
@@ -146,11 +169,17 @@ async function handle(command) {
     case 'focusSession': focusSession(!!command.active,command.fullscreen!==false);break;
     case 'focusDeck': focusSession(command.deck>=0,command.fullscreen!==false);break;
     case 'fullscreen': focusSession(focusActive,!!command.active);break;
-    case 'newChallenge': await configure(command);break;
-    case 'mode': activeLesson=null;transition=null;drill='';await configure(command);break;
-    case 'lesson': activeLesson=command.lesson;transition=null;drill='';await configure(command);break;
-    case 'drill': activeLesson=null;transition=null;drill=command.drill;await configure(command);break;
+    case 'newChallenge': stopStar();await configure(command);if(mode==='star')startStar();break;
+    case 'mode': activeLesson=null;transition=null;drill='';stopStar();await configure(command);if(mode==='star')startStar();break;
+    case 'lesson': activeLesson=command.lesson;transition=null;drill='';stopStar();await configure(command);break;
+    case 'drill': activeLesson=null;transition=null;drill=command.drill;stopStar();await configure(command);break;
+    case 'starRun': if(command.active)startStar();else stopStar();break;
     case 'check': {
+      if(star){
+        if(star.done){notice(mode==='star'?'Run\'s over. Take a bow, then hit New run for the encore.':'Run\'s over. Take a bow, then hit New star run for the encore.');break;}
+        if(star.elapsed<10){notice('Easy, superstar. Keep both decks playing for at least 10 seconds before you bow out.');break;}
+        finishStar();break;
+      }
       if(!telemetry.length||!telemetry.every(d=>d.playing)) {notice('Play both decks, match the pitch, then check your mix.');break;}
       if(performance.now()-lastStart<3000||recent.length<20){notice('Let both decks run together for at least 3 seconds before checking. Listen for drift.');break;}
       if(mode==='pro' && !engine.state.every(d=>d.source==='pcm')){notice('Load a real track into both decks before checking a Pro mix.');break;}

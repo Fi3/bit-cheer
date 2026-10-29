@@ -47,3 +47,17 @@ test('skin archive rejects excessive entries before extracting them',()=>{
   assert.throws(()=>readArchive(zipSync(files)),/too large/);
   assert.ok(readArchive(zipSync({'skin.toml':strToU8(skinTemplate())}))['skin.toml']);
 });
+test('star drift stays in range, moves gradually, and scoring rewards held sync',async()=>{
+  const { createStar, stepDrift, stepScore, starResult, STAR } = await import('../src/training.js');
+  let seed=1;const random=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  const star=createStar(random);let previous=[0,0];
+  for(let t=0;t<600;t++){stepDrift(star,.1);star.elapsed+=.1;
+    for(let i=0;i<2;i++){assert.ok(Math.abs(star.drift[i])<=STAR.maxDrift+1e-9);assert.ok(Math.abs(star.drift[i]-previous[i])<=STAR.driftRate*.1+1e-9);}
+    previous=[...star.drift];}
+  assert.ok(star.drift.some(d=>Math.abs(d)>.1),'decks must actually drift');
+  const locked=createStar(random),loose=createStar(random);
+  for(let t=0;t<600;t++){stepScore(locked,[{bpm:124,beat:t/10},{bpm:124,beat:t/10+.01}],.1);stepScore(loose,[{bpm:124,beat:t/10},{bpm:125,beat:t/10+(t%2?.3:.01)}],.1);}
+  assert.ok(Math.abs(locked.synced-60)<1e-6);assert.ok(Math.abs(locked.best-60)<1e-6);
+  assert.ok(starResult(locked).score>=95);
+  assert.ok(starResult(loose).score<40);assert.match(starResult(locked).summary,/In sync 60\.0 s/);
+});

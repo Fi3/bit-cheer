@@ -1,5 +1,5 @@
 /* Rust/WASM renders both decks on the audio thread; no JS audio synthesis. */
-const PARAMS = Object.freeze({ play: 0, bpm: 1, pitch: 2, elements: 3, nudge: 4, seek: 5, cue: 6, setCue: 7, low: 8, mid: 9, high: 10, gain: 11, source: 12, loop: 13, beatOffset: 14, bend: 15 });
+const PARAMS = Object.freeze({ play: 0, bpm: 1, pitch: 2, elements: 3, nudge: 4, seek: 5, cue: 6, setCue: 7, low: 8, mid: 9, high: 10, gain: 11, source: 12, loop: 13, beatOffset: 14, bend: 15, drift: 16 });
 
 class BitCheerProcessor extends AudioWorkletProcessor {
   constructor(options) {
