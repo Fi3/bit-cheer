@@ -1,6 +1,7 @@
 import { assetUrl } from './assets.js';
 import { clamp, estimateTempo, generatedWaveform, waveformPeaks } from './training.js';
 import { availableChannelCount, validateRouting, buildHardwareGraph } from './output-routing.js';
+import { MAX_FOLDER_FILE } from './library.js';
 
 const MAX_PCM_FRAMES = 28_800_000;
 export const VOICE_COUNT = 20;
@@ -438,7 +439,8 @@ export class AudioEngine {
   async load(deck, bytes, name, knownBpm) {
     if (deck !== 0 && deck !== 1) throw new Error('Choose deck A or B.');
     const version = ++this.loadVersions[deck];
-    if (bytes.byteLength > 100 * 1024 * 1024) throw new Error('Choose an audio file smaller than 100 MB.');
+    // Backstop: each source (import, download, folder) checks its own limit first; folder tracks allow the most.
+    if (bytes.byteLength > MAX_FOLDER_FILE) throw new Error(`Choose an audio file smaller than ${MAX_FOLDER_FILE / 1024 / 1024} MB.`);
     await this.ensure();
     const buffer = await this.context.decodeAudioData(bytes);
     if (version !== this.loadVersions[deck]) return false;

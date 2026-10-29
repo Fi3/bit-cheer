@@ -406,6 +406,89 @@ test('Pro selectors load playable genres and reuse a local import on either deck
   for (const deck of [0, 1]) await expect.poll(() => page.evaluate(index => window.bitCheer.telemetry[index].peak, deck)).toBeGreaterThan(.01);
 });
 
+test('Pro decks browse a chosen folder tree and load tracks from disk on either deck', async ({ page }) => {
+  await page.getByRole('button', { name: /Pro decks/ }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(d => d.source === 'pcm'))).toBe(true);
+  // Stand in for the native folder dialog with an in-memory directory tree backed by a bundled recording.
+  await page.evaluate(() => {
+    window.__folderReads = 0;
+    const file = name => ({ kind: 'file', name, getFile: async () => {
+      window.__folderReads++;
+      const bytes = await (await fetch(new URL('tracks/selection.mp3', document.baseURI))).arrayBuffer();
+      return new File([bytes], name, { type: 'audio/mpeg' });
+    } });
+    const dir = (name, children) => ({ kind: 'directory', name,
+      async *entries() { yield* Object.entries(children); },
+      async getDirectoryHandle(child) { return children[child]; },
+      async getFileHandle(child) { return children[child]; } });
+    const root = dir('My Crate', { 'cover.jpg': file('cover.jpg'), 'warmup.mp3': file('warmup.mp3'), House: dir('House', { 'deep cut.mp3': file('deep cut.mp3') }) });
+    window.showDirectoryPicker = async () => root;
+  });
+  await openModule(page, 'picker', 'A');
+  await page.getByRole('button', { name: 'Browse a folder for deck A', exact: true }).click();
+  const browserA = page.getByLabel('Folder browser deck A', { exact: true });
+  // The first browse explains that the system folder dialog greys out files before opening it.
+  await expect(browserA).toContainText('greys out the files inside');
+  await page.getByRole('button', { name: 'Choose music folder deck A', exact: true }).click();
+  await expect(browserA.locator('.folder-entry')).toHaveText(['📁 House', '♪ warmup.mp3']);
+  expect(await page.evaluate(() => window.__folderReads)).toBe(0);
+  await browserA.getByRole('button', { name: 'Open House deck A', exact: true }).click();
+  await expect(browserA.locator('.folder-path')).toContainText('My Crate/House');
+  const before = await deckSnapshots(page);
+  await page.getByRole('button', { name: 'Load deep cut.mp3 into deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].name)).toBe('deep cut.mp3');
+  expect((await deckSnapshots(page))[1]).toEqual(before[1]);
+  await expect(page.getByLabel('Deck A genre', { exact: true })).toHaveValue('Local files');
+  await expect(browserA.getByRole('button', { name: 'Load deep cut.mp3 into deck A' })).toHaveClass(/is-loaded/);
+  await page.getByRole('button', { name: 'Up one folder deck A', exact: true }).click();
+  await page.getByLabel('Filter folder deck A', { exact: true }).fill('warm');
+  await expect(browserA.locator('.folder-entry')).toHaveText(['♪ warmup.mp3']);
+
+  // Deck B reuses the open folder without asking again, and its browser is independent.
+  await page.evaluate(() => { window.showDirectoryPicker = async () => { throw new Error('must not prompt again'); }; });
+  await openModule(page, 'picker', 'B');
+  await page.getByRole('button', { name: 'Browse a folder for deck B', exact: true }).click();
+  await page.getByRole('button', { name: 'Load warmup.mp3 into deck B', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[1].name)).toBe('warmup.mp3');
+  expect(await page.evaluate(() => window.bitCheer.audio.state[0].name)).toBe('deep cut.mp3');
+  const folderTracks = await page.evaluate(() => window.bitCheer.library.filter(track => track.id.startsWith('folder:')).length);
+  expect(folderTracks).toBe(2);
+  await page.getByRole('button', { name: 'Close folder browser deck B', exact: true }).click();
+  await expect(page.getByLabel('Folder browser deck B', { exact: true })).toHaveCount(0);
+  await playBoth(page);
+  for (const deck of [0, 1]) await expect.poll(() => page.evaluate(index => window.bitCheer.telemetry[index].peak, deck)).toBeGreaterThan(.01);
+});
+
+test('browsers without the folder API fall back to a folder upload tree, including hi-res FLAC', async ({ page }, testInfo) => {
+  const folder = testInfo.outputPath('Fallback Crate');
+  const { mkdirSync, copyFileSync, writeFileSync } = await import('node:fs');
+  mkdirSync(path.join(folder, 'Techno'), { recursive: true });
+  copyFileSync(asset('tracks/robowalk.mp3'), path.join(folder, 'Techno', 'robo.mp3'));
+  copyFileSync(path.join(root, 'tests/fixtures/kick-120-24bit-96k.flac'), path.join(folder, 'Techno', 'Kick 24-96.FLAC'));
+  writeFileSync(path.join(folder, 'notes.txt'), 'not audio');
+  await page.evaluate(() => { delete window.showDirectoryPicker; delete Window.prototype.showDirectoryPicker; });
+  await page.getByRole('button', { name: /Pro decks/ }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(d => d.source === 'pcm'))).toBe(true);
+  await openModule(page, 'picker', 'A');
+  await page.getByRole('button', { name: 'Browse a folder for deck A', exact: true }).click();
+  const choosing = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Choose music folder deck A', exact: true }).click();
+  await (await choosing).setFiles(folder);
+  const browserA = page.getByLabel('Folder browser deck A', { exact: true });
+  await expect(browserA.locator('.folder-entry')).toHaveText(['📁 Techno']);
+  await browserA.getByRole('button', { name: 'Open Techno deck A', exact: true }).click();
+  await expect(browserA.locator('.folder-entry')).toHaveText(['↰ ..', '♪ Kick 24-96.FLAC', '♪ robo.mp3']);
+  await page.getByRole('button', { name: 'Load robo.mp3 into deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].name)).toBe('robo.mp3');
+  // A 24-bit/96 kHz FLAC decodes, is resampled to the audio context rate and plays.
+  await page.getByRole('button', { name: 'Load Kick 24-96.FLAC into deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].name)).toBe('Kick 24-96.FLAC');
+  expect(await page.evaluate(() => window.bitCheer.audio.state[0].duration)).toBeCloseTo(4, 1);
+  await expect(page.locator('.notice.error')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Play deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.telemetry[0].peak)).toBeGreaterThan(.01);
+});
+
 test('a delayed Pro download cannot replace generated decks after switching to Foundation', async ({ page }) => {
   let release;
   const gate = new Promise(resolve => { release = resolve; });
