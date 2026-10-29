@@ -114,7 +114,7 @@ test.afterEach(async ({ page }) => {
 });
 
 test('desktop renders real waveform canvases and accessible two-deck controls', async ({ page }, testInfo) => {
-  await expect(page.locator('html')).toHaveAttribute('data-skin', 'classified5');
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'millennium');
   await expect(page.locator('html')).toHaveAttribute('data-layout', 'classified5');
   await expect(page.getByRole('slider', { name: 'Deck A pitch', exact: true })).toBeVisible();
   await expect(page.getByRole('slider', { name: 'Deck B pitch', exact: true })).toBeVisible();
@@ -216,27 +216,15 @@ test('jog bends temporarily, dragging seeks, and CUE returns to saved position p
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].position)).toBeCloseTo(cue, 2);
 });
 
-test('skin studio applies all five designs and imports persistent TOML and original WSZ', async ({ page }, testInfo) => {
+test('skin studio applies Millennium Chrome and imports persistent TOML and original WSZ', async ({ page }, testInfo) => {
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
-  for (const [id, name] of [['classic', 'Classic 2.91'], ['classified3', 'Winamp 3 Classified'], ['classified5', 'Winamp 5 Classified'], ['bento', 'Bento Classified'], ['alien', 'Headspace · Alien Lime']]) {
-    await page.locator('.skin-card').filter({ has: page.locator('.skin-card-copy strong', { hasText: name }) }).click();
-    await expect(page.locator('html')).toHaveAttribute('data-skin', id);
-  }
+  await expect(page.locator('.skin-card')).toHaveCount(1);
+  await page.locator('.skin-card').filter({ has: page.locator('.skin-card-copy strong', { hasText: 'Millennium Chrome' }) }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'millennium');
   await page.reload();
-  await expect(page.locator('html')).toHaveAttribute('data-skin', 'alien');
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'millennium');
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
   await page.screenshot({ path: testInfo.outputPath('skin-studio.png'), fullPage: true });
-  await page.getByRole('button', { name: 'Practice', exact: true }).click();
-  await page.getByRole('button', { name: 'Headspace play/pause deck A', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.bitCheer.telemetry[0]?.playing)).toBe(true);
-  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].position)).toBeGreaterThan(.1);
-  await page.getByRole('button', { name: 'Stop to cue deck A', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].playing)).toBe(false);
-  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].position)).toBeCloseTo(0, 3);
-  await page.getByRole('button', { name: 'Headspace focus session from deck A', exact: true }).click();
-  await expect(page.locator('.focus-channel')).toHaveCount(2);
-  await page.getByRole('button', { name: 'Exit session focus', exact: true }).click();
-  await expect(page.locator('.deck')).toHaveCount(2);
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
   await importFile(page, page.getByRole('button', { name: /Import a skin/ }), asset('skins/electric-blue.toml'));
   await expect(page.locator('.active-skin')).toContainText('Electric Blue 2001');
@@ -257,7 +245,7 @@ test('invalid skins report an error and preserve the current design', async ({ p
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
   await importFile(page, page.getByRole('button', { name: /Import a skin/ }), { name: 'bad.toml', mimeType: 'text/plain', buffer: Buffer.from('version = 1\nname = "Bad"\n[colors]\naccent = "url(https://example.com/x)"') });
   await expect(page.getByText(/Color accent must be a six-digit hex color/)).toBeVisible();
-  await expect(page.locator('html')).toHaveAttribute('data-skin', 'classified5');
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'millennium');
 });
 
 test('a custom TOML and graphic ZIP applies colors and image assets and survives reload', async ({ page }) => {
@@ -1199,8 +1187,8 @@ test('configured hosting path serves the actual engine catalog skin bitmaps and 
   await playBoth(page);
   await expect.poll(() => page.evaluate(() => window.bitCheer.telemetry.every(deck => deck.peak > .001))).toBe(true);
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
-  await expect.poll(() => page.locator('.skin-card img').evaluateAll(images => images.length === 5 && images.every(image => image.complete && image.naturalWidth > 0))).toBe(true);
-  for (const [id, name] of [['classic', 'Classic 2.91'], ['classified3', 'Winamp 3 Classified'], ['classified5', 'Winamp 5 Classified'], ['bento', 'Bento Classified'], ['alien', 'Headspace · Alien Lime']]) {
+  await expect.poll(() => page.locator('.skin-card img').evaluateAll(images => images.length === 1 && images.every(image => image.complete && image.naturalWidth > 0))).toBe(true);
+  for (const [id, name] of [['millennium', 'Millennium Chrome']]) {
     await page.locator('.skin-card').filter({ has: page.locator('.skin-card-copy strong', { hasText: name }) }).click();
     await expect(page.locator('html')).toHaveAttribute('data-skin', id);
     await page.getByRole('button', { name: 'Practice', exact: true }).click();

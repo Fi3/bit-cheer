@@ -1,0 +1,63 @@
+name: Diagnose GitHub Pages domain
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      PAGES_DOMAIN: bit-cheer.com
+    steps:
+      - name: Read the configured Pages domain and certificate state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/pages" --jq '{status, cname, build_type, html_url, source, pending_domain_unverified_at, protected_domain_state, https_certificate, https_enforced}'
+
+      - name: Resolve DNS from the GitHub runner
+        run: |
+          for dns_server in default 8.8.8.8 1.1.1.1; do
+            dns_args=()
+            if [ "$dns_server" != default ]; then
+              dns_args=("@$dns_server")
+            fi
+            for domain_name in "$PAGES_DOMAIN" "www.$PAGES_DOMAIN"; do
+              for record_type in A AAAA CNAME; do
+                printf '\nResolver=%s Domain=%s Type=%s\n' "$dns_server" "$domain_name" "$record_type"
+                dig "${dns_args[@]}" "$domain_name" "$record_type" +noall +answer +time=3 +tries=1
+              done
+            done
+          done
+
+      - name: Trace HTTP and HTTPS from the GitHub runner
+        run: |
+          for domain_name in "$PAGES_DOMAIN" "www.$PAGES_DOMAIN"; do
+            for scheme in http https; do
+              printf '\nChecking %s://%s/\n' "$scheme" "$domain_name"
+              if ! curl --silent --show-error --head --location --max-redirs 8 --max-time 15 --write-out '\nFinal HTTP status=%{http_code} IP=%{remote_ip} URL=%{url_effective}\n' "$scheme://$domain_name/"; then
+                printf '::warning::Request failed; inspect the DNS, redirect, or certificate error above.\n'
+              fi
+            done
+          done
+
+      - name: Explain the report
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'REPORT'
+          ## Pages domain diagnostic report
+
+          Open the three steps above for the saved Pages domain/certificate state,
+          DNS answers, and HTTP redirect chains as seen by this GitHub runner.
+
+          A completed diagnostic run means the report was collected; it does not
+          mean that the website passed DNS or HTTPS validation. Requests that
+          failed appear as warnings with the original curl error.
+
+          The separate `/pages/health` administrative API requires additional
+          administrator permissions and is not queried by this read-only workflow.
+          REPORT

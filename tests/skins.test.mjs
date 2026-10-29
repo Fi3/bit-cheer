@@ -2,7 +2,7 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { zipSync, strToU8 } from 'fflate';
 import { parse } from 'smol-toml';
-import { validateSkin, importSkin, applySkin, readArchive, skinTemplate, themes, SKIN_ASSETS } from '../src/skins.js';
+import { validateSkin, importSkin, applySkin, readArchive, skinTemplate, themes, SKIN_ASSETS, museumSkinUrl } from '../src/skins.js';
 
 const originalDocument = globalThis.document, originalBitmap = globalThis.createImageBitmap;
 const properties = new Map(), draws = [];
@@ -64,7 +64,8 @@ test('applying a different skin clears stale custom images and ignores unsafe st
   assert.equal(properties.get('--number-sheet'), 'url("/skins/classic/numbers.png")');
   assert.equal(root.dataset.artwork, 'panel');
   applySkin('classified3'); assert.equal(root.dataset.artwork, ''); assert.equal(properties.get('--skin-panel'), 'none'); assert.equal(root.dataset.layout, 'classified3');
-  applySkin('unknown'); assert.equal(root.dataset.skin, 'classic'); assert.equal(root.dataset.layout, 'classic');
+  applySkin('unknown'); assert.equal(root.dataset.skin, 'millennium'); assert.equal(root.dataset.layout, 'classified5');
+  assert.equal(properties.get('--skin-titlebar'), 'url("/skins/millennium/titlebar.png")');
   applySkin('alien'); assert.equal(properties.get('--skin-platter'), 'none'); assert.equal(properties.get('--skin-pitch'), 'none'); assert.equal(root.dataset.artwork, '');
 });
 
@@ -86,7 +87,7 @@ test('WSZ preserves original MAIN/CBUTTONS/NUMBERS/TITLEBAR and crops the real a
   assert.equal(result.images.buttons, `data:image/bmp;base64,${Buffer.from(buttons).toString('base64')}`);
   assert.equal(result.images.numbers, `data:image/bmp;base64,${Buffer.from(numbers).toString('base64')}`);
   assert.equal(result.originals.titlebar, `data:image/bmp;base64,${Buffer.from(titlebar).toString('base64')}`);
-  assert.equal(result.images.titlebar, 'data:image/png;base64,AA=='); assert.equal(result.preview, result.images.frame);
+  assert.equal(result.images.titlebar, 'data:image/png;base64,AA=='); assert.match(result.preview, /^data:image\/png;base64,/); // rendered Winamp window
   const crop = draws.at(-1); assert.deepEqual(crop.slice(1), [27, 0, 275, 14, 0, 0, 275, 14]);
 });
 
@@ -97,6 +98,27 @@ test('skin import rejects missing assets, oversized raster dimensions, and incom
   await assert.rejects(importSkin(file({ 'skin.toml': strToU8(config), 'numbers.bmp': bmp(5000, 13) })), /4096/);
   await assert.rejects(importSkin(file({ 'skin.toml': strToU8(config), 'numbers.bmp': bmp(200, 13) })), /99 × 13/);
   await assert.rejects(importSkin(file({ 'skin.toml': strToU8(config), 'numbers.bmp': bmp(99, 14) })), /99 × 13/);
-  const template = parse(skinTemplate()); assert.equal(template.base, 'classic'); assert.equal(validateSkin(template).theme.name, 'My midnight session');
+  const template = parse(skinTemplate()); assert.equal(template.base, 'millennium'); assert.equal(validateSkin(template).theme.name, 'My midnight session');
   for (const key of SKIN_ASSETS) assert.ok(skinTemplate().includes(`# ${key} =`));
+});
+
+test('museum links resolve to the museum file server', () => {
+  const page = museumSkinUrl('https://skins.webamp.org/skin/5ea2d974dad5507b83a6ddff7003a8ee/Yufo06.wsz');
+  assert.deepEqual(page, { download: 'https://r2.webampskins.org/skins/5ea2d974dad5507b83a6ddff7003a8ee.wsz', filename: 'Yufo06.wsz' });
+  assert.equal(museumSkinUrl(' https://skins.webamp.org/skin/5EA2D974DAD5507B83A6DDFF7003A8EE/ ').filename, '5ea2d974dad5507b83a6ddff7003a8ee.wsz');
+  assert.equal(museumSkinUrl('https://r2.webampskins.org/skins/5ea2d974dad5507b83a6ddff7003a8ee.wsz').download, page.download);
+  for (const bad of ['hello', 'https://evil.example/skin/5ea2d974dad5507b83a6ddff7003a8ee/x.wsz', 'https://skins.webamp.org/', 'https://skins.webamp.org.evil.com/skin/5ea2d974dad5507b83a6ddff7003a8ee/']) {
+    assert.throws(() => museumSkinUrl(bad));
+  }
+});
+
+test('imported Winamp sprites reach the page only as safe data images', () => {
+  const png = 'data:image/png;base64,AA==';
+  applySkin('custom', { ...validateSkin({ version: 1, name: 'Sprites' }), images: {}, originals: { main: png }, sprites: { stop: png, volThumb: png, prev: 'https://remote/x.png', bogus: png } });
+  assert.equal(root.dataset.wsz, 'stop volThumb main');
+  assert.equal(properties.get('--wsz-stop'), `url("${png}")`);
+  assert.equal(properties.get('--wsz-prev'), 'none');
+  assert.equal(properties.get('--wsz-main'), `url("${png}")`);
+  applySkin('millennium');
+  assert.equal(root.dataset.wsz, ''); assert.equal(properties.get('--wsz-stop'), 'none'); assert.equal(properties.get('--wsz-main'), 'none');
 });

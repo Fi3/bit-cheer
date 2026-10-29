@@ -1,0 +1,113 @@
+/* Retro "PC only" screen shown on phones. Matches the classified5 glossy-blue chrome. */
+html.mobile-gated, html.mobile-gated body { margin: 0; min-height: 100%; background: #0b1220; color: #dcedff; }
+html.mobile-gated body {
+  min-width: 0;
+  background:
+    repeating-linear-gradient(0deg, #ffffff06 0 1px, transparent 1px 3px),
+    radial-gradient(circle at 50% 20%, #1c3a66, #0b1220 70%);
+  font-family: Tahoma, Verdana, Arial, sans-serif;
+}
+
+.mg-stage { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 16px; box-sizing: border-box; gap: 14px; }
+
+.mg-window {
+  width: 100%; max-width: 440px;
+  background: linear-gradient(#7f93ad, #253954 45%, #8295ae);
+  border: 2px ridge #bccde2; border-radius: 10px; padding: 5px;
+  box-shadow: 0 10px 30px #000c, inset 0 0 0 1px #20314a;
+  animation: mg-pop .5s cubic-bezier(.2, 1.6, .4, 1) both;
+}
+.mg-titlebar {
+  display: flex; align-items: center; gap: 7px; padding: 5px 7px;
+  background: linear-gradient(#163151, #6e87a5 48%, #1b2b46 52%, #101c33);
+  border-radius: 6px 6px 0 0; border-top: 1px solid #d7e2f1;
+  color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-shadow: 1px 1px #050e1b;
+}
+.mg-title-icon { font: 800 11px/16px monospace; width: 16px; height: 16px; text-align: center; background: #b8ee75; color: #17200d; border-radius: 3px; transform: skew(-8deg); }
+.mg-titlebar #mg-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mg-title-buttons { display: flex; gap: 3px; }
+.mg-title-buttons i { font-style: normal; width: 14px; height: 13px; line-height: 11px; text-align: center; font-size: 10px; border-radius: 3px; background: linear-gradient(#f0f7ff, #a2b4c9 48%, #576c88 51%, #c2d1e4); color: #14243a; border: 1px solid #142038; }
+
+.mg-marquee { overflow: hidden; white-space: nowrap; background: #000; color: #b8ee75; font: 10px/18px 'Courier New', monospace; border: 1px inset #57708f; }
+.mg-marquee span { display: inline-block; padding-left: 100%; animation: mg-scroll 14s linear infinite; }
+
+.mg-content { display: flex; gap: 14px; align-items: center; padding: 16px 12px; background: linear-gradient(#1a2840, #0e1729); border-left: 1px solid #08101e; border-right: 1px solid #08101e; }
+
+.mg-phone {
+  flex: none; width: 78px; padding: 8px 7px 10px; position: relative;
+  background: linear-gradient(90deg, #2a3a52, #5d7494 40%, #2a3a52);
+  border-radius: 18px 18px 22px 22px; border: 2px solid #0a1424;
+  box-shadow: inset 0 2px 3px #ffffff40, 0 4px 8px #000a;
+  animation: mg-ring 3.2s ease-in-out infinite;
+}
+.mg-antenna { position: absolute; top: -14px; right: 12px; width: 8px; height: 16px; background: #24344c; border-radius: 4px 4px 0 0; border: 2px solid #0a1424; border-bottom: 0; }
+.mg-screen { background: #9bbc0f; border: 3px solid #0a1424; border-radius: 4px; padding: 2px; box-shadow: inset 0 0 6px #3a5a0a; }
+.mg-signal { font: 700 6px/8px monospace; color: #1e2b0c; letter-spacing: 1px; }
+.mg-snake { display: block; width: 100%; image-rendering: pixelated; }
+.mg-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 8px; }
+.mg-keys button {
+  height: 7px; padding: 0; border: 0; border-radius: 4px; cursor: pointer;
+  background: linear-gradient(#f0f7ff, #a2b4c9); box-shadow: 0 1px 1px #000;
+  font: 700 0/1 Tahoma, sans-serif; color: #14243a; touch-action: manipulation;
+}
+.mg-keys button:active { background: linear-gradient(#b8ee75, #6f9a3a); transform: translateY(1px); }
+.mg-phone { cursor: pointer; }
+.mg-phone:focus-visible { outline: 2px solid #b8ee75; outline-offset: 4px; }
+.mg-signal { display: flex; justify-content: space-between; }
+.mg-score { font-weight: 700; }
+
+.mg-text { min-width: 0; }
+.mg-text h1 { margin: 0 0 8px; font: 700 20px/1.15 Tahoma, Verdana, sans-serif; letter-spacing: -.3px; color: #fff; text-shadow: 2px 2px #050e1b; }
+.mg-text p { margin: 0 0 8px; font-size: 12px; line-height: 1.55; color: #a9bdd6; }
+.mg-text b { color: #b8ee75; }
+.mg-text em { color: #e3aa60; font-style: normal; }
+.mg-cta { color: #dcedff !important; }
+.mg-blink { color: #b8ee75; animation: mg-blink 1s steps(1) infinite; }
+
+.mg-progress { height: 12px; margin: 10px 0 6px; border: 1px inset #57708f; background: #050b16; padding: 1px; }
+.mg-bar { height: 100%; width: 0; background: repeating-linear-gradient(90deg, #b8ee75 0 8px, transparent 8px 10px); animation: mg-load 9s steps(36) infinite; }
+.mg-status { margin: 0; padding: 6px 12px 10px; background: #0e1729; border-left: 1px solid #08101e; border-right: 1px solid #08101e; font: 10px/1.4 'Courier New', monospace; color: #b8ee75; min-height: 2.8em; text-align: center; }
+
+/* Game mode: the phone takes over the window. */
+.mg-playing .mg-content { flex-direction: column; justify-content: center; padding-top: 38px; }
+.mg-playing .mg-text { display: none; }
+.mg-playing .mg-phone {
+  width: min(230px, 64vw); padding: 16px 14px 20px; border-radius: 34px 34px 44px 44px;
+  animation: mg-zoom .35s cubic-bezier(.2, 1.4, .4, 1) both; touch-action: none; cursor: default;
+}
+.mg-playing .mg-antenna { top: -26px; right: 28px; width: 16px; height: 28px; }
+.mg-playing .mg-screen { border-width: 5px; border-radius: 8px; padding: 4px; }
+.mg-playing .mg-signal { font-size: 10px; line-height: 14px; }
+.mg-playing .mg-keys { gap: 9px; margin-top: 16px; }
+.mg-playing .mg-keys button { height: 30px; border-radius: 12px; font-size: 14px; }
+.mg-playing .mg-keys button:is([data-key="2"], [data-key="4"], [data-key="6"], [data-key="8"]) { background: linear-gradient(#ecffd6, #a6cf72); }
+.mg-playing .mg-keys button[data-key="5"] { background: linear-gradient(#ffe2b8, #e3aa60); }
+
+.mg-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 10px; background: linear-gradient(#56718f, #162238); border-radius: 0 0 6px 6px; border-top: 1px solid #08101e; }
+.mg-btn {
+  font: 700 12px Tahoma, Verdana, sans-serif; padding: 8px 16px; cursor: pointer;
+  border-radius: 15px 15px 5px 5px; border: 1px solid #142038;
+  background: linear-gradient(#f0f7ff, #a2b4c9 48%, #576c88 51%, #c2d1e4); color: #14243a;
+  box-shadow: inset 0 1px 2px #fff, 0 1px 2px #050c15;
+}
+.mg-btn:active { background: linear-gradient(#20548c, #092650 60%, #163b69); color: #dcedff; }
+.mg-bypass { background: linear-gradient(#ffe2b8, #e3aa60 48%, #a9692a 51%, #e8b777); animation: mg-pop .4s cubic-bezier(.2, 1.6, .4, 1) both; }
+.mg-footer { margin: 0; font: 10px 'Courier New', monospace; color: #57708f; }
+
+.mg-shake { animation: mg-shake .45s both; }
+
+@keyframes mg-pop { from { transform: scale(.6) translateY(30px); opacity: 0; } }
+@keyframes mg-scroll { to { transform: translateX(-100%); } }
+@keyframes mg-blink { 50% { opacity: 0; } }
+@keyframes mg-load { 0% { width: 0; } 85%, 100% { width: 99%; } }
+@keyframes mg-ring { 0%, 70%, 100% { transform: rotate(0); } 74% { transform: rotate(-8deg); } 78% { transform: rotate(8deg); } 82% { transform: rotate(-6deg); } 86% { transform: rotate(6deg); } 90% { transform: rotate(0); } }
+@keyframes mg-zoom { from { transform: scale(.4); } }
+@keyframes mg-shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+
+@media (max-width: 360px) {
+  .mg-content { flex-direction: column; text-align: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mg-window, .mg-marquee span, .mg-phone, .mg-playing .mg-phone, .mg-bar, .mg-blink, .mg-shake { animation: none; }
+  .mg-bar { width: 99%; }
+}
