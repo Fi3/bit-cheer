@@ -114,6 +114,7 @@ const WSZ_SPRITES = {
   titlebar: { tbClose: [18, 0, 9, 9], tbCloseDown: [18, 9, 9, 9], tbShade: [0, 18, 9, 9], tbShadeDown: [9, 18, 9, 9], tbInactive: [27, 15, 275, 14] },
   shufrep: { shuffle: [28, 0, 47, 15], shuffleDown: [28, 15, 47, 15] },
 };
+export const LIVE_SHEETS = ['main', 'titlebar', 'cbuttons', 'posbar', 'volume', 'balance', 'numbers', 'nums_ex', 'text', 'playpaus', 'monoster', 'shufrep'];
 export const WSZ_SPRITE_KEYS = Object.values(WSZ_SPRITES).flatMap(group => Object.keys(group));
 
 async function wszExtras(files, find, mainCanvas, hex) {
@@ -132,22 +133,19 @@ async function wszExtras(files, find, mainCanvas, hex) {
     bitmap.close();
   }
   // Playlist colors are the skin author's own text palette.
-  const colors = {};
-  const pledit = find('pledit.txt');
-  if (pledit) {
-    const read = name => strFromU8(files[pledit]).match(new RegExp(`^\\s*${name}\\s*=\\s*#?([0-9a-f]{6})`, 'im'))?.[1];
+  const colors = {}, pledit = {};
+  const pleditPath = find('pledit.txt');
+  if (pleditPath) {
+    const read = name => strFromU8(files[pleditPath]).match(new RegExp(`^\\s*${name}\\s*=\\s*#?([0-9a-f]{6})`, 'im'))?.[1];
     const normal = read('Normal'), current = read('Current'), bg = read('NormalBG'), selected = read('SelectedBG');
-    if (bg) colors.screen = `#${bg}`.toLowerCase();
-    if (current) colors.accent = `#${current}`.toLowerCase();
-    if (normal) colors.secondary = `#${normal}`.toLowerCase();
-    if (selected) colors.border = `#${selected}`.toLowerCase();
+    pledit.normal = normal && `#${normal}`; pledit.current = current && `#${current}`; pledit.bg = bg && `#${bg}`; pledit.selected = selected && `#${selected}`;
   }
   // Darkest main.bmp tone for the page behind the decks.
   const data = mainCanvas.getContext('2d').getImageData(0, 0, mainCanvas.width, mainCanvas.height).data;
   let dark = [255, 255, 255], lum = 765;
   for (let i = 0; i < data.length; i += 64) { const l = data[i] + data[i + 1] + data[i + 2]; if (l > 30 && l < lum) { lum = l; dark = [data[i], data[i + 1], data[i + 2]]; } }
   colors.background = hex(dark[0] * 0.6, dark[1] * 0.6, dark[2] * 0.6);
-  return { sprites, colors };
+  return { sprites, colors, pledit };
 }
 
 // Draws the skin's main window and equalizer the way Winamp shows them (275 × 232),
@@ -200,6 +198,36 @@ async function renderWindowPreview(files, find) {
   return out.toDataURL('image/png');
 }
 
+// ---------- readable colors ----------
+const rgbOf = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const toHex = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+const mix = (a, b, t) => toHex(rgbOf(a).map((v, i) => v + (rgbOf(b)[i] - v) * t));
+const luminance = h => { const [r, g, b] = rgbOf(h).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+export const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+// Push a color toward white or black until it reads well on the background.
+function readable(fg, bg, min) {
+  const target = luminance(bg) > 0.35 ? '#000000' : '#ffffff';
+  let color = fg;
+  for (let t = 0.1; contrast(color, bg) < min && t <= 1; t += 0.1) color = mix(fg, target, t);
+  return color;
+}
+// One palette for the whole app, built from the skin's playlist colors,
+// the same pair Winamp itself uses for readable text.
+function readablePalette(theme, pledit) {
+  const valid = c => typeof c === 'string' && HEX_COLOR.test(c);
+  const bg = valid(pledit.bg) ? pledit.bg.toLowerCase() : '#000000';
+  const normal = readable(valid(pledit.normal) ? pledit.normal.toLowerCase() : '#00ff00', bg, 7);
+  const current = readable(valid(pledit.current) ? pledit.current.toLowerCase() : '#ffffff', bg, 7);
+  let selected = valid(pledit.selected) ? pledit.selected.toLowerCase() : mix(bg, normal, 0.35);
+  if (contrast(selected, bg) < 1.6) selected = mix(bg, normal, 0.35);
+  const panel = mix(bg, normal, 0.1), panelLight = mix(bg, normal, 0.2);
+  return {
+    background: bg, screen: bg, panel, panelLight,
+    text: readable(current, panel, 7), muted: readable(mix(normal, bg, 0.25), panel, 4.5),
+    accent: current, secondary: normal, border: selected,
+  };
+}
+
 async function fromWsz(files, filename) {
   const paths = Object.keys(files);
   const find = name => paths.find(path => path.split('/').at(-1).toLowerCase() === name.toLowerCase());
@@ -220,12 +248,7 @@ async function fromWsz(files, filename) {
     panelLight: n ? hex(r / n * 1.3, g / n * 1.3, b / n * 1.3) : themes.classic.panelLight };
   const extra = await wszExtras(files, find, canvas, hex);
   const windowPreview = await renderWindowPreview(files, find);
-  Object.assign(theme, extra.colors);
-  // Keep panel text readable on both bright and dark skins.
-  const [pr, pg, pb] = [1, 3, 5].map(i => parseInt(theme.panel.slice(i, i + 2), 16));
-  const bright = (0.299 * pr + 0.587 * pg + 0.114 * pb) > 140;
-  theme.text = bright ? '#141414' : '#f4f4f0';
-  theme.muted = bright ? '#3a3a3a' : '#c8c8c0';
+  Object.assign(theme, extra.colors, readablePalette(theme, extra.pledit));
   const images = { frame: dataUrl(files[main], main) }, originals = { main: images.frame };
   let numbersWidth = 297;
   for (const [key, name] of [['buttons', 'cbuttons.bmp'], ['numbers', 'numbers.bmp'], ['pitch', 'posbar.bmp']]) {
@@ -244,12 +267,17 @@ async function fromWsz(files, filename) {
   title.width = Math.min(275, titleSource.width - x); title.height = Math.min(14, titleSource.height);
   title.getContext('2d').drawImage(titleSource, x, 0, title.width, title.height, 0, 0, title.width, title.height);
   titleBitmap?.close(); images.titlebar = title.toDataURL('image/png');
-  const vis = find('viscolor.txt');
-  if (vis) {
-    const colors = strFromU8(files[vis]).split(/\r?\n/).map(line => line.match(/^\s*(\d+),\s*(\d+),\s*(\d+)/)).filter(Boolean);
-    if (colors.length > 2) theme.accent = hex(+colors[2][1], +colors[2][2], +colors[2][3]);
+  // Full sheets for the live Winamp window on each deck.
+  const sheets = {};
+  for (const name of LIVE_SHEETS) {
+    const path = find(`${name}.bmp`);
+    if (path && files[path].length <= MAX_IMAGE_BYTES) sheets[name] = dataUrl(files[path], path);
   }
-  return { base: 'classic', theme, assets: {}, images, originals, numbersWidth, preview: windowPreview || images.frame, sprites: extra.sprites };
+  const visPath = find('viscolor.txt');
+  const viscolor = visPath ? strFromU8(files[visPath]).split(/\r?\n/).map(line => line.match(/^\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)).filter(Boolean).slice(0, 24).map(m => hex(+m[1], +m[2], +m[3])) : [];
+  // The skin's main color, for borders and frames (never behind text).
+  const tone = n ? hex(r / n, g / n, b / n) : null;
+  return { base: 'classic', theme, assets: {}, images, originals, numbersWidth, preview: windowPreview || images.frame, sprites: extra.sprites, sheets, viscolor, tone };
 }
 
 export async function importSkin(file) {
@@ -341,6 +369,8 @@ export function applySkin(id, custom = null) {
   if (sprites.length && typeof main === 'string' && IMAGE_DATA.test(main)) { sprites.push('main'); root.style.setProperty('--wsz-main', `url("${main}")`); }
   else root.style.setProperty('--wsz-main', 'none');
   root.dataset.wsz = sprites.join(' ');
+  const tone = custom?.tone;
+  root.style.setProperty('--skin-tone', typeof tone === 'string' && HEX_COLOR.test(tone) ? tone : 'var(--border)');
   root.style.setProperty('--number-sheet', urls.numbers);
   root.style.setProperty('--transport-sheet', urls.buttons);
   const width = custom?.numbersWidth === 297 || custom?.numbersWidth === 324 ? custom.numbersWidth : base === 'bento' ? 324 : 297;

@@ -1122,6 +1122,42 @@ receive data model =
             in
             ( { model | a = apply 0 model.a, b = apply 1 model.b }, Cmd.none )
 
+        "remote" ->
+            -- The live Winamp window on each deck works like the real buttons.
+            let
+                deck =
+                    field "deck" D.int -1 data
+            in
+            if deck /= 0 && deck /= 1 then
+                ( model, Cmd.none )
+
+            else
+                case field "action" D.string "" data of
+                    "play" ->
+                        update (Play deck) model
+
+                    "stop" ->
+                        update (Cue deck) model
+
+                    "prev" ->
+                        update (Nudge deck -0.04) model
+
+                    "next" ->
+                        update (Nudge deck 0.04) model
+
+                    "eject" ->
+                        if model.mode == "pro" then
+                            ( model, Cmd.none )
+
+                        else
+                            update (ChangeTrack deck) model
+
+                    "volume" ->
+                        update (DeckValue deck "volume" (String.fromFloat (field "value" D.float 0.8 data))) model
+
+                    _ ->
+                        ( model, Cmd.none )
+
         "tap" ->
             ( { model | tapBpm = field "bpm" D.float 0 data, taps = field "taps" D.int 0 data }, Cmd.none )
 
@@ -1821,7 +1857,13 @@ deckView model number deck =
             List.any (\item -> item.id == "pitch" && not item.collapsed) modules
     in
     section [ class ("deck deck-" ++ String.toLower letter), attribute "data-deck" (String.fromInt number), attribute "aria-label" ("Deck " ++ letter) ]
-        [ div [ class "deck-heading" ]
+        [ if model.skin == "custom" then
+            div [ class "winamp-live", attribute "data-deck" (String.fromInt number) ]
+                [ canvas [ attribute "width" "275", attribute "height" "116", attribute "role" "img", attribute "aria-label" ("Deck " ++ letter ++ " in the skin's Winamp window. Its buttons control this deck.") ] [] ]
+
+          else
+            text ""
+        , div [ class "deck-heading" ]
             [ span [ class "deck-label" ]
                 [ span [ class "deck-letter" ] [ text letter ]
                 , strong [] [ text ("DECK " ++ letter) ]

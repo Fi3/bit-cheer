@@ -13,6 +13,7 @@ import { applySkin, importSkin, importSkinFromUrl, downloadTemplate, skinPicture
 import { SessionLibrary, DeckSelections } from './library.js';
 import { adjustedPitch, wheelPitchDelta, keyPitchDelta, pitchSensitivity } from './pitch-control.js';
 import { validateLayout } from './layout.js';
+import { createWinampLive } from './winamp-live.js';
 
 // Apply the saved skin before Elm mounts, so the first app frame has its final theme.
 // Skins that are no longer offered fall back to the default.
@@ -33,12 +34,13 @@ const send = event => {
   app.ports.incoming.send(event);
 };
 const engine = new AudioEngine(send);
+const live = createWinampLive({ engine, seek: (deck, fraction) => seekWave(deck, fraction), remote: (deck, action, value) => send({ type: 'remote', deck, action, value }) });
 const library = new SessionLibrary(), selections = new DeckSelections();
 let sensitivities = [.05,.05], pendingProCatalog = false;
 function publishLibrary(){catalog.tracks=library.list();send({type:'catalog',tracks:catalog.tracks});}
 function beginSelection(deck){engine.loadVersions[deck]++;return selections.begin(deck);}
 const notice=message=>send({type:'notice',message});
-const skinChanged=(id,name,custom)=>send({type:'skin',id,name,preview:skinPicture(id,custom),source:custom?.source&&/^https:\/\/skins\.webamp\.org\//.test(custom.source)?custom.source:''});
+const skinChanged=(id,name,custom)=>{live.setSkin(id==='custom'?custom:null);send({type:'skin',id,name,preview:skinPicture(id,custom),source:custom?.source&&/^https:\/\/skins\.webamp\.org\//.test(custom.source)?custom.source:''});};
 const fail=error=>{if(engine.context)engine.emitRouting();send({type:'error',message:error instanceof Error?error.message:String(error)});};
 function chooseFile(accept,handle) {
   const input=document.createElement('input'); input.type='file';input.accept=accept;input.style.display='none';document.body.append(input);
@@ -294,6 +296,11 @@ queueMicrotask(async()=>{
   const layout=validateLayout(restore('bit-cheer-layout'));if(layout){sensitivities=layout.sensitivity;send({type:'restoreLayout',layout});}
   const saved=restore('bit-cheer-progress');if(saved&&Array.isArray(saved.progress)&&Array.isArray(saved.history))send({type:'restore',...saved});
   skinChanged(document.documentElement.dataset.skin,startupSkinName,startupSkin?.custom);
+  // Skins saved before the live window existed: fetch museum skins again for the full look.
+  if(startupSkin?.id==='custom'&&startupSkin.custom?.originals?.main&&!startupSkin.custom.sheets){
+    if(startupSkin.custom.source)importSkinFromUrl(startupSkin.custom.source).then(custom=>{const name=applySkin('custom',custom);store('bit-cheer-skin',{id:'custom',custom});skinChanged('custom',name,custom);notice(`Skin refreshed: ${name} now dresses every part of your decks.`);}).catch(()=>{});
+    else notice('Import your Winamp skin again to get its full look, including the live Winamp window on each deck.');
+  }
   try{const response=await fetch(assetUrl('/catalog.json'));if(!response.ok)throw new Error('Library catalog unavailable. Local imports still work.');catalog=await response.json();library.setBundled(catalog.tracks);publishLibrary();send({type:'skins',skins:(catalog.skins||[]).map(skin=>({...skin,preview:skin.preview?assetUrl(skin.preview):'',archive:skin.archive?assetUrl(skin.archive):''}))});send({type:'referenceCatalog',tracks:(catalog.referenceTracks||[]).map(t=>({id:String(t.id),name:t.title,source:t.source,genre:primaryGenre(t.tags||[]),bpm:Number(t.bpm)||0}))});if(pendingProCatalog&&mode==='pro'&&catalog.tracks.length>=2){pendingProCatalog=false;const version=configVersion;await loadTrack(0,catalog.tracks[0].id);if(version===configVersion&&mode==='pro')await loadTrack(1,catalog.tracks[1].id);}}catch(error){fail(error);}
 });
 // Small diagnostics surface for automated browser/audio verification.
