@@ -1,10 +1,13 @@
 import { assetUrl, BASE_PATH } from './assets.js';
-const MAX_FILE = 100 * 1024 * 1024;
-const MAX_SESSION = 256 * 1024 * 1024;
+const MB = 1024 * 1024;
+const MAX_FILE = 100 * MB;
+const MAX_SESSION = 256 * MB;
+// Folder tracks are never cached, so they can be larger: enough for 24-bit/96 kHz FLAC up to the decode length limit.
+export const MAX_FOLDER_FILE = 300 * MB;
 export class SessionLibrary {
-  constructor({ fetcher = (...args) => fetch(...args), id = () => crypto.randomUUID(), limit = MAX_SESSION, basePath = BASE_PATH } = {}) {
-    this.fetcher = fetcher; this.createId = id; this.limit = limit; this.basePath = basePath;
-    this.tracks = []; this.cache = new Map(); this.pending = new Map(); this.totalBytes = 0;
+  constructor({ fetcher = (...args) => fetch(...args), id = () => crypto.randomUUID(), limit = MAX_SESSION, folderLimit = MAX_FOLDER_FILE, basePath = BASE_PATH } = {}) {
+    this.fetcher = fetcher; this.createId = id; this.limit = limit; this.folderLimit = folderLimit; this.basePath = basePath;
+    this.tracks = []; this.cache = new Map(); this.pending = new Map(); this.readers = new Map(); this.totalBytes = 0;
   }
   setBundled(records) {
     const local = this.tracks.filter(track => track.local);
@@ -34,6 +37,14 @@ export class SessionLibrary {
     const track = { id, name: file.name, title: file.name, artist: 'Your files', genre: 'Local files', bpm: 0, duration: 0, local: true };
     this.tracks.push(track); return { ...track };
   }
+  // Folder tracks stay on disk: each load reopens the file, so they never fill the session cache.
+  // open() resolves to a File (or anything with size and arrayBuffer()).
+  addLinked(key, name, open) {
+    const id = `folder:${key}`;
+    let track = this.find(id);
+    if (!track) { track = { id, name, title: name, artist: 'Your folder', genre: 'Local files', bpm: 0, duration: 0, local: true }; this.tracks.push(track); }
+    this.readers.set(id, open); return { ...track };
+  }
   update(id, metadata) {
     const track = this.find(id); if (!track) return;
     if (Number.isFinite(metadata.bpm) && metadata.bpm > 0) track.bpm = metadata.bpm;
@@ -41,6 +52,13 @@ export class SessionLibrary {
   }
   async audioBytes(id) {
     const track = this.find(id); if (!track) throw new Error('Track not found in your session library.');
+    if (this.readers.has(id)) {
+      const file = await this.readers.get(id)();
+      if (file.size > this.folderLimit) throw new Error(`${track.name} is ${Math.round(file.size / MB)} MB. Folder tracks can be up to ${Math.round(this.folderLimit / MB)} MB.`);
+      const bytes = await file.arrayBuffer();
+      if (!(bytes instanceof ArrayBuffer) || !bytes.byteLength) throw new Error('The audio file is empty.');
+      return bytes;
+    }
     if (!this.cache.has(id)) {
       if (!this.pending.has(id)) {
         const fetching = (async () => {

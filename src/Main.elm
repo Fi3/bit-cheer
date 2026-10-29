@@ -70,6 +70,15 @@ type alias Track =
     { id : String, name : String, artist : String, genre : String, bpm : Float, duration : Float }
 
 
+type alias FolderListing =
+    { root : String, path : List String, folders : List String, files : List String }
+
+
+type FolderPanel
+    = FolderIntro
+    | FolderOpen FolderListing
+
+
 type alias ReferenceTrack =
     { id : String, name : String, source : String, genre : String, bpm : Float }
 
@@ -151,6 +160,9 @@ type alias Model =
     , help : Bool
     , focused : Bool
     , layouts : Dict String ModuleLayout
+    , folders : Dict Int FolderPanel
+    , folderChosen : Bool
+    , folderFilters : Dict Int String
     }
 
 
@@ -206,6 +218,12 @@ type Msg
     | Tap
     | Microphone
     | ImportTrack Int
+    | BrowseFolder Int
+    | ChooseFolder Int
+    | OpenFolder Int (List String)
+    | LoadFolderFile Int (List String) String
+    | CloseFolder Int
+    | FolderFilter Int String
     | LoadTrack Int String
     | Genre String
     | ReferencePage Int
@@ -278,6 +296,9 @@ init flags =
       , genre = "All genres"
       , help = False
       , focused = False
+      , folders = Dict.empty
+      , folderChosen = False
+      , folderFilters = Dict.empty
       , layouts = Dict.fromList (List.map (\mode -> ( mode, defaultModuleLayout mode )) [ "foundation", "builder", "blind", "star", "pro" ])
       }
     , send "init" []
@@ -746,6 +767,29 @@ update msg model =
         ImportTrack deck ->
             ( model, send "importTrack" [ ( "deck", E.int deck ) ] )
 
+        BrowseFolder deck ->
+            if model.folderChosen then
+                ( model, send "browseFolder" [ ( "deck", E.int deck ), ( "path", E.list E.string [] ) ] )
+
+            else
+                -- Explain the folder dialog first: it greys out files, which looks like a bug.
+                ( { model | folders = Dict.insert deck FolderIntro model.folders }, Cmd.none )
+
+        ChooseFolder deck ->
+            ( model, send "chooseFolder" [ ( "deck", E.int deck ) ] )
+
+        OpenFolder deck path ->
+            ( model, send "browseFolder" [ ( "deck", E.int deck ), ( "path", E.list E.string path ) ] )
+
+        LoadFolderFile deck path name ->
+            ( model, send "loadFolderFile" [ ( "deck", E.int deck ), ( "path", E.list E.string path ), ( "name", E.string name ) ] )
+
+        CloseFolder deck ->
+            ( { model | folders = Dict.remove deck model.folders, folderFilters = Dict.remove deck model.folderFilters }, Cmd.none )
+
+        FolderFilter deck filter ->
+            ( { model | folderFilters = Dict.insert deck filter model.folderFilters }, Cmd.none )
+
         LoadTrack deck track ->
             ( model, send "loadTrack" [ ( "deck", E.int deck ), ( "track", E.string track ) ] )
 
@@ -1201,6 +1245,24 @@ receive data model =
 
         "referenceCatalog" ->
             ( { model | referenceTracks = field "tracks" (D.list referenceDecoder) [] data }, Cmd.none )
+
+        "folderListing" ->
+            let
+                deck =
+                    field "deck" D.int 0 data
+
+                listing =
+                    { root = field "root" D.string "" data
+                    , path = field "path" (D.list D.string) [] data
+                    , folders = field "folders" (D.list D.string) [] data
+                    , files = field "files" (D.list D.string) [] data
+                    }
+            in
+            if String.isEmpty listing.root then
+                ( { model | folders = Dict.remove deck model.folders }, Cmd.none )
+
+            else
+                ( { model | folders = Dict.insert deck (FolderOpen listing) model.folders, folderChosen = True, folderFilters = Dict.remove deck model.folderFilters }, Cmd.none )
 
         "catalog" ->
             ( { model | tracks = field "tracks" (D.list trackDecoder) [] data }, Cmd.none )
@@ -2317,7 +2379,17 @@ trackPickerView model number deck =
             , button [ class "small-button", onClick (NextTrack number), disabled (List.isEmpty tracks), attribute "aria-label" ("Next track deck " ++ letter) ] [ text "Next ▶" ]
             , button [ class "small-button", onClick (ChangeTrack number), disabled (List.isEmpty tracks), attribute "aria-label" ("Change track deck " ++ letter) ] [ text "Change track" ]
             , button [ class "small-button", onClick (ImportTrack number), attribute "aria-label" ("Import track into deck " ++ letter) ] [ text "↥ Import" ]
+            , button [ class "small-button", onClick (BrowseFolder number), attribute "aria-label" ("Browse a folder for deck " ++ letter) ] [ text "📁 Browse folder" ]
             ]
+        , case Dict.get number model.folders of
+            Just (FolderOpen listing) ->
+                folderBrowserView model number deck listing
+
+            Just FolderIntro ->
+                folderIntroView number
+
+            Nothing ->
+                text ""
         , div [ class "picker-current" ] [ strong [] [ text "LOADED" ], span [] [ text deck.name ] ]
         , small [] [ text "These tracks play inside Bit Cheer. Imports stay on this device for this session." ]
         , div [ class "source-settings" ]
@@ -2328,6 +2400,99 @@ trackPickerView model number deck =
                 label [ class "source-bpm" ] [ span [] [ text "SOURCE BPM" ], input [ type_ "number", A.min "40", A.max "300", step "0.01", value (fixed 2 deck.bpm), on "change" (D.map (SourceBpm number) targetValue), attribute "aria-label" ("Deck " ++ letter ++ " source BPM") ] [] ]
             , button [ class "small-button", onClick (SetGrid number), attribute "aria-label" ("Set beat grid deck " ++ letter), title "Mark the current position as beat one" ] [ text "SET GRID" ]
             ]
+        ]
+
+
+folderIntroView : Int -> Html Msg
+folderIntroView number =
+    let
+        letter =
+            deckLetter number
+    in
+    div [ class "folder-browser folder-intro", attribute "aria-label" ("Folder browser deck " ++ letter) ]
+        [ div [ class "folder-browser-bar" ]
+            [ strong [ class "folder-path" ] [ text "Choose your music folder" ]
+            , button [ class "small-button", onClick (CloseFolder number), attribute "aria-label" ("Close folder browser deck " ++ letter) ] [ text "×" ]
+            ]
+        , p [] [ text "Pick the folder that holds your tracks, such as Music, and confirm it. The folder dialog greys out the files inside; that is normal, because it selects folders, not tracks." ]
+        , p [] [ text "Your tracks and subfolders then appear here. Click any track to load it." ]
+        , button [ class "primary-button load-track-button", onClick (ChooseFolder number), attribute "aria-label" ("Choose music folder deck " ++ letter) ] [ text "📁 Choose music folder…" ]
+        , small [] [ text "If your browser asks to upload the files, they still stay on this computer." ]
+        ]
+
+
+folderBrowserView : Model -> Int -> Deck -> FolderListing -> Html Msg
+folderBrowserView model number deck listing =
+    let
+        letter =
+            deckLetter number
+
+        filter =
+            Dict.get number model.folderFilters |> Maybe.withDefault ""
+
+        matches name =
+            String.contains (String.toLower (String.trim filter)) (String.toLower name)
+
+        folders =
+            List.filter matches listing.folders
+
+        files =
+            List.filter matches listing.files
+
+        crumbs =
+            List.indexedMap (\index name -> ( List.take (index + 1) listing.path, name )) listing.path
+
+        crumb ( path, name ) =
+            button [ class "folder-crumb", onClick (OpenFolder number path) ] [ text name ]
+
+        parent =
+            List.take (List.length listing.path - 1) listing.path
+
+        upEntry =
+            if List.isEmpty listing.path then
+                []
+
+            else
+                [ li [] [ button [ class "folder-entry folder-up", onClick (OpenFolder number parent), attribute "aria-label" ("Up one folder deck " ++ letter) ] [ text "↰ .." ] ] ]
+
+        folderEntry name =
+            li [] [ button [ class "folder-entry folder-dir", onClick (OpenFolder number (listing.path ++ [ name ])), title ("Open " ++ name), attribute "aria-label" ("Open " ++ name ++ " deck " ++ letter) ] [ text ("📁 " ++ name) ] ]
+
+        fileEntry name =
+            li []
+                [ button
+                    [ classList [ ( "folder-entry", True ), ( "folder-file", True ), ( "is-loaded", deck.name == name ) ]
+                    , onClick (LoadFolderFile number listing.path name)
+                    , title ("Load " ++ name ++ " into deck " ++ letter)
+                    , attribute "aria-label" ("Load " ++ name ++ " into deck " ++ letter)
+                    ]
+                    [ text ("♪ " ++ name) ]
+                ]
+
+        plural count one many =
+            String.fromInt count
+                ++ (if count == 1 then
+                        one
+
+                    else
+                        many
+                   )
+    in
+    div [ class "folder-browser", attribute "aria-label" ("Folder browser deck " ++ letter) ]
+        [ div [ class "folder-browser-bar" ]
+            [ div [ class "folder-path" ] (crumb ( [], listing.root ) :: List.concatMap (\c -> [ span [ class "folder-sep" ] [ text "/" ], crumb c ]) crumbs)
+            , button [ class "small-button", onClick (ChooseFolder number), attribute "aria-label" ("Choose another folder deck " ++ letter) ] [ text "Change folder" ]
+            , button [ class "small-button", onClick (CloseFolder number), attribute "aria-label" ("Close folder browser deck " ++ letter) ] [ text "×" ]
+            ]
+        , input [ type_ "search", class "folder-filter", A.placeholder "Filter this folder", value filter, onInput (FolderFilter number), attribute "aria-label" ("Filter folder deck " ++ letter) ] []
+        , ul [ class "folder-entries" ]
+            (if List.isEmpty folders && List.isEmpty files && List.isEmpty upEntry then
+                [ li [ class "folder-empty" ] [ text "No audio files or folders here." ] ]
+
+             else
+                upEntry ++ List.map folderEntry folders ++ List.map fileEntry files
+            )
+        , small [] [ text (plural (List.length listing.folders) " folder · " " folders · " ++ plural (List.length listing.files) " audio file" " audio files" ++ ". Click a file to load it. Files are read from your disk and never uploaded.") ]
         ]
 
 

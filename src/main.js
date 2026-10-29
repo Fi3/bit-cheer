@@ -11,6 +11,7 @@ import { assetUrl, BASE_PATH } from './assets.js';
 import { clamp, tapTempo, matchScore, estimateTempo, STAR, createStar, stepDrift, stepScore, starStats, starResult } from './training.js';
 import { applySkin, importSkin, importSkinFromUrl, downloadTemplate, skinPicture, SELECTABLE_SKINS, DEFAULT_SKIN } from './skins.js';
 import { SessionLibrary, DeckSelections } from './library.js';
+import { pickFolder, AUDIO_EXTENSIONS } from './folder-browser.js';
 import { adjustedPitch, wheelPitchDelta, keyPitchDelta, pitchSensitivity } from './pitch-control.js';
 import { validateLayout } from './layout.js';
 import { createWinampLive } from './winamp-live.js';
@@ -37,6 +38,17 @@ const engine = new AudioEngine(send);
 const live = createWinampLive({ engine, seek: (deck, fraction) => seekWave(deck, fraction), remote: (deck, action, value) => send({ type: 'remote', deck, action, value }) });
 const library = new SessionLibrary(), selections = new DeckSelections();
 let sensitivities = [.05,.05], pendingProCatalog = false;
+let folder=null;
+async function showFolder(deck,path){
+  if(!folder){send({type:'folderListing',deck,root:'',path:[],folders:[],files:[]});return;}
+  const source=folder,listing=await source.list(path);
+  if(source===folder)send({type:'folderListing',deck,root:source.name,...listing});
+}
+async function chooseFolder(deck){
+  const chosen=await pickFolder();
+  if(!chosen)return;
+  folder=chosen;await showFolder(deck,[]);
+}
 function publishLibrary(){catalog.tracks=library.list();send({type:'catalog',tracks:catalog.tracks});}
 function beginSelection(deck){engine.loadVersions[deck]++;return selections.begin(deck);}
 const notice=message=>send({type:'notice',message});
@@ -191,8 +203,8 @@ async function handle(command) {
     case 'tap': {const result=tapTempo(taps,performance.now());taps=result.times;send({type:'tap',bpm:result.bpm,taps:result.taps});break;}
     case 'importTrack': {
       pendingProCatalog=false;const token=beginSelection(deck);
-      chooseFile('audio/*,.mp3,.wav,.ogg,.flac,.m4a',async file=>{
-        if(file.size>100*1024*1024)throw new Error('Choose an audio file smaller than 100 MB.');
+      chooseFile(['audio/*',...AUDIO_EXTENSIONS.map(ext=>`.${ext}`)].join(','),async file=>{
+        if(file.size>100*1024*1024)throw new Error('Import accepts files up to 100 MB. For larger files such as hi-res FLAC, use 📁 Browse folder (up to 300 MB).');
         notice(`Adding ${file.name} to this session…`);
         const bytes=await file.arrayBuffer();if(!selections.valid(token))return;
         const track=library.addLocal(file,bytes);publishLibrary();
@@ -200,6 +212,15 @@ async function handle(command) {
       });break;
     }
     case 'loadTrack': pendingProCatalog=false;await loadTrack(deck,command.track);break;
+    case 'chooseFolder': await chooseFolder(deck);break;
+    case 'browseFolder': if(folder)await showFolder(deck,command.path);else await chooseFolder(deck);break;
+    case 'loadFolderFile': {
+      if(!folder)throw new Error('Choose a music folder first.');
+      pendingProCatalog=false;
+      const source=folder,path=command.path,name=String(command.name||'');
+      const track=library.addLinked(source.key(path,name),name,()=>source.file(path,name));
+      publishLibrary();await loadTrack(deck,track.id,false,'Local files');break;
+    }
     case 'skin': {if(!SELECTABLE_SKINS.includes(command.id))break;const name=applySkin(command.id);store('bit-cheer-skin',{id:command.id});skinChanged(command.id,name);break;}
     case 'importSkin': chooseFile('.toml,.zip,.wsz',async file=>{const custom=await importSkin(file);const name=applySkin('custom',custom);store('bit-cheer-skin',{id:'custom',custom});skinChanged('custom',name,custom);notice(`Skin loaded: ${name}`);});break;
     case 'loadSkinUrl': {
