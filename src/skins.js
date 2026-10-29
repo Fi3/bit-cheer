@@ -101,6 +101,55 @@ function numberWidth(bitmap) {
   return bitmap.width * 3;
 }
 
+
+// Classic Winamp 2 sprite positions (x, y, w, h) we reuse around the app.
+// Missing files or sheets that are too small are skipped, never fatal.
+const WSZ_SPRITES = {
+  cbuttons: { prev: [0, 0, 23, 18], prevDown: [0, 18, 23, 18], stop: [69, 0, 23, 18], stopDown: [69, 18, 23, 18], next: [92, 0, 22, 18], nextDown: [92, 18, 22, 18], eject: [114, 0, 22, 16], ejectDown: [114, 16, 22, 16] },
+  pledit: { plTopLeft: [0, 0, 25, 20], plTitle: [26, 0, 100, 20], plTopFill: [127, 0, 25, 20], plTopRight: [153, 0, 25, 20], plLeft: [0, 42, 12, 29], plRight: [31, 42, 20, 29], plBottomFill: [179, 0, 25, 38], plBottomLeft: [0, 72, 125, 38], plBottomRight: [126, 72, 150, 38] },
+  volume: { volTrack: [0, 405, 68, 13], volThumb: [15, 422, 14, 11], volThumbDown: [0, 422, 14, 11] },
+  balance: { balTrack: [9, 0, 38, 13], balThumb: [15, 422, 14, 11], balThumbDown: [0, 422, 14, 11] },
+  eqmain: { eqBar: [13, 229, 14, 63], eqThumb: [0, 164, 11, 11], eqThumbDown: [0, 176, 11, 11], eqTitle: [0, 134, 275, 14] },
+  posbar: { posTrack: [0, 0, 248, 10], posThumb: [248, 0, 29, 10], posThumbDown: [278, 0, 29, 10] },
+  titlebar: { tbClose: [18, 0, 9, 9], tbCloseDown: [18, 9, 9, 9], tbShade: [0, 18, 9, 9], tbShadeDown: [9, 18, 9, 9], tbInactive: [27, 15, 275, 14] },
+  shufrep: { shuffle: [28, 0, 47, 15], shuffleDown: [28, 15, 47, 15] },
+};
+export const WSZ_SPRITE_KEYS = Object.values(WSZ_SPRITES).flatMap(group => Object.keys(group));
+
+async function wszExtras(files, find, mainCanvas, hex) {
+  const sprites = {};
+  for (const [sheet, crops] of Object.entries(WSZ_SPRITES)) {
+    const path = find(`${sheet}.bmp`);
+    if (!path) continue;
+    let bitmap;
+    try { bitmap = await imageBitmap(files[path], path); } catch { continue; }
+    for (const [key, [x, y, w, h]] of Object.entries(crops)) {
+      if (x + w > bitmap.width || y + h > bitmap.height) continue;
+      const crop = document.createElement('canvas'); crop.width = w; crop.height = h;
+      crop.getContext('2d').drawImage(bitmap, x, y, w, h, 0, 0, w, h);
+      sprites[key] = crop.toDataURL('image/png');
+    }
+    bitmap.close();
+  }
+  // Playlist colors are the skin author's own text palette.
+  const colors = {};
+  const pledit = find('pledit.txt');
+  if (pledit) {
+    const read = name => strFromU8(files[pledit]).match(new RegExp(`^\\s*${name}\\s*=\\s*#?([0-9a-f]{6})`, 'im'))?.[1];
+    const normal = read('Normal'), current = read('Current'), bg = read('NormalBG'), selected = read('SelectedBG');
+    if (bg) colors.screen = `#${bg}`.toLowerCase();
+    if (current) colors.accent = `#${current}`.toLowerCase();
+    if (normal) colors.secondary = `#${normal}`.toLowerCase();
+    if (selected) colors.border = `#${selected}`.toLowerCase();
+  }
+  // Darkest main.bmp tone for the page behind the decks.
+  const data = mainCanvas.getContext('2d').getImageData(0, 0, mainCanvas.width, mainCanvas.height).data;
+  let dark = [255, 255, 255], lum = 765;
+  for (let i = 0; i < data.length; i += 64) { const l = data[i] + data[i + 1] + data[i + 2]; if (l > 30 && l < lum) { lum = l; dark = [data[i], data[i + 1], data[i + 2]]; } }
+  colors.background = hex(dark[0] * 0.6, dark[1] * 0.6, dark[2] * 0.6);
+  return { sprites, colors };
+}
+
 async function fromWsz(files, filename) {
   const paths = Object.keys(files);
   const find = name => paths.find(path => path.split('/').at(-1).toLowerCase() === name.toLowerCase());
@@ -119,6 +168,13 @@ async function fromWsz(files, filename) {
   const theme = { ...themes.classic, name: filename.replace(/\.(wsz|zip)$/i, '').slice(0, 60) || 'Imported Winamp skin',
     panel: n ? hex(r / n, g / n, b / n) : themes.classic.panel,
     panelLight: n ? hex(r / n * 1.3, g / n * 1.3, b / n * 1.3) : themes.classic.panelLight };
+  const extra = await wszExtras(files, find, canvas, hex);
+  Object.assign(theme, extra.colors);
+  // Keep panel text readable on both bright and dark skins.
+  const [pr, pg, pb] = [1, 3, 5].map(i => parseInt(theme.panel.slice(i, i + 2), 16));
+  const bright = (0.299 * pr + 0.587 * pg + 0.114 * pb) > 140;
+  theme.text = bright ? '#141414' : '#f4f4f0';
+  theme.muted = bright ? '#3a3a3a' : '#c8c8c0';
   const images = { frame: dataUrl(files[main], main) }, originals = { main: images.frame };
   let numbersWidth = 297;
   for (const [key, name] of [['buttons', 'cbuttons.bmp'], ['numbers', 'numbers.bmp'], ['pitch', 'posbar.bmp']]) {
@@ -142,7 +198,7 @@ async function fromWsz(files, filename) {
     const colors = strFromU8(files[vis]).split(/\r?\n/).map(line => line.match(/^\s*(\d+),\s*(\d+),\s*(\d+)/)).filter(Boolean);
     if (colors.length > 2) theme.accent = hex(+colors[2][1], +colors[2][2], +colors[2][3]);
   }
-  return { base: 'classic', theme, assets: {}, images, originals, numbersWidth, preview: images.frame };
+  return { base: 'classic', theme, assets: {}, images, originals, numbersWidth, preview: images.frame, sprites: extra.sprites };
 }
 
 export async function importSkin(file) {
@@ -210,6 +266,18 @@ export function applySkin(id, custom = null) {
     root.style.setProperty(`--skin-${key}`, urls[key]);
   }
   root.dataset.artwork = artwork.join(' ');
+  const sprites = [];
+  for (const key of WSZ_SPRITE_KEYS) {
+    const value = custom?.sprites?.[key];
+    const ok = typeof value === 'string' && IMAGE_DATA.test(value);
+    if (ok) sprites.push(key);
+    root.style.setProperty(`--wsz-${key}`, ok ? `url("${value}")` : 'none');
+  }
+  // Main window art doubles as the deck backdrop for imported Winamp skins.
+  const main = custom?.originals?.main;
+  if (sprites.length && typeof main === 'string' && IMAGE_DATA.test(main)) { sprites.push('main'); root.style.setProperty('--wsz-main', `url("${main}")`); }
+  else root.style.setProperty('--wsz-main', 'none');
+  root.dataset.wsz = sprites.join(' ');
   root.style.setProperty('--number-sheet', urls.numbers);
   root.style.setProperty('--transport-sheet', urls.buttons);
   const width = custom?.numbersWidth === 297 || custom?.numbersWidth === 324 ? custom.numbersWidth : base === 'bento' ? 324 : 297;

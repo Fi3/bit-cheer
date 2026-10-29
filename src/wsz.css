@@ -1,0 +1,148 @@
+/* Imported classic Winamp skins (.wsz): reuse the skin's own sprites across the app.
+   Each rule only applies when that sprite exists (data-wsz lists the ones found). */
+:root[data-wsz~=main] .app-shell{image-rendering:pixelated}
+
+/* Decks: the skin's main window becomes the deck backdrop. */
+:root[data-wsz~=main] .app-shell .deck{
+  background:linear-gradient(#0000004d,#0000004d),var(--wsz-main) center top/cover no-repeat,var(--panel);
+}
+:root[data-wsz~=main] .app-shell .deck-heading{
+  background:var(--screen);border:1px solid var(--secondary);border-radius:0;color:var(--accent);
+  box-shadow:0 2px 0 #0008;text-shadow:none;
+}
+:root[data-wsz~=main] .app-shell .deck-heading :is(span,small,strong){color:inherit}
+
+/* Modules look like little playlist windows. */
+:root[data-wsz~=plTopFill] .app-shell .player-module{
+  background:var(--screen);border:0;border-radius:0;box-shadow:0 3px 6px #0009;padding:0;overflow:hidden;
+}
+:root[data-wsz~=plTopFill] .app-shell .module-titlebar{
+  height:20px;min-height:20px;padding:0 6px 0 14px;border:0;border-radius:0;
+  background:var(--wsz-plTopLeft) left top no-repeat,var(--wsz-plTopRight) right top no-repeat,var(--wsz-plTopFill) left top repeat-x,var(--screen);
+}
+:root[data-wsz~=plTopFill] .app-shell .module-titlebar>strong{
+  padding:1px 6px;background:var(--screen);color:var(--accent);font:bold 9px/12px Tahoma,Verdana,sans-serif;letter-spacing:1px;text-shadow:none;
+}
+:root[data-wsz~=plLeft] .app-shell .player-module:not(.is-collapsed) .module-body{
+  background:var(--wsz-plLeft) left top repeat-y,var(--wsz-plRight) right top repeat-y,var(--screen);
+  padding:6px 22px 6px 14px;color:var(--secondary);
+}
+:root[data-wsz~=plBottomFill] .app-shell .player-module:not(.is-collapsed)::after{
+  content:"";display:block;height:8px;
+  background:var(--wsz-plBottomLeft) left top no-repeat,var(--wsz-plBottomRight) right top no-repeat,var(--wsz-plBottomFill) left top repeat-x;
+}
+:root[data-wsz~=plTopFill] .app-shell .module-body :is(label,small,span,p,.control-label){color:var(--secondary)}
+:root[data-wsz~=plTopFill] .app-shell .module-body strong{color:var(--accent)}
+
+/* Window buttons use the skin's shade and close sprites. */
+:root[data-wsz~=tbClose] .app-shell .module-window-actions{gap:2px;margin-right:2px}
+:root[data-wsz~=tbClose] .app-shell :is(.module-collapse,.module-remove){
+  width:9px;height:9px;min-width:0;padding:0;border:0;border-radius:0;box-shadow:none;font-size:0;color:transparent;
+  background:var(--wsz-tbShade) 0 0/100% 100% no-repeat;
+}
+:root[data-wsz~=tbClose] .app-shell .module-remove{background-image:var(--wsz-tbClose)}
+:root[data-wsz~=tbClose] .app-shell .module-collapse:active{background-image:var(--wsz-tbShadeDown)}
+:root[data-wsz~=tbClose] .app-shell .module-remove:active{background-image:var(--wsz-tbCloseDown)}
+
+/* Transport: Stop for cue, Previous / Next for nudge. */
+:root[data-wsz~=stop] .app-shell .deck .transport-cue,
+:root[data-wsz~=prev] .app-shell .deck .nudge-controls button{
+  width:46px;min-width:46px;height:36px;padding:0;border:0;border-radius:0;box-shadow:none;font-size:0;color:transparent;
+  background:var(--wsz-stop) 0 0/100% 100% no-repeat;
+}
+:root[data-wsz~=stop] .app-shell .deck .transport-cue:active{background-image:var(--wsz-stopDown)}
+:root[data-wsz~=prev] .app-shell .deck .nudge-controls button:first-child{background-image:var(--wsz-prev)}
+:root[data-wsz~=prev] .app-shell .deck .nudge-controls button:first-child:active{background-image:var(--wsz-prevDown)}
+:root[data-wsz~=next] .app-shell .deck .nudge-controls button:last-child{width:44px;min-width:44px;background-image:var(--wsz-next)}
+:root[data-wsz~=next] .app-shell .deck .nudge-controls button:last-child:active{background-image:var(--wsz-nextDown)}
+:root[data-wsz~=prev] .app-shell .deck .nudge-controls{gap:0}
+:root[data-wsz~=prev] .app-shell .deck .nudge-controls span{color:var(--accent);background:var(--screen);padding:1px 4px}
+
+/* Other buttons and menus take the skin's playlist colors. */
+:root[data-wsz~=main] .app-shell :is(.set-cue,.deck-action,.small-button,.pitch-fine button,.deck-add-element,.text-button){
+  background:var(--screen);color:var(--secondary);border:1px solid var(--secondary);border-radius:0;box-shadow:inset 0 0 0 1px #0006;text-shadow:none;
+  font:bold 10px Tahoma,Verdana,sans-serif;
+}
+:root[data-wsz~=main] .app-shell :is(.set-cue,.deck-action,.small-button,.pitch-fine button,.deck-add-element,.text-button):hover:not(:disabled){color:var(--accent);border-color:var(--accent);filter:none}
+:root[data-wsz~=main] .app-shell :is(.set-cue,.deck-action,.small-button,.pitch-fine button):active:not(:disabled){background:var(--border);color:var(--accent)}
+:root[data-wsz~=main] .app-shell :is(select,.add-module-menu select){background-color:var(--screen);color:var(--secondary);border:1px solid var(--secondary);border-radius:0}
+:root[data-wsz~=shuffle] .app-shell .deck-action.tempo-action{
+  padding-left:62px;background:var(--wsz-shuffle) 6px 50%/47px 15px no-repeat,var(--screen);
+}
+:root[data-wsz~=shuffle] .app-shell .deck-action.tempo-action:active:not(:disabled){background:var(--wsz-shuffleDown) 6px 50%/47px 15px no-repeat,var(--border)}
+
+/* LCD screens use the playlist background and highlight colors. */
+:root[data-wsz~=main] .app-shell :is(.deck-screen,.time-display,.tap-readout){background:var(--screen);color:var(--accent);border-color:var(--secondary)}
+:root[data-wsz~=main] .app-shell .deck-screen :is(.track-title,.track-meta,small,span){color:var(--secondary)}
+
+/* Volume sliders (deck volume, master) use VOLUME.BMP. */
+:root[data-wsz~=volTrack] .app-shell :is(.deck-volume-row,.master-volume) input[type=range]{
+  -webkit-appearance:none;appearance:none;height:26px;margin:4px 0;border:0;border-radius:0;box-shadow:none;
+  background:var(--wsz-volTrack) 0 0/100% 100% no-repeat;image-rendering:pixelated;
+}
+:root[data-wsz~=volThumb] .app-shell :is(.deck-volume-row,.master-volume) input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:28px;height:22px;border:0;border-radius:0;box-shadow:none;background:var(--wsz-volThumb) 0 0/100% 100% no-repeat;
+}
+:root[data-wsz~=volThumb] .app-shell :is(.deck-volume-row,.master-volume) input[type=range]:active::-webkit-slider-thumb{background-image:var(--wsz-volThumbDown)}
+:root[data-wsz~=volThumb] .app-shell :is(.deck-volume-row,.master-volume) input[type=range]::-moz-range-thumb{width:28px;height:22px;border:0;border-radius:0;background:var(--wsz-volThumb) 0 0/100% 100% no-repeat}
+:root[data-wsz~=volTrack] .app-shell :is(.deck-volume-row,.master-volume) input[type=range]::-moz-range-track{background:transparent;border:0}
+
+/* Crossfader uses BALANCE.BMP (it is a left/right control too). */
+:root[data-wsz~=balTrack] .app-shell .crossfader input[type=range]{
+  -webkit-appearance:none;appearance:none;height:26px;margin:6px 0;border:0;border-radius:0;box-shadow:none;
+  background:var(--wsz-balTrack) 0 0/100% 100% no-repeat;image-rendering:pixelated;
+}
+:root[data-wsz~=balThumb] .app-shell .crossfader input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:28px;height:22px;border:0;border-radius:0;box-shadow:none;background:var(--wsz-balThumb) 0 0/100% 100% no-repeat;
+}
+:root[data-wsz~=balThumb] .app-shell .crossfader input[type=range]:active::-webkit-slider-thumb{background-image:var(--wsz-balThumbDown)}
+:root[data-wsz~=balThumb] .app-shell .crossfader input[type=range]::-moz-range-thumb{width:28px;height:22px;border:0;border-radius:0;background:var(--wsz-balThumb) 0 0/100% 100% no-repeat}
+:root[data-wsz~=balTrack] .app-shell .crossfader input[type=range]::-moz-range-track{background:transparent;border:0}
+
+/* EQ knobs use the seek bar. */
+:root[data-wsz~=posTrack] .app-shell .eq-control input[type=range]{
+  -webkit-appearance:none;appearance:none;height:20px;border:0;border-radius:0;box-shadow:none;
+  background:var(--wsz-posTrack) 0 0/100% 100% no-repeat;image-rendering:pixelated;
+}
+:root[data-wsz~=posThumb] .app-shell .eq-control input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:29px;height:20px;border:0;border-radius:0;box-shadow:none;background:var(--wsz-posThumb) 0 0/100% 100% no-repeat;
+}
+:root[data-wsz~=posThumb] .app-shell .eq-control input[type=range]::-moz-range-thumb{width:29px;height:20px;border:0;border-radius:0;background:var(--wsz-posThumb) 0 0/100% 100% no-repeat}
+
+/* Pitch fader: an EQ slider bar with the seek-bar thumb as its cap. */
+:root[data-wsz~=eqBar] .app-shell .pitch-rail{
+  width:28px;border:0;border-radius:0;box-shadow:none;background:var(--wsz-eqBar) 0 0/100% 100% no-repeat;image-rendering:pixelated;
+}
+:root[data-wsz~=posThumb] .app-shell .pitch-handle{
+  width:58px;height:20px;border:0;border-radius:0;box-shadow:0 2px 3px #0009;
+  background:var(--wsz-posThumb) 0 0/100% 100% no-repeat;image-rendering:pixelated;
+}
+:root[data-wsz~=posThumb] .app-shell .pitch-handle-line{display:none}
+:root[data-wsz~=posThumbDown] .app-shell .pitch-track:active .pitch-handle{background-image:var(--wsz-posThumbDown)}
+:root[data-wsz~=posThumb] .app-shell .pitch-track:focus-within .pitch-handle{box-shadow:0 2px 3px #0009,0 0 0 2px var(--accent)}
+:root[data-wsz~=main] .app-shell .pitch-value{background:var(--screen);color:var(--accent);border:1px solid var(--secondary)}
+
+/* Polish: calmer backdrop, framed transport, one centred title strip, skinned top bar. */
+:root[data-wsz~=main] .app-shell .deck{
+  background:linear-gradient(#000000b8,#000000b8),var(--wsz-main) center top/cover no-repeat,var(--panel);
+}
+:root[data-wsz~=main] .app-shell .deck-transport{
+  padding:6px;background:var(--screen);border:1px solid var(--secondary);box-shadow:0 3px 6px #0009;
+}
+:root[data-wsz~=main] .app-shell .deck-transport :is(.deck-action-hint,small){color:var(--secondary)}
+:root[data-wsz~=main] .app-shell .rack-footer{background:var(--screen);color:var(--secondary);padding:4px 6px}
+:root[data-wsz~=main] .app-shell .rack-footer :is(small,span,p){color:var(--secondary)}
+:root[data-wsz~=plTopFill] .app-shell .rack-title{
+  background:var(--skin-titlebar) center/auto 100% no-repeat,var(--wsz-plTopFill) left center/auto 100% repeat-x,var(--screen);
+  border:0;
+}
+:root[data-wsz~=plTopFill] .app-shell .rack-title>*{background:var(--screen);color:var(--accent);padding:1px 6px;text-shadow:none}
+:root[data-wsz~=main] .app-shell .topbar{background:var(--screen);border-bottom:2px solid var(--secondary)}
+:root[data-wsz~=main] .app-shell :is(.main-nav button,.nav-item,.mode-pill){
+  background:var(--screen);color:var(--secondary);border:1px solid var(--secondary);border-radius:0;box-shadow:none;text-shadow:none;
+}
+:root[data-wsz~=main] .app-shell :is(.main-nav button,.nav-item,.mode-pill):is(.active,[aria-current=page]){background:var(--border);color:var(--accent);border-color:var(--accent)}
+:root[data-wsz~=main] .app-shell :is(.main-nav button,.nav-item,.mode-pill):hover{color:var(--accent);filter:none}
+:root[data-wsz~=plTopFill] .app-shell .rack-title>.rack-grip{visibility:hidden}
+:root[data-wsz~=main] .app-shell .add-module-menu{background:var(--screen);padding:4px 6px;border:1px solid var(--secondary)}
+:root[data-wsz~=main] .app-shell .add-module-menu small{color:var(--secondary)}

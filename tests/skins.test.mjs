@@ -111,3 +111,14 @@ test('museum links resolve to the museum file server', () => {
     assert.throws(() => museumSkinUrl(bad));
   }
 });
+
+test('imported Winamp sprites reach the page only as safe data images', () => {
+  const png = 'data:image/png;base64,AA==';
+  applySkin('custom', { ...validateSkin({ version: 1, name: 'Sprites' }), images: {}, originals: { main: png }, sprites: { stop: png, volThumb: png, prev: 'https://remote/x.png', bogus: png } });
+  assert.equal(root.dataset.wsz, 'stop volThumb main');
+  assert.equal(properties.get('--wsz-stop'), `url("${png}")`);
+  assert.equal(properties.get('--wsz-prev'), 'none');
+  assert.equal(properties.get('--wsz-main'), `url("${png}")`);
+  applySkin('millennium');
+  assert.equal(root.dataset.wsz, ''); assert.equal(properties.get('--wsz-stop'), 'none'); assert.equal(properties.get('--wsz-main'), 'none');
+});

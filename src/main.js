@@ -5,6 +5,7 @@ import './session.css';
 import './module-skins.css';
 import './lcd.css';
 import './skin-studio.css';
+import './wsz.css';
 import { AudioEngine } from './audio.js';
 import { assetUrl, BASE_PATH } from './assets.js';
 import { clamp, tapTempo, matchScore, estimateTempo } from './training.js';
