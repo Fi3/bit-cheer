@@ -123,9 +123,9 @@ export function starResult(star) {
   const time = Math.max(.001, star.elapsed), ratio = star.synced / time, closeness = star.closenessSum / time;
   const score = Math.round(clamp(100 * (.6 * ratio + .4 * closeness), 0, 100));
   const phaseError = Math.round(star.phaseSum / time), tempoError = Math.round(star.tempoSum / time * 100) / 100;
-  const message = score >= 85 ? 'Star run! You rode the drift and kept the decks locked.'
-    : ratio < .3 && tempoError > .3 ? 'The speeds kept wandering apart. React sooner: small pitch moves as soon as you hear the kicks start to flam.'
-    : 'Good holds, but the beats slipped. Use quick nudges to pull them back the moment they separate.';
+  const message = score >= 85 ? 'Star run. The dancefloor didn\'t notice a thing, and that\'s the whole point.'
+    : ratio < .3 && tempoError > .3 ? 'The decks wandered off like two dogs in a park. Catch the drift sooner with tiny pitch moves the moment the kicks start to flam.'
+    : 'Speeds were tight, but the beats slipped. A quick nudge the second they separate, and nobody has to know.';
   const summary = `In sync ${star.synced.toFixed(1)} s of ${star.elapsed.toFixed(0)} s · longest lock ${star.best.toFixed(1)} s · ${phaseError} ms apart on average`;
   return { type: 'result', score, tempoError, phaseError, message, summary };
 }

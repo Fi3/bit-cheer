@@ -481,12 +481,11 @@ test('phase and blind drills configure distinct practice challenges', async ({ p
 
 test('star mode drifts deck speeds behind the pitch faders and rates the held sync', async ({ page }) => {
   test.setTimeout(45000);
-  await page.getByRole('button', { name: 'Training', exact: true }).click();
-  await page.locator('.drill-card').filter({ has: page.getByRole('heading', { name: 'Star mode', exact: true }) }).getByRole('button').click();
+  await page.locator('.mode-card').filter({ hasText: 'Star mode' }).click();
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].bpm === window.bitCheer.audio.state[1].bpm)).toBe(true);
-  await expect(page.locator('.star-meter')).toContainText('Press play on both decks');
-  await page.locator('body').press('Space');
-  await expect(page.locator('.star-meter')).toContainText(/LOCKED|DRIFTING/);
+  await expect(page.locator('.star-meter')).toContainText('Drop the needle on both decks');
+  await page.locator('.play-both-button').click();
+  await expect(page.locator('.star-meter')).toContainText(/LOCKED IN|DRIFTING/);
   // Speeds wander while the pitch faders stay where the player left them.
   await expect.poll(() => page.evaluate(() => {
     const { telemetry, audio } = window.bitCheer;
@@ -498,6 +497,24 @@ test('star mode drifts deck speeds behind the pitch faders and rates the held sy
   await page.waitForTimeout(8000);
   await page.getByRole('button', { name: /Finish the run/ }).click();
   await expect(page.locator('.match-result')).toContainText(/In sync \d+\.\d s of \d+ s · longest lock/);
+});
+
+test('pro decks can start and stop a star run on loaded tracks', async ({ page }) => {
+  await page.locator('.mode-card').filter({ hasText: 'Pro decks' }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(deck => deck.source === 'pcm')), { timeout: 15000 }).toBe(true);
+  await page.getByRole('button', { name: '★ Star run', exact: true }).click();
+  await expect(page.locator('.star-meter')).toContainText('Drop the needle on both decks');
+  await page.locator('.play-both-button').click();
+  await expect.poll(() => page.evaluate(() => {
+    const { telemetry, audio } = window.bitCheer;
+    return Math.max(...telemetry.map((deck, i) => Math.abs(deck.bpm - audio.state[i].bpm * (1 + audio.state[i].pitch / 100))));
+  }), { timeout: 10000 }).toBeGreaterThan(.05);
+  await page.getByRole('button', { name: '★ Stop star run', exact: true }).click();
+  await expect(page.locator('.star-meter')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => {
+    const { telemetry, audio } = window.bitCheer;
+    return Math.max(...telemetry.map((deck, i) => Math.abs(deck.bpm - audio.state[i].bpm * (1 + audio.state[i].pitch / 100))));
+  })).toBeLessThan(.001);
 });
 
 test('tap tempo measures human tapping and mobile layout remains usable', async ({ page }, testInfo) => {

@@ -90,10 +90,10 @@ function primaryGenre(tags) {
   return 'Electronic';
 }
 async function constrainDrill() {
-  if(drill!=='phase'&&drill!=='phrase'&&drill!=='star')return;
+  if(drill!=='phase'&&drill!=='phrase'&&mode!=='star')return;
   const bpm=engine.state[0].bpm;
   await engine.set(1,'bpm',bpm);
-  if(drill!=='star')await engine.set(1,'seek',(drill==='phase'?.28:4)*60/bpm);
+  if(mode!=='star')await engine.set(1,'seek',(drill==='phase'?.28:4)*60/bpm);
   send({type:'randomized',bpms:[bpm,bpm],names:engine.state.map(d=>d.name)});
 }
 async function configure(command) {
@@ -153,7 +153,7 @@ async function handle(command) {
     case 'zoom': zoom[deck]=clamp(zoom[deck] * value,1,16);break;
     case 'grid': await engine.set(deck,'beatOffset',engine.state[deck].position);recent=[];lastStart=performance.now();notice('Current position marked as beat one. Grid checks now use this downbeat.');break;
     case 'randomizeTempo':
-      if(drill==='phase'||drill==='phrase'||drill==='star'){notice('This drill keeps tempos equal. Use New challenge for a fresh offset.');break;}
+      if(drill==='phase'||drill==='phrase'||mode==='star'){notice('This drill keeps tempos equal. Use New challenge for a fresh offset.');break;}
       await engine.randomizeTempo(deck,mode);recent=[];lastStart=performance.now();break;
     case 'changeTrack': {
       if(mode==='pro')await navigateTrack(deck,command.genre,'random');
@@ -169,14 +169,15 @@ async function handle(command) {
     case 'focusSession': focusSession(!!command.active,command.fullscreen!==false);break;
     case 'focusDeck': focusSession(command.deck>=0,command.fullscreen!==false);break;
     case 'fullscreen': focusSession(focusActive,!!command.active);break;
-    case 'newChallenge': stopStar();await configure(command);if(drill==='star')startStar();break;
-    case 'mode': activeLesson=null;transition=null;drill='';stopStar();await configure(command);break;
+    case 'newChallenge': stopStar();await configure(command);if(mode==='star')startStar();break;
+    case 'mode': activeLesson=null;transition=null;drill='';stopStar();await configure(command);if(mode==='star')startStar();break;
     case 'lesson': activeLesson=command.lesson;transition=null;drill='';stopStar();await configure(command);break;
-    case 'drill': activeLesson=null;transition=null;drill=command.drill;stopStar();await configure(command);if(drill==='star')startStar();break;
+    case 'drill': activeLesson=null;transition=null;drill=command.drill;stopStar();await configure(command);break;
+    case 'starRun': if(command.active)startStar();else stopStar();break;
     case 'check': {
-      if(drill==='star'){
-        if(!star||star.done){notice('Start a new Star run with New challenge.');break;}
-        if(star.elapsed<10){notice('Keep both decks playing and in sync for at least 10 seconds before finishing the run.');break;}
+      if(star){
+        if(star.done){notice(mode==='star'?'Run\'s over. Take a bow, then hit New run for the encore.':'Run\'s over. Take a bow, then hit New star run for the encore.');break;}
+        if(star.elapsed<10){notice('Easy, superstar. Keep both decks playing for at least 10 seconds before you bow out.');break;}
         finishStar();break;
       }
       if(!telemetry.length||!telemetry.every(d=>d.playing)) {notice('Play both decks, match the pitch, then check your mix.');break;}

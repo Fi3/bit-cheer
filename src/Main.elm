@@ -216,6 +216,7 @@ type Msg
     | LoadSkinUrl
     | UseExampleSkinUrl
     | Check
+    | ToggleStarRun Bool
     | StartLesson Int
     | StartDrill String
     | ToggleHelp
@@ -277,7 +278,7 @@ init flags =
       , genre = "All genres"
       , help = False
       , focused = False
-      , layouts = Dict.fromList (List.map (\mode -> ( mode, defaultModuleLayout mode )) [ "foundation", "builder", "blind", "pro" ])
+      , layouts = Dict.fromList (List.map (\mode -> ( mode, defaultModuleLayout mode )) [ "foundation", "builder", "blind", "star", "pro" ])
       }
     , send "init" []
     )
@@ -781,6 +782,9 @@ update msg model =
 
         Check ->
             ( model, send "check" [ ( "drill", E.string model.drill ) ] )
+
+        ToggleStarRun active ->
+            ( { model | star = Nothing, result = Nothing }, send "starRun" [ ( "active", E.bool active ) ] )
 
         StartLesson lessonId ->
             case List.head (List.filter (\l -> l.number == lessonId) lessons) of
@@ -1426,7 +1430,7 @@ topbar model =
 sidebar : Model -> Html Msg
 sidebar model =
     aside [ class "sidebar" ]
-        [ div [ class "sidebar-heading" ] [ span [] [ text "YOUR PLAYGROUND" ], small [] [ text "01—04" ] ]
+        [ div [ class "sidebar-heading" ] [ span [] [ text "YOUR PLAYGROUND" ], small [] [ text "01—05" ] ]
         , nav [ class "mode-list", attribute "aria-label" "Practice mode" ]
             (List.map
                 (\( mode, ( number, name, description ) ) ->
@@ -1439,7 +1443,8 @@ sidebar model =
                 [ ( "foundation", ( "01", "Foundation", "Two kicks. One groove." ) )
                 , ( "builder", ( "02", "Loop builder", "Layer up the challenge." ) )
                 , ( "blind", ( "03", "By ear", "Trust what you hear." ) )
-                , ( "pro", ( "04", "Pro decks", "Real tracks. Real skills." ) )
+                , ( "star", ( "04", "Star mode", "Decks with trust issues." ) )
+                , ( "pro", ( "05", "Pro decks", "Real tracks. Real skills." ) )
                 ]
             )
         , div [ class "sidebar-progress" ]
@@ -1494,6 +1499,9 @@ modeName mode =
         "blind" ->
             "Let your ears lead."
 
+        "star" ->
+            "Hold it together."
+
         "pro" ->
             "Make the mix yours."
 
@@ -1509,6 +1517,9 @@ modeDescription mode =
 
         "blind" ->
             "The numbers are off. Listen for the drift and bring two rhythms together."
+
+        "star" ->
+            "Just like real turntables, these decks drift off speed whenever they feel like it. Keep them locked for 60 seconds. The rating counts how long and how tight you held it. No sync button. Just you and your nerves."
 
         "pro" ->
             "Pick a genre or bring your own tracks. This is where practice meets the dance floor."
@@ -1560,6 +1571,21 @@ practiceView model =
                 , toggle "Hide BPM" model.hideBpm HideBpm
                 , if not (String.isEmpty model.drill) then
                     button [ class "small-button", onClick NewChallenge, title "Start a new drill with both decks reset" ] [ text "New challenge" ]
+
+                  else if model.mode == "star" then
+                    button [ class "small-button", onClick NewChallenge, title "Start a new 60-second run with fresh loops" ] [ text "New run" ]
+
+                  else if model.mode == "pro" then
+                    case model.star of
+                        Just run ->
+                            if run.done then
+                                button [ class "small-button star-run-button", onClick (ToggleStarRun True), title "Start another 60-second Star run on these tracks" ] [ text "★ New star run" ]
+
+                            else
+                                button [ class "small-button star-run-button is-active", onClick (ToggleStarRun False), title "Stop the drift and cancel this run" ] [ text "★ Stop star run" ]
+
+                        Nothing ->
+                            button [ class "small-button star-run-button", onClick (ToggleStarRun True), title "The decks start drifting like real turntables. Keep them in sync for 60 seconds. Good luck, superstar." ] [ text "★ Star run" ]
 
                   else
                     text ""
@@ -1627,7 +1653,7 @@ defaultModuleLayout mode =
             if mode == "pro" then
                 [ "screen", "pitch", "volume", "picker" ]
 
-            else if mode == "builder" || mode == "blind" then
+            else if mode == "builder" || mode == "blind" || mode == "star" then
                 [ "screen", "pitch", "volume", "composer" ]
 
             else
@@ -1666,7 +1692,7 @@ availableModules scope model =
             |> List.filter
                 (\( name, _ ) ->
                     if name == "composer" then
-                        model.mode == "builder" || model.mode == "blind"
+                        model.mode == "builder" || model.mode == "blind" || model.mode == "star"
 
                     else if name == "picker" then
                         model.mode == "pro"
@@ -2773,7 +2799,10 @@ coachView model =
             , h2 [] [ text "Your ears. Your call." ]
             , span [ class "mini-badge" ]
                 [ text
-                    (if String.isEmpty model.drill then
+                    (if model.star /= Nothing then
+                        "STAR RUN"
+
+                     else if String.isEmpty model.drill then
                         "COACH"
 
                      else
@@ -2818,16 +2847,16 @@ coachView model =
                     ]
 
             Nothing ->
-                case ( model.drill, model.star ) of
-                    ( "star", Just run ) ->
+                case model.star of
+                    Just run ->
                         starMeter run
 
-                    _ ->
+                    Nothing ->
                         coachCopy model
         , div [ class "coach-bottom" ]
             [ button [ class "primary-button", onClick Check ]
                 [ text
-                    (if model.drill == "star" then
+                    (if starRunning model then
                         "Finish the run"
 
                      else
@@ -2875,6 +2904,16 @@ coachCopy model =
         ]
 
 
+starRunning : Model -> Bool
+starRunning model =
+    case model.star of
+        Just run ->
+            not run.done
+
+        Nothing ->
+            False
+
+
 starMeter : StarRun -> Html Msg
 starMeter run =
     let
@@ -2887,13 +2926,13 @@ starMeter run =
             , strong []
                 [ text
                     (if run.elapsed <= 0 then
-                        "Press play on both decks"
+                        "Drop the needle on both decks"
 
                      else if run.inSync then
-                        "LOCKED"
+                        "LOCKED IN"
 
                      else
-                        "DRIFTING"
+                        "DRIFTING…"
                     )
                 ]
             , small [] [ text (fixed 0 (Basics.max 0 (run.length - run.elapsed)) ++ " s left") ]
@@ -2903,7 +2942,7 @@ starMeter run =
             , div [ class "star-synced", style "width" (pct run.synced) ] []
             ]
         , p [] [ text ("In sync " ++ fixed 1 run.synced ++ " s · streak " ++ fixed 1 run.streak ++ " s · best " ++ fixed 1 run.best ++ " s") ]
-        , small [] [ text "The decks drift on their own, like real turntables. Keep correcting with pitch and nudge." ]
+        , small [] [ text "Your decks had three espressos. Ride the pitch, tap the nudge, stay cool." ]
         ]
 
 
@@ -3118,7 +3157,6 @@ trainingView model =
                 , ( "phase", ( "◎", "Lock the phase", "The tempos start matched. Use tiny nudges to bring the kicks into the very same moment." ) )
                 , ( "blind", ( "◒", "Trust your ears", "No numbers to lean on. Learn to recognize drift, choose a direction, and hold the groove." ) )
                 , ( "phrase", ( "▥", "Find the one", "Align the start of each four-bar phrase. Listen beyond individual kicks and feel the larger pattern." ) )
-                , ( "star", ( "★", "Star mode", "Like real turntables, each deck's speed slowly wanders. Keep them locked for 60 seconds: your rating counts how long and how tightly you held the sync." ) )
                 ]
             )
         , section [ class "history-panel" ]
@@ -3143,10 +3181,6 @@ drillInstruction drill =
 
         "phrase" ->
             "Phrase drill: line up beat one of each 16-beat phrase. Use cue and nudge, then check your alignment."
-
-        "star" ->
-            "Star mode: press Space to start both decks. Their speeds drift slightly over the 60-second run, so keep correcting with pitch and nudge to stay locked."
-
         _ ->
             "Blind drill: keep BPM hidden. Listen carefully to the direction of drift, then correct it by ear."
 
