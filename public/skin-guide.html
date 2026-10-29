@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>bit.cheer · Skin guide</title>
+  <style>
+    :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#121b2a;color:#dce6f2;font:15px/1.65 Tahoma,Verdana,system-ui,sans-serif}
+    main{max-width:860px;margin:auto;padding:40px 20px 80px}a{color:#b8ee75;text-underline-offset:3px}
+    h1{font-size:34px;letter-spacing:-1px;margin:14px 0 6px;color:#fff;text-shadow:2px 2px #050e1b}
+    h2{font:700 13px 'Courier New',monospace;text-transform:uppercase;letter-spacing:2px;color:#ffc861;margin:40px 0 10px}
+    p,li{color:#b9c8da;max-width:74ch}strong{color:#f2f8ff}
+    .tag{font:11px 'Courier New',monospace;border:1px solid #57708f;color:#b8ee75;padding:4px 8px}
+    ol{padding-left:22px}li{margin:8px 0}
+    code{color:#b8ee75;font-family:'Courier New',monospace}
+    pre{background:#050b16;border:2px inset #57708f;padding:14px;overflow-x:auto;font:13px/1.5 'Courier New',monospace;color:#eaf6ff}
+    .table{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #2b3d57;vertical-align:top}th{color:#f2f8ff;font-weight:700}
+    .note{background:#1b2b44;border-left:3px solid #b8ee75;padding:10px 14px;margin:16px 0}
+    footer{border-top:1px solid #2b3d57;padding-top:18px;margin-top:40px;color:#7f93ad;font:12px 'Courier New',monospace}
+  </style>
+</head>
+<body><main>
+  <a href="./">← Back to bit.cheer</a>
+  <h1>Make a bit.cheer skin.</h1>
+  <span class="tag">SKIN GUIDE · FORMAT v1</span>
+
+  <h2>Fastest way: use a museum skin</h2>
+  <ol>
+    <li>Open <a href="https://skins.webamp.org/" target="_blank" rel="noopener noreferrer">skins.webamp.org</a> and click a skin.</li>
+    <li>Copy the address from your browser’s address bar, for example:<br><code>https://skins.webamp.org/skin/5ea2d974dad5507b83a6ddff7003a8ee/Yufo06.wsz</code></li>
+    <li>In bit.cheer, open <strong>Skin studio</strong>, paste the link and press <strong>Load skin</strong>.</li>
+  </ol>
+  <p>If you already have a <code>.wsz</code> file on your computer, use <strong>Import a skin file</strong> instead.</p>
+
+  <h2>Make your own in 4 steps</h2>
+  <ol>
+    <li>In <strong>Skin studio</strong>, press <strong>Download template</strong>. You get a ZIP with <code>skin.toml</code> and a README.</li>
+    <li>Unzip it and open <code>skin.toml</code> in any text editor.</li>
+    <li>Give your skin a name and change the colors. Each color is a hex code like <code>#b8ee75</code>.</li>
+    <li>Zip the folder again and press <strong>Import a skin file</strong>. Done. It stays saved on this device.</li>
+  </ol>
+  <div class="note">Only changing colors? You can import <code>skin.toml</code> on its own, no ZIP needed.</div>
+
+  <h2>A minimal skin.toml</h2>
+<pre>version = 1
+name = "Sunset Walkman"
+base = "millennium"   # the skin you start from
+
+[colors]
+background = "#1d1220"
+panel      = "#6b3a5a"
+panelLight = "#f2c6a0"
+text       = "#fff4e8"
+muted      = "#e9cbb8"
+accent     = "#ffe08a"
+secondary  = "#ff7a59"
+screen     = "#2a0f2c"
+border     = "#f0b48a"</pre>
+  <p>Leave out any color and it keeps the value from the <code>base</code> skin.</p>
+
+  <h2>What each color does</h2>
+  <div class="table"><table>
+    <tr><th>Color</th><th>Where you see it</th></tr>
+    <tr><td><code>background</code></td><td>The page behind the decks</td></tr>
+    <tr><td><code>panel</code> / <code>panelLight</code></td><td>The two ends of the metal panel gradient</td></tr>
+    <tr><td><code>text</code> / <code>muted</code></td><td>Main text and secondary text</td></tr>
+    <tr><td><code>accent</code></td><td>LCD text, highlights and focus rings</td></tr>
+    <tr><td><code>secondary</code></td><td>Small second highlight color</td></tr>
+    <tr><td><code>screen</code></td><td>The deck LCD screens</td></tr>
+    <tr><td><code>border</code></td><td>Bevels and outlines</td></tr>
+  </table></div>
+
+  <h2>Adding your own images (optional)</h2>
+  <p>Put images next to <code>skin.toml</code> in the ZIP and list them under <code>[assets]</code>:</p>
+<pre>[assets]
+titlebar = "graphics/titlebar.png"   # 275 × 14, the strip above the decks
+buttons  = "graphics/cbuttons.png"   # 136 × 36, play / pause sprite sheet
+numbers  = "graphics/numbers.png"    # 99 × 13, digits 0–9 (9 px each)
+background = "graphics/bg.jpg"       # page background, any size</pre>
+  <div class="table"><table>
+    <tr><th>Asset</th><th>Size</th><th>Notes</th></tr>
+    <tr><td><code>titlebar</code></td><td>275 × 14</td><td>Shown above the decks, scaled up</td></tr>
+    <tr><td><code>buttons</code></td><td>136 × 36</td><td>Two rows of 18 px: normal on top, pressed below. Play is at x 23, pause at x 46</td></tr>
+    <tr><td><code>numbers</code></td><td>99 × 13 or 108 × 13</td><td>Digits 0 to 9, 9 px wide each, shown 3× bigger on the BPM display</td></tr>
+    <tr><td><code>panel</code>, <code>background</code>, <code>frame</code>, <code>platter</code>, <code>pitch</code></td><td>Up to 4096 × 4096</td><td>Textures for panels, page, deck frame, jog wheel and pitch fader</td></tr>
+  </table></div>
+  <p>Formats: PNG, JPG, WebP or BMP. Each image under 2 MB, the ZIP under 10 MB. Paths must be relative. Remote URLs, SVG and scripts are not allowed, so skins are always safe to load.</p>
+
+  <h2>Base skin</h2>
+  <p>Use <code>base = "millennium"</code>. Your colors and images go on top of it. More bases are coming later.</p>
+
+  <footer>bit.cheer · Millennium Chrome is an original skin. Museum skins belong to their creators.</footer>
+</main></body>
+</html>

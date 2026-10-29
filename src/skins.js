@@ -3,7 +3,13 @@ import { parse } from 'smol-toml';
 import { unzipSync, strFromU8, zipSync, strToU8 } from 'fflate';
 
 const COLORS = ['background', 'panel', 'panelLight', 'text', 'muted', 'accent', 'secondary', 'screen', 'border'];
-export const SKIN_BASES = ['classic', 'classified3', 'classified5', 'bento', 'alien'];
+export const SKIN_BASES = ['millennium', 'classic', 'classified3', 'classified5', 'bento', 'alien'];
+// Skins offered in the app. The others stay in code for later, but are not selectable.
+export const SELECTABLE_SKINS = ['millennium'];
+export const DEFAULT_SKIN = 'millennium';
+// Some skins reuse another skin's structural layout (CSS) with their own art.
+const LAYOUTS = { millennium: 'classified5' };
+const layoutOf = base => LAYOUTS[base] || base;
 export const SKIN_ASSETS = ['panel', 'titlebar', 'background', 'frame', 'buttons', 'numbers', 'platter', 'pitch'];
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const HEX_COLOR = /^#[a-f0-9]{6}$/i;
@@ -13,6 +19,8 @@ const IMAGE_DATA = /^data:image\/(?:png|jpeg|bmp|webp);base64,[a-zA-Z0-9+/=]+$/;
 // Colors complement the real archive bitmaps: navy/lime, gray/gold,
 // chrome/blue, charcoal/teal, and Headspace's green/purple respectively.
 export const themes = {
+  // Original bit.cheer skin, drawn by scripts/make-millennium-skin.mjs.
+  millennium: { name: 'Millennium Chrome', background: '#121b2a', panel: '#41597a', panelLight: '#d6e0ec', text: '#f2f8ff', muted: '#c9d8e8', accent: '#eaf6ff', secondary: '#b8ee75', screen: '#1f56a0', border: '#c4d0e0' },
   classic: { name: 'base-2.91', background: '#15151e', panel: '#2c2d46', panelLight: '#595a73', text: '#e4e4f0', muted: '#b1b3ca', accent: '#44ff55', secondary: '#d8bb63', screen: '#050608', border: '#77788d' },
   classified3: { name: 'Winamp3_Classified_v5.5', background: '#222221', panel: '#62625e', panelLight: '#c8c7b8', text: '#fffef1', muted: '#deddd0', accent: '#f0d16d', secondary: '#d9ddc3', screen: '#060706', border: '#b9b8ab' },
   classified5: { name: 'Winamp5_Classified_v5.5', background: '#192332', panel: '#48627d', panelLight: '#d8dfe7', text: '#f2f8ff', muted: '#d3e1ed', accent: '#d9edff', secondary: '#f5ca67', screen: '#164884', border: '#c4d0e0' },
@@ -20,7 +28,14 @@ export const themes = {
   alien: { name: 'Headspace · Alien Lime', background: '#10170c', panel: '#29551b', panelLight: '#6c9f27', text: '#f1ffdb', muted: '#bed49a', accent: '#aeef29', secondary: '#ce9aef', screen: '#081204', border: '#7fa53a' }
 };
 
-const builtinAssets = base => ({
+const builtinAssets = base => base === 'millennium' ? {
+  titlebar: '/skins/millennium/titlebar.png',
+  frame: null,
+  buttons: '/skins/millennium/cbuttons.png',
+  numbers: '/skins/millennium/numbers.png',
+  platter: null,
+  pitch: null
+} : ({
   titlebar: base === 'alien' ? null : `/skins/${base}-titlebar.png`,
   frame: base === 'alien' ? '/skins/alien-bg_drawer_left.png' : `/skins/${base}/main.png`,
   buttons: base === 'alien' ? '/skins/classic/cbuttons.png' : `/skins/${base}/cbuttons.png`,
@@ -32,6 +47,7 @@ const builtinAssets = base => ({
 export function validateSkin(parsed) {
   if (!parsed || parsed.version !== 1) throw new Error('skin.toml needs version = 1.');
   if (typeof parsed.name !== 'string' || !parsed.name.trim() || parsed.name.length > 60) throw new Error('Choose a skin name from 1 to 60 characters.');
+  // Older skin files without a base keep the classic layout they were made for.
   const base = parsed.base === undefined ? 'classic' : parsed.base;
   if (!SKIN_BASES.includes(base)) throw new Error(`Skin base must be one of: ${SKIN_BASES.join(', ')}.`);
   const colors = parsed.colors || {}, clean = { name: parsed.name.trim() };
@@ -152,14 +168,37 @@ export async function importSkin(file) {
   return { ...result, images, numbersWidth };
 }
 
+// Accepts a Winamp Skin Museum link, e.g.
+// https://skins.webamp.org/skin/5ea2d974dad5507b83a6ddff7003a8ee/Yufo06.wsz
+// The museum page itself is HTML, so we download the .wsz from its file server.
+const MUSEUM_FILES = 'https://r2.webampskins.org/skins/';
+export function museumSkinUrl(input) {
+  let url;
+  try { url = new URL(String(input).trim()); } catch { throw new Error('That doesn’t look like a link. Copy the full address from skins.webamp.org and paste it here.'); }
+  const md5 = url.pathname.match(/[a-f0-9]{32}/i)?.[0]?.toLowerCase();
+  const museum = /(^|\.)webamp\.org$|(^|\.)webampskins\.org$/i.test(url.hostname);
+  if (!museum || !md5) throw new Error('Paste a skin link from skins.webamp.org, like https://skins.webamp.org/skin/5ea2d974dad5507b83a6ddff7003a8ee/Yufo06.wsz');
+  const name = decodeURIComponent(url.pathname.split('/').filter(Boolean).at(-1) || '');
+  return { download: `${MUSEUM_FILES}${md5}.wsz`, filename: /\.wsz$/i.test(name) ? name : `${md5}.wsz` };
+}
+
+export async function importSkinFromUrl(input) {
+  const { download, filename } = museumSkinUrl(input);
+  let response;
+  try { response = await fetch(download); } catch { throw new Error('Couldn’t reach the Winamp Skin Museum. Check your connection and try again.'); }
+  if (!response.ok) throw new Error(response.status === 404 ? 'The museum doesn’t have a file for that skin. Try another one.' : `The museum answered with error ${response.status}. Try again in a moment.`);
+  const blob = await response.blob();
+  return importSkin(new File([blob], filename));
+}
+
 export function applySkin(id, custom = null) {
-  const builtin = Object.hasOwn(themes, id) ? id : 'classic';
+  const builtin = Object.hasOwn(themes, id) ? id : DEFAULT_SKIN;
   const base = custom ? (SKIN_BASES.includes(custom.base) ? custom.base : 'classic') : builtin;
   const theme = { ...themes[base], name: custom?.theme?.name || themes[base].name };
   for (const key of COLORS) if (custom?.theme?.[key] && HEX_COLOR.test(custom.theme[key])) theme[key] = custom.theme[key];
   const root = document.documentElement;
   root.dataset.skin = custom ? 'custom' : builtin;
-  root.dataset.layout = base;
+  root.dataset.layout = layoutOf(base);
   for (const key of COLORS) root.style.setProperty(`--${key.replace(/[A-Z]/g, match => '-' + match.toLowerCase())}`, theme[key]);
   const inherited = builtinAssets(base), urls = {}, artwork = [];
   for (const key of SKIN_ASSETS) {
@@ -179,11 +218,11 @@ export function applySkin(id, custom = null) {
 }
 
 export function skinTemplate() {
-  return `# Bit Cheer skin v1\n# Keep skin.toml and optional raster assets together inside a ZIP.\nversion = 1\nname = "My midnight session"\n# Structural layout: classic, classified3, classified5, bento, or alien.\nbase = "classic"\n\n# Omitted colors and assets inherit your chosen base.\n[colors]\n${COLORS.map(key => `${key} = "${themes.classic[key]}"`).join('\n')}\n\n# Raster formats: PNG, JPG, WebP, BMP. Relative paths only.\n# [assets]\n# panel = "graphics/panel.png"          # Repeating panel texture\n# titlebar = "graphics/titlebar.png"    # Active title strip, ideally 275x14\n# background = "graphics/background.jpg" # Page background\n# frame = "graphics/main.png"          # Main player frame, traditionally 275x116\n# buttons = "graphics/cbuttons.png"    # Original transport sprite, 136x36\n# numbers = "graphics/numbers.png"     # 99x13 (NUMBERS) or 108x13 (NUMS_EX)\n# platter = "graphics/platter.png"     # Jog-wheel artwork\n# pitch = "graphics/pitch.png"         # Pitch panel texture or artwork\n`;
+  return `# Bit Cheer skin v1\n# Keep skin.toml and optional raster assets together inside a ZIP.\nversion = 1\nname = "My midnight session"\n# Start from: millennium (recommended), classic, classified3, classified5, bento, or alien.\nbase = "millennium"\n\n# Omitted colors and assets inherit your chosen base.\n[colors]\n${COLORS.map(key => `${key} = "${themes.millennium[key]}"`).join('\n')}\n\n# Raster formats: PNG, JPG, WebP, BMP. Relative paths only.\n# [assets]\n# panel = "graphics/panel.png"          # Repeating panel texture\n# titlebar = "graphics/titlebar.png"    # Active title strip, ideally 275x14\n# background = "graphics/background.jpg" # Page background\n# frame = "graphics/main.png"          # Main player frame, traditionally 275x116\n# buttons = "graphics/cbuttons.png"    # Original transport sprite, 136x36\n# numbers = "graphics/numbers.png"     # 99x13 (NUMBERS) or 108x13 (NUMS_EX)\n# platter = "graphics/platter.png"     # Jog-wheel artwork\n# pitch = "graphics/pitch.png"         # Pitch panel texture or artwork\n`;
 }
 
 export function downloadTemplate() {
-  const readme = `BIT CHEER SKIN FORMAT v1\n\nEdit skin.toml; import it alone for a color/layout skin, or zip it with images.\nbase selects the actual structural layout: classic, classified3, classified5, bento, alien.\nOmitting base keeps legacy skins on classic. Missing colors and artwork inherit that base.\nAll nine colors use #rrggbb. Artwork can replace the panel, titlebar, page background,\nframe, transport buttons, number glyphs, platter, and pitch fader. Paths are relative\nto skin.toml. PNG/JPG/WebP/BMP only; no scripts, SVG, remote URLs, or parent paths.\n\nSprite conventions: buttons uses the classic Winamp 136x36 CBUTTONS sheet.\nNumber sheets are 99x13 NUMBERS or 108x13 NUMS_EX; the UI scales glyphs 3x.\nTitle strips are normally 275x14; frame artwork is normally MAIN 275x116.\nOther raster artwork may use different dimensions, up to 4096x4096 pixels.\nEach image must be below 2MB; archive below 10MB compressed and 24MB expanded;\n120 files maximum.\n\nClassic Winamp 2 .wsz archives can be imported directly. Bit Cheer preserves MAIN,\nCBUTTONS, NUMBERS/NUMS_EX, POSBAR, and TITLEBAR artwork. The active title strip is\ncropped from the original TITLEBAR at x27,y0,275x14 when the full sheet is present.\nThese archives use the classic structural layout; use a TOML base to choose another.\nModern .wal/.wms skin scripts are not executed.\n`;
+  const readme = `BIT CHEER SKIN FORMAT v1\n\nEdit skin.toml; import it alone for a color/layout skin, or zip it with images.\nbase selects the starting skin: millennium, classic, classified3, classified5, bento, alien.\nOmitting base keeps older skins on classic. Missing colors and artwork inherit that base.\nAll nine colors use #rrggbb. Artwork can replace the panel, titlebar, page background,\nframe, transport buttons, number glyphs, platter, and pitch fader. Paths are relative\nto skin.toml. PNG/JPG/WebP/BMP only; no scripts, SVG, remote URLs, or parent paths.\n\nSprite conventions: buttons uses the classic Winamp 136x36 CBUTTONS sheet.\nNumber sheets are 99x13 NUMBERS or 108x13 NUMS_EX; the UI scales glyphs 3x.\nTitle strips are normally 275x14; frame artwork is normally MAIN 275x116.\nOther raster artwork may use different dimensions, up to 4096x4096 pixels.\nEach image must be below 2MB; archive below 10MB compressed and 24MB expanded;\n120 files maximum.\n\nClassic Winamp 2 .wsz archives can be imported directly. Bit Cheer preserves MAIN,\nCBUTTONS, NUMBERS/NUMS_EX, POSBAR, and TITLEBAR artwork. The active title strip is\ncropped from the original TITLEBAR at x27,y0,275x14 when the full sheet is present.\nThese archives use the classic structural layout; use a TOML base to choose another.\nModern .wal/.wms skin scripts are not executed.\n`;
   const bytes = zipSync({ 'skin.toml': strToU8(skinTemplate()), 'README.txt': strToU8(readme) });
   const url = URL.createObjectURL(new Blob([bytes], { type: 'application/zip' })), a = document.createElement('a');
   a.href = url; a.download = 'bit-cheer-skin-template.zip'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);

@@ -4,19 +4,22 @@ import './skin-variants.css';
 import './session.css';
 import './module-skins.css';
 import './lcd.css';
+import './skin-studio.css';
 import { AudioEngine } from './audio.js';
 import { assetUrl, BASE_PATH } from './assets.js';
 import { clamp, tapTempo, matchScore, estimateTempo } from './training.js';
-import { applySkin, importSkin, downloadTemplate } from './skins.js';
+import { applySkin, importSkin, importSkinFromUrl, downloadTemplate, SELECTABLE_SKINS, DEFAULT_SKIN } from './skins.js';
 import { SessionLibrary, DeckSelections } from './library.js';
 import { adjustedPitch, wheelPitchDelta, keyPitchDelta, pitchSensitivity } from './pitch-control.js';
 import { validateLayout } from './layout.js';
 
 // Apply the saved skin before Elm mounts, so the first app frame has its final theme.
-const startupSkin = restore('bit-cheer-skin');
+// Skins that are no longer offered fall back to the default.
+const savedSkin = restore('bit-cheer-skin');
+const startupSkin = savedSkin?.id === 'custom' || SELECTABLE_SKINS.includes(savedSkin?.id) ? savedSkin : null;
 let startupSkinName;
-try { startupSkinName = applySkin(startupSkin?.id || 'classified5', startupSkin?.custom); }
-catch { startupSkinName = applySkin('classified5'); }
+try { startupSkinName = applySkin(startupSkin?.id || DEFAULT_SKIN, startupSkin?.custom); }
+catch { startupSkinName = applySkin(DEFAULT_SKIN); }
 
 const app = Elm.Main.init({ node: document.getElementById('app'), flags: { basePath: BASE_PATH } });
 let telemetry = [], recent = [], lastStart = performance.now(), mode = 'foundation', catalog = {tracks:[]}, taps = [], zoom = [1,1], mic = null, drill = '', configVersion = 0, micEpoch = 0, micPending = false, focusActive = false, wasFullscreen = false, activeLesson = 1, transition = null;
@@ -164,8 +167,16 @@ async function handle(command) {
       });break;
     }
     case 'loadTrack': pendingProCatalog=false;await loadTrack(deck,command.track);break;
-    case 'skin': {const name=applySkin(command.id);store('bit-cheer-skin',{id:command.id});send({type:'skin',id:command.id,name});break;}
+    case 'skin': {if(!SELECTABLE_SKINS.includes(command.id))break;const name=applySkin(command.id);store('bit-cheer-skin',{id:command.id});send({type:'skin',id:command.id,name});break;}
     case 'importSkin': chooseFile('.toml,.zip,.wsz',async file=>{const custom=await importSkin(file);const name=applySkin('custom',custom);store('bit-cheer-skin',{id:'custom',custom});send({type:'skin',id:'custom',name});notice(`Skin loaded: ${name}`);});break;
+    case 'loadSkinUrl': {
+      try {
+        const custom=await importSkinFromUrl(command.url);const name=applySkin('custom',custom);
+        store('bit-cheer-skin',{id:'custom',custom});send({type:'skin',id:'custom',name});
+        send({type:'skinUrlResult',ok:true,message:`Loaded “${name}”. Enjoy the view!`});
+      } catch(error) { send({type:'skinUrlResult',ok:false,message:error instanceof Error?error.message:String(error)}); }
+      break;
+    }
     case 'exportSkin': downloadTemplate();notice('Your skin kit is downloaded. Edit skin.toml, add optional images, then import the ZIP.');break;
     case 'persist': store('bit-cheer-progress',{progress:command.progress,history:command.history});break;
     case 'mic': await toggleMic();break;

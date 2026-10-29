@@ -95,18 +95,20 @@ Where supported, choose an output device in the panel or use the browser's devic
 
 ## Skins
 
-The five native themes include the museum's first four entries as observed on 26 October 2026: **base-2.91**, **Winamp3_Classified_v5.5**, **Winamp5_Classified_v5.5**, and **Bento_Classified**. **Headspace · Alien Lime** recreates the supplied green-face reference using the HeadAMP adaptation's graphics. It was originally a Windows Media Player design.
+The default skin is **Millennium Chrome**, an original bit.cheer skin. It uses the rounded chrome/cobalt housing, with its own title strip, transport buttons and LCD digits drawn by `scripts/make-millennium-skin.mjs` (no third-party skin art). For now it is the only skin offered in Skin studio. A previously chosen custom skin is restored on reload; older built-in choices switch to Millennium Chrome.
 
-Fresh sessions use **Winamp 5 Classified**. A previously chosen built-in or custom skin is restored on reload.
+**Any skin from the [Winamp Skin Museum](https://skins.webamp.org/)** can be loaded from Skin studio: copy the skin's address, for example `https://skins.webamp.org/skin/5ea2d974dad5507b83a6ddff7003a8ee/Yufo06.wsz`, paste it and press **Load skin**. The app reads the skin id from the link and downloads the `.wsz` from the museum's file server (`r2.webampskins.org`, which allows cross-origin requests), so bit.cheer never hosts those skins.
 
-The skins use original bitmap number fonts, transport buttons and title strips, with distinct native housings: Classic violet/gold bevels, square champagne Classified 3, rounded chrome/blue Classified 5, compact charcoal Bento, and Headspace's large green face with purple controls. These are functional two-deck adaptations. Skin studio shows the original previews and keeps author credits.
+The earlier museum-based themes (base-2.91, Classified 3/5, Bento, Headspace) are still in the code and `public/skins/`, but are not selectable.
+
+A user-facing guide lives at [public/skin-guide.html](public/skin-guide.html) (linked from Skin studio).
 
 Download the template ZIP in Skin studio, edit `skin.toml`, and optionally add graphics:
 
 ```toml
 version = 1
 name = "My midnight session"
-base = "classic" # classic | classified3 | classified5 | bento | alien
+base = "millennium" # millennium (recommended) | classic | classified3 | classified5 | bento | alien
 
 [colors]
 background = "#151719"

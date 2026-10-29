@@ -129,6 +129,9 @@ type alias Model =
     , micActive : Bool
     , skin : String
     , skinName : String
+    , skinUrl : String
+    , skinUrlLoading : Bool
+    , skinUrlResult : Maybe ( Bool, String )
     , progress : List Int
     , history : List Int
     , currentLesson : Maybe Int
@@ -202,6 +205,9 @@ type Msg
     | SelectSkin String String
     | ImportSkin
     | ExportSkin
+    | SkinUrlInput String
+    | LoadSkinUrl
+    | UseExampleSkinUrl
     | Check
     | StartLesson Int
     | StartDrill String
@@ -245,8 +251,11 @@ init flags =
       , taps = 0
       , micBpm = 0
       , micActive = False
-      , skin = "classified5"
-      , skinName = "Winamp5_Classified_v5.5"
+      , skin = "millennium"
+      , skinName = "Millennium Chrome"
+      , skinUrl = ""
+      , skinUrlLoading = False
+      , skinUrlResult = Nothing
       , progress = []
       , history = []
       , currentLesson = Just 1
@@ -744,6 +753,22 @@ update msg model =
         ExportSkin ->
             ( model, send "exportSkin" [] )
 
+        SkinUrlInput url ->
+            ( { model | skinUrl = url, skinUrlResult = Nothing }, Cmd.none )
+
+        UseExampleSkinUrl ->
+            ( { model | skinUrl = exampleSkinUrl, skinUrlResult = Nothing }, Cmd.none )
+
+        LoadSkinUrl ->
+            if String.isEmpty (String.trim model.skinUrl) then
+                ( { model | skinUrlResult = Just ( False, "Paste a skin link first. Not sure where to get one? Press “Use this example”." ) }, Cmd.none )
+
+            else if model.skinUrlLoading then
+                ( model, Cmd.none )
+
+            else
+                ( { model | skinUrlLoading = True, skinUrlResult = Nothing }, send "loadSkinUrl" [ ( "url", E.string (String.trim model.skinUrl) ) ] )
+
         Check ->
             ( model, send "check" [ ( "drill", E.string model.drill ) ] )
 
@@ -1101,6 +1126,9 @@ receive data model =
 
         "skin" ->
             ( { model | skin = field "id" D.string model.skin data, skinName = field "name" D.string model.skinName data }, Cmd.none )
+
+        "skinUrlResult" ->
+            ( { model | skinUrlLoading = False, skinUrlResult = Just ( field "ok" D.bool False data, field "message" D.string "" data ) }, Cmd.none )
 
         "restore" ->
             ( { model | progress = field "progress" (D.list D.int) [] data, history = field "history" (D.list D.int) [] data }, Cmd.none )
@@ -2996,8 +3024,23 @@ stat name val =
     div [ class "stat-card" ] [ span [] [ text name ], strong [] [ text val ] ]
 
 
+exampleSkinUrl : String
+exampleSkinUrl =
+    "https://skins.webamp.org/skin/5ea2d974dad5507b83a6ddff7003a8ee/Yufo06.wsz"
+
+
 skinsView : Model -> Html Msg
 skinsView model =
+    let
+        builtin =
+            [ ( "millennium", "Millennium Chrome", "Brushed chrome, cobalt LCDs and a lime glow. Drawn pixel by pixel for bit.cheer." ) ]
+
+        externalLink url label =
+            a [ href url, target "_blank", attribute "rel" "noopener noreferrer" ] [ text label ]
+
+        step number body =
+            li [ class "skin-step" ] [ span [ class "skin-step-number" ] [ text (String.fromInt number) ], div [] body ]
+    in
     div [ class "skins-page" ]
         [ div [ class "page-heading" ] [ div [] [ div [ class "eyebrow" ] [ text "SAME GROOVE. DIFFERENT SHELL." ], h1 [] [ text "Your player. Your era." ], p [] [ text "A little chrome. A little phosphor. A lot of 2000. Make the decks feel like home." ] ] ]
         , div [ class "active-skin" ] [ span [ class "status-dot" ] [], text ("CURRENT SKIN · " ++ model.skinName) ]
@@ -3016,7 +3059,7 @@ skinsView model =
                             )
                         ]
                         [ div [ class ("skin-preview skin-preview-" ++ skin) ]
-                            [ img [ class "skin-original-image", src (model.basePath ++ "skins/" ++ skin ++ ".png"), alt (name ++ " original skin preview") ] []
+                            [ img [ class "skin-original-image", src (model.basePath ++ "skins/" ++ skin ++ ".png"), alt (name ++ " skin preview") ] []
                             ]
                         , div [ class "skin-card-copy" ]
                             [ strong [] [ text name ]
@@ -3033,19 +3076,60 @@ skinsView model =
                             ]
                         ]
                 )
-                [ ( "classic", "Classic 2.91", "Violet panels, gold rails, and original green bitmap digits." )
-                , ( "classified3", "Winamp 3 Classified", "Champagne metal, gold trim, and a black LCD." )
-                , ( "classified5", "Winamp 5 Classified", "A polished silver shell with cobalt-blue displays." )
-                , ( "bento", "Bento Classified", "Charcoal panels and cool steel-blue details." )
-                , ( "alien", "Headspace · Alien Lime", "Acid-lime curves, alien energy, and purple transport buttons." )
-                ]
+                builtin
             )
+        , section [ class "skin-import-panel skin-url-panel", attribute "aria-labelledby" "skin-url-title" ]
+            [ div [ class "eyebrow" ] [ text "THOUSANDS OF SKINS FROM THE EARLY WEB" ]
+            , h2 [ id "skin-url-title" ] [ text "Wear any skin from the Winamp Skin Museum." ]
+            , p [] [ text "The museum keeps thousands of classic skins people made back in the day. Any of them can dress up your decks. No downloads, no unzipping: just copy a link and paste it here." ]
+            , Html.ol [ class "skin-steps" ]
+                [ step 1 [ strong [] [ text "Open the museum. " ], text "Go to ", externalLink "https://skins.webamp.org/" "skins.webamp.org ↗", text " and click any skin you like." ]
+                , step 2 [ strong [] [ text "Copy the link. " ], text "Copy the address from your browser’s address bar. It looks like this:", Html.code [ class "skin-url-example" ] [ text exampleSkinUrl ] ]
+                , step 3 [ strong [] [ text "Paste it below and press Load skin. " ], text "bit.cheer downloads it and puts it on your decks." ]
+                ]
+            , div [ class "skin-url-form" ]
+                [ input
+                    [ class "skin-url-input"
+                    , type_ "url"
+                    , A.placeholder "Paste a skins.webamp.org link here"
+                    , value model.skinUrl
+                    , onInput SkinUrlInput
+                    , on "keydown" (D.field "key" D.string |> D.andThen (\key -> if key == "Enter" then D.succeed LoadSkinUrl else D.fail "not enter"))
+                    , attribute "aria-label" "Winamp Skin Museum link"
+                    , attribute "inputmode" "url"
+                    , attribute "autocomplete" "off"
+                    , attribute "spellcheck" "false"
+                    ]
+                    []
+                , button [ class "primary-button", onClick LoadSkinUrl, disabled model.skinUrlLoading ]
+                    [ text
+                        (if model.skinUrlLoading then
+                            "Loading…"
+
+                         else
+                            "Load skin"
+                        )
+                    ]
+                , button [ class "secondary-button", onClick UseExampleSkinUrl ] [ text "Use this example" ]
+                ]
+            , case model.skinUrlResult of
+                Just ( ok, message ) ->
+                    p [ classList [ ( "skin-url-result", True ), ( "ok", ok ), ( "bad", not ok ) ], attribute "role" "status" ] [ text message ]
+
+                Nothing ->
+                    p [ class "skin-url-result", attribute "role" "status" ] [ small [] [ text "Classic Winamp 2 skins (.wsz) work. The skin stays on this device. To go back, pick Millennium Chrome above." ] ]
+            ]
         , section [ class "skin-import-panel" ]
             [ div [ class "skin-import-icon" ] [ text "{ / }" ]
-            , div [] [ div [ class "eyebrow" ] [ text "BUILT TO BE YOURS" ], h2 [] [ text "Make a skin of your own." ], p [] [ text "Choose a base layout in skin.toml, change its colors, and replace the frame, buttons, digits, or platter artwork. Import your ZIP to use it on this device." ], small [] [ text "TOML, ZIP skin pack, or classic Winamp WSZ · validated before applying" ] ]
-            , div [ class "skin-import-actions" ] [ button [ class "primary-button", onClick ImportSkin ] [ text "↥ Import a skin" ], button [ class "secondary-button", onClick ExportSkin ] [ text "↓ Download template" ] ]
+            , div []
+                [ div [ class "eyebrow" ] [ text "BUILT TO BE YOURS" ]
+                , h2 [] [ text "Make a skin of your own." ]
+                , p [] [ text "Download the template, change the colors in skin.toml, and swap in your own images for the title bar, buttons and digits if you like. Zip it up, import it, and it’s yours. You can also import a .wsz file you already have." ]
+                , small [] [ text "Step-by-step guide: ", a [ href (model.basePath ++ "skin-guide.html"), target "_blank", attribute "rel" "noopener noreferrer" ] [ text "How to make a bit.cheer skin ↗" ] ]
+                ]
+            , div [ class "skin-import-actions" ] [ button [ class "primary-button", onClick ImportSkin ] [ text "↥ Import a skin file" ], button [ class "secondary-button", onClick ExportSkin ] [ text "↓ Download template" ] ]
             ]
-        , p [ class "skin-attribution" ] [ text "The early web had personality. Explore the originals at the ", a [ href "https://skins.webamp.org/", target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Winamp Skin Museum ↗" ], text ". These are native Bit Cheer adaptations of the original skins. ", a [ href (model.basePath ++ "credits.html"), target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Skin credits ↗" ] ]
+        , p [ class "skin-attribution" ] [ text "Millennium Chrome is an original bit.cheer skin. Museum skins belong to their creators and load straight from ", externalLink "https://skins.webamp.org/" "skins.webamp.org ↗", text ". ", a [ href (model.basePath ++ "credits.html"), target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Credits ↗" ] ]
         ]
 
 

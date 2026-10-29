@@ -1,0 +1,26 @@
+/* Skin studio: "paste a museum link" panel, plus Millennium Chrome tweaks. */
+.skin-import-panel.skin-url-panel{display:block}
+.skin-url-panel>p{max-width:72ch}
+.skin-steps{list-style:none;margin:16px 0;padding:0;display:grid;gap:12px}
+.skin-step{display:flex;gap:12px;align-items:flex-start;font-size:13px;line-height:1.55;color:var(--text)}
+.skin-step>div{min-width:0}
+.skin-step a{font-weight:700}
+.skin-step-number{flex:none;width:26px;height:26px;display:grid;place-items:center;border-radius:50%;font:700 13px Tahoma,sans-serif;color:#17200d;background:radial-gradient(circle at 35% 30%,#e9ffd0,#b8ee75 55%,#6f9a3a);border:1px solid #142038;box-shadow:0 1px 2px #0006}
+.skin-url-example{display:block;margin-top:6px;padding:7px 9px;font:12px/1.4 'Courier New',monospace;color:#b8ee75;background:#050b16;border:2px inset #57708f;overflow-wrap:anywhere;user-select:all}
+.skin-url-form{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.skin-url-input{flex:1 1 280px;min-width:0;padding:9px 10px;font:13px 'Courier New',monospace;color:#eaf6ff;background:#0b1630;border:2px inset #8fa4bd;border-radius:0}
+.skin-url-input::placeholder{color:#7f93ad}
+.skin-url-form .primary-button,.skin-url-form .secondary-button{justify-content:center}
+.skin-url-result{margin-top:10px;font-size:12px}
+.skin-url-result.ok{color:#2f6a12;font-weight:700}
+.skin-url-result.bad{color:#a3261b;font-weight:700}
+:root:not([data-layout=classified3]):not([data-layout=classified5]) .skin-url-result.ok{color:#b8ee75}
+:root:not([data-layout=classified3]):not([data-layout=classified5]) .skin-url-result.bad{color:#ff8a7a}
+
+/* Millennium Chrome: one centred title plate instead of a repeating strip. */
+html:root[data-skin=millennium] .rack-title{background-repeat:no-repeat,no-repeat;background-position:center,center}
+html:root[data-skin=millennium] .app-shell:not(.session-focus-view){background:radial-gradient(ellipse at 50% -10%,#2d4d7a,transparent 60%),linear-gradient(110deg,#1f3350,#111d31 62%,#26395a)}
+.skin-grid:has(> .skin-card:only-child){grid-template-columns:minmax(0,560px)}
+.skin-preview-millennium{padding:0}
+.skin-preview-millennium img{object-fit:cover;image-rendering:auto;filter:none}
+.skin-url-result small{font-size:11px}
