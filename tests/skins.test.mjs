@@ -87,7 +87,7 @@ test('WSZ preserves original MAIN/CBUTTONS/NUMBERS/TITLEBAR and crops the real a
   assert.equal(result.images.buttons, `data:image/bmp;base64,${Buffer.from(buttons).toString('base64')}`);
   assert.equal(result.images.numbers, `data:image/bmp;base64,${Buffer.from(numbers).toString('base64')}`);
   assert.equal(result.originals.titlebar, `data:image/bmp;base64,${Buffer.from(titlebar).toString('base64')}`);
-  assert.equal(result.images.titlebar, 'data:image/png;base64,AA=='); assert.equal(result.preview, result.images.frame);
+  assert.equal(result.images.titlebar, 'data:image/png;base64,AA=='); assert.match(result.preview, /^data:image\/png;base64,/); // rendered Winamp window
   const crop = draws.at(-1); assert.deepEqual(crop.slice(1), [27, 0, 275, 14, 0, 0, 275, 14]);
 });
 

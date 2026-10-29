@@ -9,7 +9,7 @@ import './wsz.css';
 import { AudioEngine } from './audio.js';
 import { assetUrl, BASE_PATH } from './assets.js';
 import { clamp, tapTempo, matchScore, estimateTempo } from './training.js';
-import { applySkin, importSkin, importSkinFromUrl, downloadTemplate, SELECTABLE_SKINS, DEFAULT_SKIN } from './skins.js';
+import { applySkin, importSkin, importSkinFromUrl, downloadTemplate, skinPicture, SELECTABLE_SKINS, DEFAULT_SKIN } from './skins.js';
 import { SessionLibrary, DeckSelections } from './library.js';
 import { adjustedPitch, wheelPitchDelta, keyPitchDelta, pitchSensitivity } from './pitch-control.js';
 import { validateLayout } from './layout.js';
@@ -38,6 +38,7 @@ let sensitivities = [.05,.05], pendingProCatalog = false;
 function publishLibrary(){catalog.tracks=library.list();send({type:'catalog',tracks:catalog.tracks});}
 function beginSelection(deck){engine.loadVersions[deck]++;return selections.begin(deck);}
 const notice=message=>send({type:'notice',message});
+const skinChanged=(id,name,custom)=>send({type:'skin',id,name,preview:skinPicture(id,custom),source:custom?.source&&/^https:\/\/skins\.webamp\.org\//.test(custom.source)?custom.source:''});
 const fail=error=>{if(engine.context)engine.emitRouting();send({type:'error',message:error instanceof Error?error.message:String(error)});};
 function chooseFile(accept,handle) {
   const input=document.createElement('input'); input.type='file';input.accept=accept;input.style.display='none';document.body.append(input);
@@ -168,12 +169,12 @@ async function handle(command) {
       });break;
     }
     case 'loadTrack': pendingProCatalog=false;await loadTrack(deck,command.track);break;
-    case 'skin': {if(!SELECTABLE_SKINS.includes(command.id))break;const name=applySkin(command.id);store('bit-cheer-skin',{id:command.id});send({type:'skin',id:command.id,name});break;}
-    case 'importSkin': chooseFile('.toml,.zip,.wsz',async file=>{const custom=await importSkin(file);const name=applySkin('custom',custom);store('bit-cheer-skin',{id:'custom',custom});send({type:'skin',id:'custom',name});notice(`Skin loaded: ${name}`);});break;
+    case 'skin': {if(!SELECTABLE_SKINS.includes(command.id))break;const name=applySkin(command.id);store('bit-cheer-skin',{id:command.id});skinChanged(command.id,name);break;}
+    case 'importSkin': chooseFile('.toml,.zip,.wsz',async file=>{const custom=await importSkin(file);const name=applySkin('custom',custom);store('bit-cheer-skin',{id:'custom',custom});skinChanged('custom',name,custom);notice(`Skin loaded: ${name}`);});break;
     case 'loadSkinUrl': {
       try {
         const custom=await importSkinFromUrl(command.url);const name=applySkin('custom',custom);
-        store('bit-cheer-skin',{id:'custom',custom});send({type:'skin',id:'custom',name});
+        store('bit-cheer-skin',{id:'custom',custom});skinChanged('custom',name,custom);
         send({type:'skinUrlResult',ok:true,message:`Loaded “${name}”. Enjoy the view!`});
       } catch(error) { send({type:'skinUrlResult',ok:false,message:error instanceof Error?error.message:String(error)}); }
       break;
@@ -292,7 +293,7 @@ requestAnimationFrame(draw);
 queueMicrotask(async()=>{
   const layout=validateLayout(restore('bit-cheer-layout'));if(layout){sensitivities=layout.sensitivity;send({type:'restoreLayout',layout});}
   const saved=restore('bit-cheer-progress');if(saved&&Array.isArray(saved.progress)&&Array.isArray(saved.history))send({type:'restore',...saved});
-  send({type:'skin',id:document.documentElement.dataset.skin,name:startupSkinName});
+  skinChanged(document.documentElement.dataset.skin,startupSkinName,startupSkin?.custom);
   try{const response=await fetch(assetUrl('/catalog.json'));if(!response.ok)throw new Error('Library catalog unavailable. Local imports still work.');catalog=await response.json();library.setBundled(catalog.tracks);publishLibrary();send({type:'skins',skins:(catalog.skins||[]).map(skin=>({...skin,preview:skin.preview?assetUrl(skin.preview):'',archive:skin.archive?assetUrl(skin.archive):''}))});send({type:'referenceCatalog',tracks:(catalog.referenceTracks||[]).map(t=>({id:String(t.id),name:t.title,source:t.source,genre:primaryGenre(t.tags||[]),bpm:Number(t.bpm)||0}))});if(pendingProCatalog&&mode==='pro'&&catalog.tracks.length>=2){pendingProCatalog=false;const version=configVersion;await loadTrack(0,catalog.tracks[0].id);if(version===configVersion&&mode==='pro')await loadTrack(1,catalog.tracks[1].id);}}catch(error){fail(error);}
 });
 // Small diagnostics surface for automated browser/audio verification.

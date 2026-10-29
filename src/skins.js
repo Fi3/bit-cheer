@@ -150,6 +150,56 @@ async function wszExtras(files, find, mainCanvas, hex) {
   return { sprites, colors };
 }
 
+// Draws the skin's main window and equalizer the way Winamp shows them (275 × 232),
+// so Skin studio can show a real picture of the skin at its true proportions.
+async function renderWindowPreview(files, find) {
+  const sheets = {};
+  for (const name of ['main', 'titlebar', 'cbuttons', 'posbar', 'volume', 'balance', 'shufrep', 'monoster', 'playpaus', 'numbers', 'nums_ex', 'text', 'eqmain']) {
+    const path = find(`${name}.bmp`);
+    if (!path) continue;
+    try { sheets[name] = await imageBitmap(files[path], path); } catch { /* skip broken sheets */ }
+  }
+  if (!sheets.main) return null;
+  const out = document.createElement('canvas'); out.width = 275; out.height = sheets.eqmain ? 232 : 116;
+  const ctx = out.getContext('2d');
+  const draw = (sheet, sx, sy, w, h, dx, dy) => {
+    const img = sheets[sheet];
+    if (img && sx + w <= img.width && sy + h <= img.height) ctx.drawImage(img, sx, sy, w, h, dx, dy, w, h);
+  };
+  // Main window.
+  draw('main', 0, 0, 275, 116, 0, 0);
+  draw('titlebar', 27, 0, 275, 14, 0, 0);
+  draw('playpaus', 0, 0, 9, 9, 26, 28);
+  const digits = sheets.numbers ? 'numbers' : 'nums_ex', time = [0, 1, 2, 8];
+  [48, 60, 78, 90].forEach((x, i) => draw(digits, time[i] * 9, 0, 9, 13, x, 26));
+  const title = 'BIT CHEER  BEATMATCH SCHOOL';
+  [...title].forEach((ch, i) => { const c = ch.charCodeAt(0) - 65; if (c >= 0 && c < 26) draw('text', c * 5, 0, 5, 6, 111 + i * 5, 27); });
+  ['1', '2', '8'].forEach((d, i) => draw('text', Number(d) * 5, 6, 5, 6, 111 + i * 5, 43));
+  ['4', '4'].forEach((d, i) => draw('text', Number(d) * 5, 6, 5, 6, 156 + i * 5, 43));
+  draw('monoster', 0, 0, 29, 12, 212, 41);
+  draw('monoster', 29, 12, 27, 12, 239, 41);
+  draw('volume', 0, 20 * 15, 68, 13, 107, 57); draw('volume', 15, 422, 14, 11, 147, 58);
+  draw('balance', 9, 0, 38, 13, 177, 57); draw('balance', 15, 422, 14, 11, 189, 58);
+  draw('shufrep', 0, 61, 23, 12, 219, 58); draw('shufrep', 23, 61, 23, 12, 242, 58);
+  draw('posbar', 0, 0, 248, 10, 16, 72); draw('posbar', 248, 0, 29, 10, 76, 72);
+  [[0, 16], [23, 39], [46, 62], [69, 85]].forEach(([sx, dx]) => draw('cbuttons', sx, 0, 23, 18, dx, 88));
+  draw('cbuttons', 92, 0, 22, 18, 108, 88); draw('cbuttons', 114, 0, 22, 16, 136, 89);
+  draw('shufrep', 28, 0, 47, 15, 164, 89); draw('shufrep', 0, 0, 28, 15, 210, 89);
+  // Equalizer, with a gentle smile curve on its sliders.
+  if (sheets.eqmain) {
+    draw('eqmain', 0, 0, 275, 116, 0, 116);
+    draw('eqmain', 0, 134, 275, 14, 0, 116);
+    const curve = [20, 12, 16, 19, 22, 24, 22, 19, 15, 12, 9];
+    curve.forEach((level, i) => {
+      const x = i === 0 ? 21 : 78 + (i - 1) * 18, frame = Math.min(27, level);
+      draw('eqmain', 13 + (frame % 14) * 15, frame < 14 ? 164 : 229, 14, 63, x, 116 + 38);
+      draw('eqmain', 0, 164, 11, 11, x + 1, 116 + 38 + Math.round((27 - level) / 27 * 51));
+    });
+  }
+  for (const img of Object.values(sheets)) img.close();
+  return out.toDataURL('image/png');
+}
+
 async function fromWsz(files, filename) {
   const paths = Object.keys(files);
   const find = name => paths.find(path => path.split('/').at(-1).toLowerCase() === name.toLowerCase());
@@ -169,6 +219,7 @@ async function fromWsz(files, filename) {
     panel: n ? hex(r / n, g / n, b / n) : themes.classic.panel,
     panelLight: n ? hex(r / n * 1.3, g / n * 1.3, b / n * 1.3) : themes.classic.panelLight };
   const extra = await wszExtras(files, find, canvas, hex);
+  const windowPreview = await renderWindowPreview(files, find);
   Object.assign(theme, extra.colors);
   // Keep panel text readable on both bright and dark skins.
   const [pr, pg, pb] = [1, 3, 5].map(i => parseInt(theme.panel.slice(i, i + 2), 16));
@@ -198,7 +249,7 @@ async function fromWsz(files, filename) {
     const colors = strFromU8(files[vis]).split(/\r?\n/).map(line => line.match(/^\s*(\d+),\s*(\d+),\s*(\d+)/)).filter(Boolean);
     if (colors.length > 2) theme.accent = hex(+colors[2][1], +colors[2][2], +colors[2][3]);
   }
-  return { base: 'classic', theme, assets: {}, images, originals, numbersWidth, preview: images.frame, sprites: extra.sprites };
+  return { base: 'classic', theme, assets: {}, images, originals, numbersWidth, preview: windowPreview || images.frame, sprites: extra.sprites };
 }
 
 export async function importSkin(file) {
@@ -244,7 +295,19 @@ export async function importSkinFromUrl(input) {
   try { response = await fetch(download); } catch { throw new Error('Couldn’t reach the Winamp Skin Museum. Check your connection and try again.'); }
   if (!response.ok) throw new Error(response.status === 404 ? 'The museum doesn’t have a file for that skin. Try another one.' : `The museum answered with error ${response.status}. Try again in a moment.`);
   const blob = await response.blob();
-  return importSkin(new File([blob], filename));
+  const skin = await importSkin(new File([blob], filename));
+  return { ...skin, source: museumPage(input) };
+}
+
+function museumPage(input) {
+  const md5 = String(input).match(/[a-f0-9]{32}/i)?.[0]?.toLowerCase();
+  return md5 ? `https://skins.webamp.org/skin/${md5}/` : '';
+}
+
+// What Skin studio shows as "Now wearing".
+export function skinPicture(id, custom) {
+  if (id === 'custom') return typeof custom?.preview === 'string' && IMAGE_DATA.test(custom.preview) ? custom.preview : '';
+  return Object.hasOwn(themes, id) ? assetUrl(`/skins/${id}.png`) : '';
 }
 
 export function applySkin(id, custom = null) {

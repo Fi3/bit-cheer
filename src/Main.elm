@@ -129,6 +129,8 @@ type alias Model =
     , micActive : Bool
     , skin : String
     , skinName : String
+    , skinPreview : String
+    , skinSource : String
     , skinUrl : String
     , skinUrlLoading : Bool
     , skinUrlResult : Maybe ( Bool, String )
@@ -253,6 +255,8 @@ init flags =
       , micActive = False
       , skin = "millennium"
       , skinName = "Millennium Chrome"
+      , skinPreview = ""
+      , skinSource = ""
       , skinUrl = ""
       , skinUrlLoading = False
       , skinUrlResult = Nothing
@@ -1125,7 +1129,7 @@ receive data model =
             ( { model | micBpm = field "bpm" D.float 0 data, micActive = field "active" D.bool False data }, Cmd.none )
 
         "skin" ->
-            ( { model | skin = field "id" D.string model.skin data, skinName = field "name" D.string model.skinName data }, Cmd.none )
+            ( { model | skin = field "id" D.string model.skin data, skinName = field "name" D.string model.skinName data, skinPreview = field "preview" D.string "" data, skinSource = field "source" D.string "" data }, Cmd.none )
 
         "skinUrlResult" ->
             ( { model | skinUrlLoading = False, skinUrlResult = Just ( field "ok" D.bool False data, field "message" D.string "" data ) }, Cmd.none )
@@ -3024,6 +3028,42 @@ stat name val =
     div [ class "stat-card" ] [ span [] [ text name ], strong [] [ text val ] ]
 
 
+nowWearing : Model -> Html Msg
+nowWearing model =
+    section [ classList [ ( "now-wearing", True ), ( "is-winamp", model.skin == "custom" ) ], attribute "aria-labelledby" "now-wearing-title" ]
+        [ div [ class "now-wearing-frame" ]
+            [ if String.isEmpty model.skinPreview then
+                div [ class "now-wearing-empty" ] [ text "No picture for this skin" ]
+
+              else
+                img [ class "now-wearing-image", src model.skinPreview, alt (model.skinName ++ " skin, shown as a Winamp window") ] []
+            ]
+        , div [ class "now-wearing-copy" ]
+            [ div [ class "active-skin" ] [ span [ class "status-dot" ] [], text "NOW WEARING" ]
+            , h2 [ id "now-wearing-title" ] [ text model.skinName ]
+            , p []
+                [ text
+                    (if model.skin == "custom" then
+                        "This is the skin as it looks in Winamp. Its buttons, sliders, digits, window frames and colors now dress your decks."
+
+                     else
+                        "The original bit.cheer skin: brushed chrome, cobalt LCDs and a lime glow."
+                    )
+                ]
+            , if String.isEmpty model.skinSource then
+                text ""
+
+              else
+                a [ class "now-wearing-link", href model.skinSource, target "_blank", attribute "rel" "noopener noreferrer" ] [ text "See it in the Winamp Skin Museum ↗" ]
+            , if model.skin == "custom" then
+                button [ class "secondary-button", onClick (SelectSkin "millennium" "Millennium Chrome") ] [ text "↺ Back to Millennium Chrome" ]
+
+              else
+                text ""
+            ]
+        ]
+
+
 exampleSkinUrl : String
 exampleSkinUrl =
     "https://skins.webamp.org/skin/5ea2d974dad5507b83a6ddff7003a8ee/Yufo06.wsz"
@@ -3043,7 +3083,7 @@ skinsView model =
     in
     div [ class "skins-page" ]
         [ div [ class "page-heading" ] [ div [] [ div [ class "eyebrow" ] [ text "SAME GROOVE. DIFFERENT SHELL." ], h1 [] [ text "Your player. Your era." ], p [] [ text "A little chrome. A little phosphor. A lot of 2000. Make the decks feel like home." ] ] ]
-        , div [ class "active-skin" ] [ span [ class "status-dot" ] [], text ("CURRENT SKIN · " ++ model.skinName) ]
+        , nowWearing model
         , div [ class "skin-grid" ]
             (List.map
                 (\( skin, name, description ) ->
