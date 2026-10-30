@@ -250,7 +250,7 @@ type Msg
     | ExportSkin
     | SkinUrlInput String
     | LoadSkinUrl
-    | UseExampleSkinUrl
+    | UseExampleSkinUrl String
     | Check
     | ToggleStarRun Bool
     | StartLesson Int
@@ -880,8 +880,8 @@ update msg model =
         SkinUrlInput url ->
             ( { model | skinUrl = url, skinUrlResult = Nothing }, Cmd.none )
 
-        UseExampleSkinUrl ->
-            ( { model | skinUrl = exampleSkinUrl, skinUrlResult = Nothing }, Cmd.none )
+        UseExampleSkinUrl url ->
+            ( { model | skinUrl = url, skinUrlResult = Nothing }, Cmd.none )
 
         LoadSkinUrl ->
             if String.isEmpty (String.trim model.skinUrl) then
@@ -1764,7 +1764,7 @@ normalView model =
             ]
         , footer [ class "footer" ]
             [ span [] [ span [ class "status-dot" ] [], text " Built for the ears. Inspired by the era." ]
-            , span [] [ text "ELM + RUST / WASM", span [ class "footer-separator" ] [ text "·" ], text "BIT.CHEER v1.0", span [ class "footer-separator" ] [ text "·" ], a [ href (model.basePath ++ "credits.html"), target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Credits & sources ↗" ] ]
+            , span [] [ text "ELM + RUST / WASM", span [ class "footer-separator" ] [ text "·" ], text "BIT.CHEER v1.0", span [ class "footer-separator" ] [ text "·" ], a [ href (model.basePath ++ "manual.html"), target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Manual ↗" ], span [ class "footer-separator" ] [ text "·" ], a [ href (model.basePath ++ "credits.html"), target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Credits & sources ↗" ] ]
             ]
         , if model.help then
             helpView model
@@ -3829,9 +3829,16 @@ skinDna =
         ]
 
 
+{-| Museum links the Skin studio offers as examples: cuteamp, or this one, tricorder.
+-}
 exampleSkinUrl : String
 exampleSkinUrl =
     "https://skins.webamp.org/skin/2a0453c5c41414a4e359f0797f47a830/cuteamp.wsz"
+
+
+otherExampleSkinUrl : String
+otherExampleSkinUrl =
+    "https://skins.webamp.org/skin/01b2c3556b18cd77506e49ec769aaf87/tricorder.wsz"
 
 
 {-| bit.cheer's own skins (src/skins.js SELECTABLE_SKINS): id, name and card text.
@@ -3898,7 +3905,7 @@ skinsView model =
             , p [] [ text "The museum keeps thousands of classic skins people made back in the day. Any of them can dress up your decks. No downloads, no unzipping: just copy a link and paste it here." ]
             , Html.ol [ class "skin-steps" ]
                 [ step 1 [ strong [] [ text "Open the museum. " ], text "Go to ", externalLink "https://skins.webamp.org/" "skins.webamp.org ↗", text " and click any skin you like." ]
-                , step 2 [ strong [] [ text "Copy the link. " ], text "Copy the address from your browser’s address bar. It looks like this:", Html.code [ class "skin-url-example" ] [ text exampleSkinUrl ] ]
+                , step 2 [ strong [] [ text "Copy the link. " ], text "Copy the address from your browser’s address bar. It looks like this:", Html.code [ class "skin-url-example" ] [ text exampleSkinUrl ], text "or this one:", Html.code [ class "skin-url-example" ] [ text otherExampleSkinUrl ] ]
                 , step 3 [ strong [] [ text "Paste it below and press Load skin. " ], text "bit.cheer downloads it and puts it on your decks." ]
                 ]
             , div [ class "skin-url-form" ]
@@ -3924,7 +3931,8 @@ skinsView model =
                             "Load skin"
                         )
                     ]
-                , button [ class "secondary-button", onClick UseExampleSkinUrl ] [ text "Use this example" ]
+                , button [ class "secondary-button", onClick (UseExampleSkinUrl exampleSkinUrl), title "Fill in the cuteamp skin link" ] [ text "Use this example" ]
+                , button [ class "secondary-button", onClick (UseExampleSkinUrl otherExampleSkinUrl), title "Fill in the tricorder skin link" ] [ text "Or this one" ]
                 ]
             , case model.skinUrlResult of
                 Just ( ok, message ) ->

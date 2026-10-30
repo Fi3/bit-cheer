@@ -165,7 +165,7 @@ Two clean kick drums, 120 and 124 BPM to begin with. Match the speed with pitch,
 | Key | In Foundation |
 | --- | --- |
 | `V` / `M` | **Randomize tempo** of deck A / B: a new tempo within ±4% of the other deck and at least 1 BPM from where it was, pitch back to 0 |
-| `Shift`+`V` / `M` | **Change track**: a new kick loop on that deck at its own tempo, pitch back to 0 |
+| `Shift`+`V` / `M` | **Change track**: another kick sound on that deck (never the one the other deck plays) at the deck's tempo, pitch back to 0 |
 | `N` | **New challenge**: a fresh pair of kicks with new tempos, 2–5 BPM apart; both decks stop |
 | `=` | Nothing to add: Foundation is kick-only. A notice suggests pressing `2` for the Loop builder |
 
@@ -178,11 +178,11 @@ Layered loops: kick and closed hat at first, up to twenty instruments per deck i
 | Key | In Loop builder |
 | --- | --- |
 | `V` / `M` | **Randomize tempo** of that deck: within ±8% of the other deck, at least 1 BPM away |
-| `Shift`+`V` / `M` | **Change track**: a new loop with other instruments at the deck's own tempo, pitch back to 0 |
+| `Shift`+`V` / `M` | **Change track**: a random named loop, preferably within 6% of the other deck's tempo, at its own home tempo, pitch back to 0 |
 | `N` | **New challenge**: fresh loops and tempos (2–8 BPM apart) on both decks, both with deck A's current instruments |
 | `=` | **Add an element to both decks** (the next instrument in the bank; nothing once both decks have all twenty) |
 
-The composer itself (choosing instruments, steps, level, pan, solo, CHAOS!) is reached with `Tab`, see [not on the keyboard](#9-not-on-the-keyboard).
+The composer itself (choosing instruments and their sounds, steps, level, pan, solo, CHAOS!) and the loop picker (Load, ◀ Previous, Next ▶) are reached with `Tab`, see [not on the keyboard](#9-not-on-the-keyboard).
 
 ### 7.3 By ear (03)
 
@@ -191,7 +191,7 @@ The tempo readouts, elapsed time, waveforms and beat lights are hidden. Everythi
 | Key | In By ear |
 | --- | --- |
 | `V` / `M`, `Shift`+`V` / `M`, `N`, `=` | as in the Loop builder |
-| `B` | **Show the BPM** (and the other visual aids) for a peek; press again to hide them |
+| `B` | **Show the BPM** numbers for a peek; press again to hide them. The waveforms, beat lights and time stay hidden in By ear |
 
 Training tip: the keys give you everything a blind match needs, so you never have to look at the screen. Use `Shift` with the pitch keys for the last tiny corrections.
 
@@ -280,10 +280,10 @@ These pages are for reading and choosing, not for playing, so they have no short
 
 Some controls are about setting things up rather than beatmatching. They have no shortcut; reach them with `Tab` and use `Space` / `Enter`, the arrows on sliders, or the dropdown keys:
 
-- the composer (instruments, the sixteen steps, level, pan, solo, Generate pattern, CHAOS!, + Add next);
+- the composer (instruments, their sounds, the sixteen steps, level, pan, solo, Generate pattern, CHAOS!, + Add next);
 - module layout (Hide / Open, ×, + Add module…), EQ, loop, VU, waveform zoom (`−` / `+` buttons) and the jog wheel's own keys;
 - the pitch range and Wheel / keys dropdowns, master volume, split cue, audio outputs;
-- track picker details (genre, track, Load, Change track, Import, Browse folder, the folder browser, SOURCE BPM, SET GRID);
+- track picker details (genre, track, Load, Change track, Import, Browse folder, the folder browser, SOURCE BPM, SET GRID) and the loop picker (loop, Load, ◀ Previous, Next ▶);
 - the microphone tempo listener, the external track discovery links, and the skin's live Winamp window (click its buttons).
 
 ## 10. Other keyboard layouts
