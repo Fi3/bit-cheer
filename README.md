@@ -45,7 +45,7 @@ Each deck has permanently integrated transport controls: play/pause, cue and the
 
 Each deck supports a large vertical pitch fader with ±2/4/8/16/32/50% ranges, fine adjustment, temporary nudging, a jog wheel, play/pause, saved cue, volume, three-band EQ, waveform zoom, and actual signal-level meters. Foundation remains a kick-only exercise. Optional master modules provide an equal-power crossfader, volume, and split cue (A left, B right); the audio output includes a limiter.
 
-Hover or focus a pitch fader and scroll to adjust it. Fine, Normal and Coarse sensitivity use 0.01, 0.05 and 0.25 percentage-point wheel/key increments. Pixel, line and page wheel events are normalized; fractional trackpad movement is retained. Shift always uses a 0.01-point increment. Arrow keys adjust by one increment and Page Up/Down by ten. **Focus** shows both decks with only pitch, volume and separate, clearly labeled Play and Pause buttons, and requests native fullscreen where supported. Escape or Exit restores the normal workspace without resetting playback or the saved module layout.
+Hover or focus a pitch fader and scroll to adjust it. Fine, Normal and Coarse sensitivity use 0.01, 0.05 and 0.25 percentage-point wheel/key increments (the pitch keys use the same steps). Pixel, line and page wheel events are normalized; fractional trackpad movement is retained. Shift always uses a 0.01-point increment. Arrow keys adjust by one increment and Page Up/Down by ten. **Focus** shows both decks with only pitch, volume and separate, clearly labeled Play and Pause buttons, and requests native fullscreen where supported. Escape or Exit restores the normal workspace without resetting playback or the saved module layout.
 
 ### Build your workspace
 
@@ -53,9 +53,16 @@ The initial layout keeps the essentials visible. Use each module's **Hide/Open**
 
 **Scroll a jog wheel** to temporarily accelerate/decelerate its deck. It returns to the pitch setting after 160 ms. **Drag a jog wheel** to scrub in source time; horizontal/right or upward movement moves forward. Arrow keys nudge a focused jog wheel; Home/End move to the start/end. Click/drag a waveform to seek; wheel or ± buttons zoom. Audio uses classic varispeed, so changing tempo also changes musical pitch.
 
-Keyboard: Space plays/pauses both decks, including in Focus; A/B control a deck; left/right nudge B; T taps tempo. Input fields, native controls, modifier combinations, and focused jog wheels keep their own keyboard behavior. The help dialog supports Tab/Shift+Tab and Escape.
-
 Tap tempo uses recent tap intervals and resets after a long pause. Optional microphone BPM uses continuous, downsampled audio captured by a separate AudioWorklet, analyzed locally in six-second windows. It never monitors the microphone to speakers, uploads audio, or starts without a click and browser permission.
+
+### Keyboard control
+
+Every practice view can be played from the keyboard; [docs/KEYBOARD.md](docs/KEYBOARD.md) is the full specification, with one section per view. Press **?** in the app to see the keys.
+
+- **Two hands, two decks.** Deck A sits under the left hand, deck B under the right, with the same shape on each: pitch on the top row (`Q W E R` / `U I O P`: ten steps down, one step down, one up, ten up), transport in the middle (`A` cue, `S D` nudge, `F` play / `J` play, `K L` nudge, `;` cue), volume and the track key below (`Z` pitch to 0, `X C` volume, `V` track key / `M` track key, `, .` volume, `/` pitch to 0). Shift makes every move finer (0.01% pitch) and gives cue and track keys their second job (set cue; change or previous track).
+- **Hold to keep going.** Pitch and volume keys repeat; a nudge key held longer than 250 ms bends the deck's speed by 4% until released; `G` / `H` glide the crossfader and `Y` centres it.
+- **The essentials:** `Space` plays or pauses both decks, the arrows pitch and nudge deck B, `Enter` checks the match, `N` starts the view's next round (new challenge, new run, ★ Star run), `B` hides the BPM, `T` taps tempo, `=` adds an element to both decks, `` ` `` toggles Focus session, `1`–`5` switch practice modes, `Esc` closes or lets go.
+- Keys go by position, so the layout works on AZERTY, QWERTZ and Italian keyboards. Text fields and dropdowns keep their keys; sliders keep their arrows; a clicked button never steals Space or Enter, while a button reached with Tab is still pressed by them. Ctrl/Alt/Cmd combinations stay with the browser. Learning path, Training and Skin studio only answer to `1`–`5`, `?` and `Esc`.
 
 ## Audio architecture
 

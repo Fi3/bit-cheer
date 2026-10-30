@@ -13,6 +13,7 @@ import { applySkin, applyRenderedKit, importSkin, importSkinFromUrl, downloadTem
 import { SessionLibrary, DeckSelections } from './library.js';
 import { pickFolder, AUDIO_EXTENSIONS } from './folder-browser.js';
 import { adjustedPitch, wheelPitchDelta, keyPitchDelta, pitchSensitivity } from './pitch-control.js';
+import { shortcutFor, controlKeeps, heldBend, NUDGE, GLIDE } from './keyboard.js';
 import { validateLayout } from './layout.js';
 import { createWinampLive } from './winamp-live.js';
 import { enhanceKit, RENDER_MODES } from './skin-enhance.js';
@@ -304,12 +305,29 @@ async function handle(command) {
 }
 app.ports.command.subscribe(command=>handle(command).catch(fail));
 
+// Focus session asks for full screen. Leaving it exits full screen; if a new session starts before that exit has
+// finished (Esc then ` in quick succession), full screen comes back once it has.
+let leavingFullscreen=false,enterAfterLeaving=false;
 function focusSession(active,fullscreen=true){
-  focusActive=active;
-  if(!active){if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});return;}
-  if(fullscreen&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().then(()=>{wasFullscreen=true;}).catch(()=>{});
+  focusActive=active;enterAfterLeaving=false;
+  if(!active){if(document.fullscreenElement&&!leavingFullscreen){leavingFullscreen=true;document.exitFullscreen().catch(()=>{leavingFullscreen=false;});}return;}
+  if(fullscreen)enterFullscreen();
 }
-document.addEventListener('fullscreenchange',()=>{if(document.fullscreenElement){wasFullscreen=true;}else if(wasFullscreen){wasFullscreen=false;focusActive=false;send({type:'focus',active:false});}});
+function enterFullscreen(){
+  if(leavingFullscreen){enterAfterLeaving=true;return;}
+  if(document.fullscreenElement||!document.documentElement.requestFullscreen)return;
+  // In full screen the browser takes Esc for itself. Where it can lend it to the page (Chromium's keyboard lock),
+  // Esc first closes the keyboard help and then leaves Focus session, as everywhere else; holding Esc still leaves full screen.
+  document.documentElement.requestFullscreen().then(()=>{wasFullscreen=true;return navigator.keyboard?.lock?.(['Escape']);}).catch(()=>{});
+}
+document.addEventListener('fullscreenchange',()=>{
+  if(document.fullscreenElement){wasFullscreen=true;return;}
+  if(!wasFullscreen)return;
+  wasFullscreen=false;
+  if(leavingFullscreen){leavingFullscreen=false;if(enterAfterLeaving&&focusActive){enterAfterLeaving=false;enterFullscreen();}return;}
+  // The browser left full screen by itself (Esc held, F11): leave Focus session too.
+  if(focusActive){focusActive=false;send({type:'focus',active:false});}
+});
 
 async function toggleMic() {
   const epoch=++micEpoch;
@@ -370,18 +388,111 @@ document.addEventListener('pointermove',event=>{if(!drag)return;if(drag.kind==='
 const endDrag=()=>{if(drag)drag.element.classList.remove('jogging');drag=null;};
 document.addEventListener('pointerup',endDrag);document.addEventListener('pointercancel',endDrag);
 function seekWave(deck,fraction){const duration=engine.state[deck].duration,visibleDuration=duration/zoom[deck],start=zoom[deck]>1?clamp(engine.state[deck].position-visibleDuration/2,0,duration-visibleDuration):0;engine.set(deck,'seek',start+clamp(fraction,0,1)*visibleDuration).catch(fail);recent=[];lastStart=performance.now();}
+// Keyboard control mode (docs/KEYBOARD.md). src/keyboard.js turns a key into an action; Elm carries it out
+// like the matching button, except the held keys (nudge bends, crossfader glides), which run here.
+const keyContext=()=>document.querySelector('[data-keys]')?.dataset.keys||'page';
+// Space and Enter press a button only if the focus got there by Tab (see controlKeeps).
+let lastInput='',tabbed=null;
+document.addEventListener('keydown',event=>{lastInput=event.key;},true);
+document.addEventListener('pointerdown',()=>{lastInput='';},true);
+document.addEventListener('focusin',event=>{tabbed=lastInput==='Tab'?event.target:null;});
+const focusInfo=element=>!element||element===document.body?{}:{tag:element.tagName,type:element.tagName==='INPUT'?element.type:'',role:element.getAttribute('role')||'',editable:element.isContentEditable,tabbed:element===tabbed};
+const heldNudges=new Map(),glides=new Map();
+let glideAt=0,glideFrame=null;
+function bendHeld(deck){
+  const bend=heldBend(heldNudges.values(),deck);
+  engine.set(deck,'bend',bend).catch(fail);
+  document.getElementById(deck?'jog-b':'jog-a')?.classList.toggle('jogging',bend!==0);
+}
+function pressNudge(code,action){
+  if(heldNudges.has(code))return;
+  send({type:'key',...action});
+  const held={deck:action.deck,dir:action.dir,fine:action.shift,bending:false};
+  held.timer=setTimeout(()=>{held.bending=true;bendHeld(held.deck);},NUDGE.holdMs);
+  heldNudges.set(code,held);
+}
+function releaseNudge(code){
+  const held=heldNudges.get(code);if(!held)return;
+  clearTimeout(held.timer);heldNudges.delete(code);
+  if(held.bending)bendHeld(held.deck);
+}
+// The crossfader moves for as long as G or H is down, measured in time so key repeat rates don't matter.
+function glideStep(){
+  const now=performance.now();let delta=0;
+  for(const glide of glides.values())delta+=glide.dir*(now-glideAt)/1000/(glide.fine?GLIDE.fineSeconds:GLIDE.seconds);
+  glideAt=now;if(delta)send({type:'key',action:'crossfade',value:delta});
+}
+function glideLoop(){glideStep();glideFrame=requestAnimationFrame(glideLoop);}
+function pressGlide(code,action){
+  if(glides.has(code))return;
+  if(glides.size)glideStep();else glideAt=performance.now();
+  glides.set(code,{dir:action.dir,fine:action.shift});
+  if(glideFrame===null)glideFrame=requestAnimationFrame(glideLoop);
+}
+function releaseGlide(code){
+  if(!glides.has(code))return;
+  glideStep();glides.delete(code);
+  if(!glides.size){cancelAnimationFrame(glideFrame);glideFrame=null;}
+}
+function releaseHeldKeys(){for(const code of [...heldNudges.keys()])releaseNudge(code);for(const code of [...glides.keys()])releaseGlide(code);}
+// A short glow on the control a key just used, so the keys are easy to learn. (An attribute, not a class:
+// Elm rewrites class names when the control changes state.)
+const deckName=deck=>deck?'B':'A';
+const flashTargets={
+  play:a=>`:is([aria-label="Play deck ${deckName(a.deck)}"],[aria-label="Pause deck ${deckName(a.deck)}"]):not(:disabled)`,
+  playBoth:()=>'.play-both-button',
+  cue:a=>a.shift?`[aria-label="Set cue deck ${deckName(a.deck)}"]`:`.deck[data-deck="${a.deck}"] .transport-cue`,
+  nudge:a=>`[aria-label="Nudge deck ${deckName(a.deck)} ${a.dir<0?'backward':'forward'}"]`,
+  pitch:a=>`[aria-label="Fine ${a.dir<0?'decrease':'increase'} deck ${deckName(a.deck)} pitch"]`,
+  pitchZero:a=>`.pitch-section[data-deck="${a.deck}"] .pitch-fine button[title="Reset pitch"]`,
+  volume:a=>`[aria-label="Deck ${deckName(a.deck)} volume"]`,
+  track:a=>`[aria-label="${mode==='pro'?(a.shift?'Previous track':'Next track'):(a.shift?'Change track':'Randomize tempo')} deck ${deckName(a.deck)}"]`,
+  check:()=>'.coach-panel .coach-bottom .primary-button',
+  new:()=>'.toolbar-actions .small-button',
+  hideBpm:()=>'.toolbar-actions .toggle-label',
+  tap:()=>'.tap-button',
+  addElement:()=>'.add-element-button',
+  crossfade:()=>'[aria-label="Crossfader"]',
+  crossfadeCenter:()=>'[aria-label="Crossfader"]',
+  focus:()=>'.session-focus-button, .exit-focus-button',
+  mode:a=>`.mode-list .mode-card:nth-child(${a.value})`,
+};
+const flashTimers=new WeakMap();
+function flashKey(action){
+  const selector=flashTargets[action.action]?.(action);if(!selector)return;
+  for(const element of document.querySelectorAll(selector)){
+    element.setAttribute('data-key-flash','');clearTimeout(flashTimers.get(element));
+    flashTimers.set(element,setTimeout(()=>element.removeAttribute('data-key-flash'),160));
+  }
+}
+function runShortcut(action,code,context){
+  if(action.action==='none')return;
+  flashKey(action);
+  if(action.action==='escape'){
+    // Esc closes the help or leaves Focus session; otherwise it lets go of the focused control so keys reach the decks.
+    if(context==='help'||context==='focus')send({type:'key',action:'escape'});
+    else if(document.activeElement&&document.activeElement!==document.body)document.activeElement.blur();
+  }
+  else if(action.action==='nudge')pressNudge(code,action);
+  else if(action.action==='crossfade')pressGlide(code,action);
+  else send({type:'key',...action});
+}
 document.addEventListener('keydown',event=>{
-  if(event.ctrlKey||event.metaKey||event.altKey)return;
-  if(focusActive&&event.code==='Space'&&event.target.matches('input[type=range]'))event.preventDefault();
+  if(event.ctrlKey||event.metaKey||event.altKey||event.defaultPrevented)return;
+  // A focused pitch fader or jog wheel moves with the arrows (and Page Up/Down, Home/End) itself.
   const pitch=event.target.closest?.('.vertical-fader');
   if(pitch){const deck=pitchDeck(pitch),delta=keyPitchDelta(event,pitch.getAttribute('data-pitch-sensitivity')||sensitivities[deck]);if(delta!==null||event.code==='Home'||event.code==='End'){event.preventDefault();event.stopPropagation();applyPitch(pitch,delta||0,event.code==='Home'?Number(pitch.min):event.code==='End'?Number(pitch.max):null);return;}}
-  if(event.target.matches('input,textarea,select'))return;
   const jog=jogDeck(event.target);
   if(jog&&['Home','End'].includes(event.code)){event.preventDefault();engine.set(jog.deck,'seek',event.code==='Home'?0:Math.max(0,engine.state[jog.deck].duration-.01)).catch(fail);return;}
   if(jog&&['ArrowLeft','ArrowRight'].includes(event.code)){event.preventDefault();engine.set(jog.deck,'nudge',event.code==='ArrowRight'?.04:-.04).catch(fail);return;}
-  if(!event.target.closest('button,a')&&['Space','ArrowLeft','ArrowRight'].includes(event.code))event.preventDefault();
+  if(controlKeeps(focusInfo(event.target instanceof Element?event.target:null),event.code))return;
+  const context=keyContext(),action=shortcutFor(event,context);
+  if(!action)return;
+  event.preventDefault();
+  runShortcut(action,event.code,context);
 });
-window.addEventListener('blur',()=>{endDrag();for(let i=0;i<2;i++)if(engine.node){clearTimeout(bendTimers[i]);engine.set(i,'bend',0).catch(()=>{});}});
+document.addEventListener('keyup',event=>{releaseNudge(event.code);releaseGlide(event.code);});
+window.addEventListener('blur',()=>{endDrag();releaseHeldKeys();for(let i=0;i<2;i++)if(engine.node){clearTimeout(bendTimers[i]);engine.set(i,'bend',0).catch(()=>{});}});
 
 let lastDraw=0;
 function draw(now) {
