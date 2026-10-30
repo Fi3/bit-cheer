@@ -2,21 +2,32 @@ import { assetUrl } from './assets.js';
 import { clamp, estimateTempo, generatedWaveform, waveformPeaks } from './training.js';
 import { availableChannelCount, validateRouting, buildHardwareGraph } from './output-routing.js';
 import { MAX_FOLDER_FILE } from './library.js';
+import { INSTRUMENTS, KICK_SOUNDS, kickStudyName } from './instruments.js';
+import { LOOPS, findLoop } from './loops.js';
 
 const MAX_PCM_FRAMES = 28_800_000;
 export const VOICE_COUNT = 20;
 export const MAX_ELEMENT_MASK = (1 << VOICE_COUNT) - 1;
-const newVoices = () => Array.from({ length: VOICE_COUNT }, (_, voice) => ({ gain: 1, pan: 0, pattern: -1, preview: voice === 0 ? 0x1111 : 0 }));
+const newVoices = () => Array.from({ length: VOICE_COUNT }, (_, voice) => ({ gain: 1, pan: 0, pattern: -1, preview: voice === 0 ? 0x1111 : 0, sound: 0 }));
 const randomWord = () => crypto.getRandomValues(new Uint32Array(1))[0];
 function seededRandom(seed) { let state = seed || 1; return () => { state ^= state << 13; state ^= state >>> 17; state ^= state << 5; return (state >>> 0) / 4294967296; }; }
-function freshSeed(previous) { let seed = randomWord() || 1; if ((seed & 7) === (previous & 7)) seed = (seed ^ 1) >>> 0; return seed || 8; }
+function freshSeed(previous) { let seed = randomWord() || 1; if (seed === previous) seed = (seed ^ 1) >>> 0; return seed || 8; }
+// A random choice from 0…count-1 that avoids the given values when it can.
+function pickAvoiding(count, avoid) {
+  const choices = Array.from({ length: count }, (_, i) => i).filter(i => !avoid.includes(i));
+  const pool = choices.length ? choices : Array.from({ length: count }, (_, i) => i);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+// Every voice gets one of its sounds; the kick is chosen separately so the two decks can differ.
+const randomSounds = (voices, random) => voices.map((voice, index) => index ? { ...voice, sound: Math.floor(random() * INSTRUMENTS[index].sounds.length) } : voice);
 const COALESCED_CONTROLS = new Set(['seek', 'bend']);
 const scheduleFrame = callback => typeof requestAnimationFrame === 'function' ? requestAnimationFrame(callback) : setTimeout(callback, 16);
 
 export class AudioEngine {
   constructor(send) {
     this.send = send; this.context = null; this.node = null; this.pending = null;
-    this.state = [0, 1].map(i => ({ bpm: i ? 124 : 120, pitch: 0, playing: false, position: 0, beat: 0, peak: 0, duration: 32 * 60 / (i ? 124 : 120), elements: 1, seed: i + 1, source: 'generated', trackId: null, voices: newVoices(), solo: -1, name: i ? 'KICK STUDY · 02' : 'KICK STUDY · 01' }));
+    // Foundation's two decks start on two different kicks: Velvet on A, Club Punch on B.
+    this.state = [0, 1].map(i => ({ bpm: i ? 124 : 120, pitch: 0, playing: false, position: 0, beat: 0, peak: 0, duration: 32 * 60 / (i ? 124 : 120), elements: 1, seed: i + 1, source: 'generated', trackId: null, loopId: null, voices: newVoices().map((voice, index) => index ? voice : { ...voice, sound: i }), solo: -1, name: kickStudyName(i) }));
     this.waveforms = [generatedWaveform(1, 1), generatedWaveform(1, 2)];
     this.crossfade = .5; this.masterVolume = .75; this.volumes = [.8, .8]; this.balances = [0, 0]; this.splitCue = false;
     this.routing = { mode: 'mix', a: 0, b: 1 }; this.hardwareGraph = null;
@@ -134,7 +145,7 @@ export class AudioEngine {
         this.gains.push(gain); this.panners.push(pan); this.analysers.push(analyser);
       }
       this.mix();
-      for (let i = 0; i < 2; i++) { this.post({ type: 'randomize', deck: i, seed: this.state[i].seed, bpm: this.state[i].bpm }); this.post({ type: 'set', deck: i, param: 'elements', value: this.state[i].elements }); }
+      for (let i = 0; i < 2; i++) { this.post({ type: 'randomize', deck: i, seed: this.state[i].seed, bpm: this.state[i].bpm }); this.post({ type: 'set', deck: i, param: 'elements', value: this.state[i].elements }); this.postVoices(i, ['sound']); }
       await resume;
       this.send({ type: 'ready' });
       this.emitRouting();
@@ -304,19 +315,27 @@ export class AudioEngine {
   activeElements(deck) { return this.state[deck].solo >= 0 ? 1 << this.state[deck].solo : this.state[deck].elements; }
 
   emitDeckChanged(deck) {
-    const { name, bpm, pitch, elements, duration, source, position, playing, voices, solo } = this.state[deck];
-    this.send({ type: 'deckChanged', deck, name, bpm, pitch, elements, duration, source, position, playing, voices, solo });
+    const { name, bpm, pitch, elements, duration, source, position, playing, voices, solo, loopId } = this.state[deck];
+    this.send({ type: 'deckChanged', deck, name, bpm, pitch, elements, duration, source, position, playing, voices, solo, loopId });
+  }
+
+  // Sends the deck's voice settings (gain, pan, sound) to the engine.
+  postVoices(deck, params = ['gain', 'pan', 'sound']) {
+    this.state[deck].voices.forEach((voice, index) => {
+      for (const param of params) this.post({ type: 'voice', deck, voice: index, param, value: voice[param] });
+    });
   }
 
   async setVoice(deck, voice, param, rawValue) {
     if ((deck !== 0 && deck !== 1) || !Number.isInteger(voice) || voice < 0 || voice >= VOICE_COUNT) throw new Error('Choose a valid deck and instrument.');
-    if (!['gain', 'pan', 'pattern', 'reset'].includes(param)) throw new Error('Unknown instrument control.');
+    if (!['gain', 'pan', 'pattern', 'reset', 'sound'].includes(param)) throw new Error('Unknown instrument control.');
     await this.ensure();
     let value = Number(rawValue);
     if (param !== 'reset' && !Number.isFinite(value)) return;
     const settings = this.state[deck].voices[voice];
     if (param === 'gain') settings.gain = value = clamp(value, 0, 1.5);
     if (param === 'pan') settings.pan = value = clamp(value, -1, 1);
+    if (param === 'sound') settings.sound = value = clamp(Math.round(value), 0, INSTRUMENTS[voice].sounds.length - 1);
     if (param === 'pattern') settings.pattern = value = value < 0 ? -1 : Math.round(value) & 65535;
     if (param === 'reset') { settings.pattern = -1; value = 0; }
     if (settings.pattern >= 0) settings.preview = settings.pattern;
@@ -364,77 +383,107 @@ export class AudioEngine {
     this.emitDeckChanged(deck);
   }
 
-  async changeGeneratedTrack(deck, mode, elements) {
+  // Puts new generated material on one deck: a fresh rhythm from the model, at pitch 0 and the given
+  // source tempo, from the start of the loop. Playback keeps going if it was playing.
+  generate(deck, { seed, bpm, elements, name, voices, loopId = null }) {
+    const selected = this.state[deck];
+    ++this.loadVersions[deck];
+    Object.assign(selected, { seed, bpm, pitch: 0, elements, name, voices, loopId, source: 'generated', trackId: null, position: 0, beat: 0, duration: 32 * 60 / bpm, solo: -1 });
+    this.post({ type: 'randomize', deck, seed, bpm });
+    this.post({ type: 'set', deck, param: 'pitch', value: 0 });
+    this.post({ type: 'set', deck, param: 'elements', value: elements });
+    this.postVoices(deck);
+    this.waveforms[deck] = generatedWaveform(elements, seed); this.queueWaveform(deck);
+  }
+
+  // Change track. Foundation swaps in another kick (never the one the other deck plays); the other
+  // generated modes load another named loop. keepTempo holds the deck's tempo (fixed-tempo drills).
+  async changeGeneratedTrack(deck, mode, { keepTempo = false } = {}) {
     if (deck !== 0 && deck !== 1) throw new Error('Choose deck A or B.');
     await this.ensure(); this.flushControls(deck);
-    const selected = this.state[deck];
-    const seed = freshSeed(selected.seed), random = seededRandom(seed);
-    let mask = 1;
-    if (mode !== 'foundation') {
-      const instruments = Array.from({ length: VOICE_COUNT - 1 }, (_, i) => i + 1);
-      for (let i = instruments.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [instruments[i], instruments[j]] = [instruments[j], instruments[i]]; }
-      const count = 2 + Math.floor(random() * 4);
-      for (const voice of instruments.slice(0, count)) mask |= 1 << voice;
-      const previous = Number.isFinite(elements) ? elements : selected.elements;
-      if (mask === previous || mask === selected.elements) mask = (mask ^ (1 << instruments[0])) | (1 << instruments[count]);
+    const selected = this.state[deck], other = this.state[1 - deck];
+    if (mode === 'foundation') {
+      const kick = pickAvoiding(KICK_SOUNDS, [selected.voices[0].sound, other.voices[0].sound]);
+      // A new source starts at its native tempo; only Randomize tempo changes tempo.
+      this.generate(deck, { seed: freshSeed(selected.seed), bpm: selected.bpm, elements: 1, name: kickStudyName(kick),
+        voices: selected.voices.map((voice, index) => ({ ...voice, pattern: -1, preview: 0, ...(index ? {} : { sound: kick }) })) });
+    } else {
+      // Prefer loops close enough to the other deck's tempo to match on the usual ±8% fader.
+      const tempo = other.bpm * (1 + other.pitch / 100);
+      const fresh = LOOPS.filter(loop => loop.id !== selected.loopId && loop.id !== other.loopId);
+      const near = fresh.filter(loop => Math.abs(loop.bpm / tempo - 1) <= .06);
+      const pool = near.length ? near : fresh.length ? fresh : LOOPS;
+      this.applyLoop(deck, pool[Math.floor(Math.random() * pool.length)], { keepTempo });
     }
-    // A new source starts at its native tempo; only Randomize tempo changes tempo.
-    const bpm = selected.bpm, pitch = 0;
-    ++this.loadVersions[deck];
-    Object.assign(selected, { seed, bpm, pitch, elements: mask, source: 'generated', trackId: null, position: 0, beat: 0, duration: 32 * 60 / bpm, solo: -1,
-      name: `${mode === 'foundation' ? 'KICK STUDY' : 'RHYTHM STUDY'} · ${String(seed % 100000).padStart(5, '0')}`,
-      voices: selected.voices.map(voice => ({ ...voice, pattern: -1, preview: 0 })) });
-    this.post({ type: 'randomize', deck, seed, bpm });
-    this.post({ type: 'set', deck, param: 'pitch', value: pitch });
-    this.post({ type: 'set', deck, param: 'elements', value: mask });
-    this.waveforms[deck] = generatedWaveform(mask, seed); this.queueWaveform(deck);
+    this.emitDeckChanged(deck);
+  }
+
+  applyLoop(deck, loop, { keepTempo = false } = {}) {
+    const voices = newVoices().map((voice, index) => ({ ...voice, ...(loop.voices[index] || {}) }));
+    this.generate(deck, { seed: loop.seed, bpm: keepTempo ? this.state[deck].bpm : loop.bpm, elements: loop.elements, name: loop.name, voices, loopId: loop.id });
+  }
+
+  // The loop picker's Load: that loop, from its start, paused (like loading a recording).
+  async loadLoop(deck, id, options) {
+    if (deck !== 0 && deck !== 1) throw new Error('Choose deck A or B.');
+    const loop = findLoop(id);
+    if (!loop) throw new Error('That loop is not in the library.');
+    await this.ensure(); this.flushControls(deck);
+    this.applyLoop(deck, loop, options);
+    this.state[deck].playing = false;
+    this.post({ type: 'set', deck, param: 'play', value: 0 });
+    this.emitDeckChanged(deck);
+  }
+
+  // The loop picker's Previous / Next: the neighbouring loop in the library, keeping playback.
+  async stepLoop(deck, direction, options) {
+    if (deck !== 0 && deck !== 1) throw new Error('Choose deck A or B.');
+    await this.ensure(); this.flushControls(deck);
+    const index = LOOPS.findIndex(loop => loop.id === this.state[deck].loopId);
+    const next = index < 0 ? (direction < 0 ? LOOPS.length - 1 : 0) : (index + direction + LOOPS.length) % LOOPS.length;
+    this.applyLoop(deck, LOOPS[next], options);
     this.emitDeckChanged(deck);
   }
 
   async chaos(deck) {
     if (deck !== 0 && deck !== 1) throw new Error('Choose deck A or B.');
-    const previousPitch = this.state[deck].pitch;
-    await this.changeGeneratedTrack(deck, 'builder');
-    // CHAOS changes composition, so it retains its separate tempo/pitch contract.
-    this.state[deck].pitch = previousPitch;
-    this.post({ type: 'set', deck, param: 'pitch', value: previousPitch });
-    const selected = this.state[deck], random = seededRandom(selected.seed ^ 0x6d2b79f5);
+    await this.ensure(); this.flushControls(deck);
+    // CHAOS changes composition, so it keeps the deck's tempo and pitch.
+    const selected = this.state[deck], previousPitch = selected.pitch;
+    const seed = freshSeed(selected.seed), random = seededRandom(seed ^ 0x6d2b79f5);
     const order = Array.from({ length: VOICE_COUNT - 1 }, (_, i) => i + 1);
     for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
     const count = 12 + Math.floor(random() * 9);
     let elements = 1; for (const voice of order.slice(0, count - 1)) elements |= 1 << voice;
-    selected.elements = elements; selected.name = `CHAOS STUDY · ${String(selected.seed % 100000).padStart(5, '0')}`;
-    selected.voices = selected.voices.map((voice, index) => {
+    const voices = selected.voices.map((voice, index) => {
       let pattern = 0;
       for (let step = 0; step < 16; step++) if (random() < (index === 0 ? .38 : .45)) pattern |= 1 << step;
       if (index === 0) pattern |= 0x1111;
       if (!pattern) pattern = 1 << Math.floor(random() * 16);
-      return { gain: Math.round((.2 + random() * .5) * 100) / 100, pan: index === 0 ? 0 : Math.round((random() * 1.6 - .8) * 100) / 100, pattern, preview: pattern };
+      return { gain: Math.round((.2 + random() * .5) * 100) / 100, pan: index === 0 ? 0 : Math.round((random() * 1.6 - .8) * 100) / 100, pattern, preview: pattern,
+        sound: Math.floor(random() * INSTRUMENTS[index].sounds.length) };
     });
-    this.post({ type: 'set', deck, param: 'elements', value: elements });
-    selected.voices.forEach((voice, index) => {
-      for (const param of ['gain', 'pan', 'pattern']) this.post({ type: 'voice', deck, voice: index, param, value: voice[param] });
-    });
+    this.generate(deck, { seed, bpm: selected.bpm, elements, name: `CHAOS STUDY · ${String(seed % 100000).padStart(5, '0')}`, voices });
+    selected.pitch = previousPitch;
+    this.post({ type: 'set', deck, param: 'pitch', value: previousPitch });
+    voices.forEach((voice, index) => this.post({ type: 'voice', deck, voice: index, param: 'pattern', value: voice.pattern }));
     this.queueWaveform(deck); this.emitDeckChanged(deck);
   }
 
+  // A new mode, lesson or drill: fresh study loops on both decks. The two decks always get different
+  // kicks; outside Foundation every other voice gets a random sound too.
   async randomize(mode, elements) {
     await this.ensure(); this.flushControls();
     const base = 100 + Math.floor(Math.random() * 31), delta = (2 + Math.random() * (mode === 'foundation' ? 3 : 6)) * (Math.random() < .5 ? -1 : 1);
     const bpms = [base, Math.round((base + delta) * 10) / 10], names = [];
+    const firstKick = Math.floor(Math.random() * KICK_SOUNDS), kicks = [firstKick, pickAvoiding(KICK_SOUNDS, [firstKick])];
     for (let i = 0; i < 2; i++) {
-      ++this.loadVersions[i]; // An earlier, still-decoding import must not replace new generated material.
-      const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-      const name = `${elements === 1 ? 'KICK STUDY' : 'RHYTHM STUDY'} · ${String(seed % 99).padStart(2, '0')}`;
-      Object.assign(this.state[i], { bpm: bpms[i], pitch: 0, seed, elements, name, source: 'generated', trackId: null, position: 0, beat: 0, duration: 32 * 60 / bpms[i], solo: -1, voices: newVoices() });
-      this.waveforms[i] = generatedWaveform(elements, seed); names[i] = name; this.queueWaveform(i);
-      this.post({ type: 'randomize', deck: i, seed, bpm: bpms[i] });
-      for (let voice = 0; voice < VOICE_COUNT; voice++) {
-        this.post({ type: 'voice', deck: i, voice, param: 'gain', value: 1 });
-        this.post({ type: 'voice', deck: i, voice, param: 'pan', value: 0 });
-      }
-      this.post({ type: 'set', deck: i, param: 'elements', value: elements });
-      this.post({ type: 'set', deck: i, param: 'pitch', value: 0 });
+      // An earlier, still-decoding import must not replace new generated material (generate() bumps loadVersions).
+      const seed = crypto.getRandomValues(new Uint32Array(1))[0], random = seededRandom(seed ^ 0x2545f491);
+      const name = mode === 'foundation' ? kickStudyName(kicks[i]) : `${elements === 1 ? 'KICK STUDY' : 'RHYTHM STUDY'} · ${String(seed % 99).padStart(2, '0')}`;
+      const fresh = newVoices().map((voice, index) => index ? voice : { ...voice, sound: kicks[i] });
+      this.generate(i, { seed, bpm: bpms[i], elements, name, voices: mode === 'foundation' ? fresh : randomSounds(fresh, random) });
+      names[i] = name;
     }
     this.send({ type: 'randomized', bpms, names });
   }
@@ -470,7 +519,7 @@ export class AudioEngine {
     if (version !== this.loadVersions[deck]) return false;
     this.cancelWaveform(deck);
     this.waveforms[deck] = peaks;
-    Object.assign(this.state[deck], { bpm, pitch: 0, playing: false, position: 0, beat: -(estimate?.offset || 0) * bpm / 60, duration: loaded.duration, source: 'pcm', name, trackId: null });
+    Object.assign(this.state[deck], { bpm, pitch: 0, playing: false, position: 0, beat: -(estimate?.offset || 0) * bpm / 60, duration: loaded.duration, source: 'pcm', name, trackId: null, loopId: null });
     this.send({ type: 'track', deck, name, bpm, duration: loaded.duration });
     this.send({ type: 'notice', message: knownBpm ? `${name} loaded. Use CUE to find your first downbeat.` : `${name} loaded. BPM ${estimate ? 'estimated' : 'defaults to'} ${bpm}; correct it with the track BPM field if needed.` });
     return true;

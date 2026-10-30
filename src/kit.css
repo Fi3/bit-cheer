@@ -61,7 +61,8 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] :is(.app-shell, .help-modal) { font-synthesis: none; }
 :root[data-layout=kit] .app-shell :is(button, a, input, select, [tabindex]):focus-visible { outline: var(--kp) solid var(--k-accent); outline-offset: var(--kp); }
 :root[data-layout=kit] ::selection { background: var(--k-list-sel); color: var(--k-list-sel-fg); }
-:root[data-layout=kit] .app-shell a { color: var(--k-accent); }
+/* Links sit in windows, so they take the windows' highlight; the footer's sit on the desk (below). */
+:root[data-layout=kit] .app-shell a { color: var(--k-list-hi); }
 
 /* ---------- reusable pieces ---------- */
 /* Skin font, used for labels the way Winamp uses TEXT.BMP. */
@@ -157,6 +158,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 
 /* Toggles light the skin's equalizer ON button. */
 :root[data-layout=kit] .app-shell .toggle-label { display: inline-flex; flex-direction: row-reverse; align-items: center; gap: calc(4 * var(--kp)); font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; color: inherit; cursor: pointer; }
+:root[data-layout=kit] .app-shell .page-heading .toggle-label { color: var(--k-desk-dim); }
 :root[data-layout=kit] .app-shell .toggle-label input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 :root[data-layout=kit] .app-shell .toggle-track {
   flex: 0 0 auto; width: calc(26 * var(--kp)); height: calc(12 * var(--kp)); border: 0; border-radius: 0; box-shadow: none;
@@ -711,9 +713,10 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .voice-row.soloed { background: color-mix(in srgb, var(--k-list-sel) 75%, var(--k-list-bg)); }
 :root[data-layout=kit] .app-shell .voice-row.muted-by-solo { opacity: .55; }
 :root[data-layout=kit] .app-shell .voice-strip, :root[data-layout=kit] .app-shell .module-composer .voice-strip {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; grid-template-areas: "name name solo" "gain pan pan"; gap: calc(2 * var(--kp)) calc(4 * var(--kp)); align-items: center; padding: 0; background: none; border: 0;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; grid-template-areas: "name sound solo" "gain pan pan"; gap: calc(2 * var(--kp)) calc(4 * var(--kp)); align-items: center; padding: 0; background: none; border: 0;
 }
 :root[data-layout=kit] .app-shell .voice-strip > .voice-name { grid-area: name; }
+:root[data-layout=kit] .app-shell .voice-strip > .voice-sound { grid-area: sound; width: 100%; min-width: 0; }
 :root[data-layout=kit] .app-shell .voice-strip > .voice-gain { grid-area: gain; }
 :root[data-layout=kit] .app-shell .voice-strip > .voice-pan { grid-area: pan; }
 :root[data-layout=kit] .app-shell .voice-strip > .voice-solo { grid-area: solo; }
@@ -829,8 +832,8 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .crate-pagination { display: flex; align-items: center; justify-content: space-between; gap: calc(4 * var(--kp)); margin-top: calc(3 * var(--kp)); font: var(--k-text)/1 var(--k-pixel); }
 
 /* Pro track pickers: each one a playlist window. */
-:root[data-layout=kit] .app-shell .pro-track-pickers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(10 * var(--kp)); margin: calc(10 * var(--kp)) 0 0; padding: 0; background: none; border: 0; }
-:root[data-layout=kit] .app-shell .pro-track-pickers .player-module {
+:root[data-layout=kit] .app-shell .track-pickers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(10 * var(--kp)); margin: calc(10 * var(--kp)) 0 0; padding: 0; background: none; border: 0; }
+:root[data-layout=kit] .app-shell .track-pickers .player-module {
   padding: calc(20 * var(--kp)) calc(20 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) calc(12 * var(--kp));
   background:
     var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
@@ -841,18 +844,18 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
     var(--k-list-bg);
   box-shadow: 0 calc(3 * var(--kp)) 0 #0007;
 }
-:root[data-layout=kit] .app-shell .pro-track-pickers .player-module::after {
+:root[data-layout=kit] .app-shell .track-pickers .player-module::after {
   content: ''; display: block; position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--k-bottom-edge, 6) * var(--kp)); pointer-events: none;
   background:
     var(--k-pl-bl-edge, var(--k-pl-bl)) left bottom / calc(12 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) no-repeat,
     var(--k-pl-br-edge, var(--k-pl-br)) right bottom / calc(20 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) no-repeat,
     var(--k-pl-b-edge, var(--k-pl-b)) left bottom / calc(25 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) repeat-x;
 }
-:root[data-layout=kit] .app-shell .pro-track-pickers .module-titlebar { position: absolute; top: 0; left: calc(25 * var(--kp)); right: calc(25 * var(--kp)); height: calc(20 * var(--kp)); background: none; }
-:root[data-layout=kit] .app-shell .pro-track-pickers .module-titlebar > strong { left: 50%; top: calc(4 * var(--kp)); transform: translateX(-50%); max-width: 100%; padding: var(--kp) calc(3 * var(--kp)); box-shadow: 0 0 0 var(--kp) var(--k-title-bg); }
-:root[data-layout=kit] .app-shell .pro-track-pickers .module-window-actions { right: calc(-25 * var(--kp)); width: calc(25 * var(--kp)); height: calc(20 * var(--kp)); }
-:root[data-layout=kit] .app-shell .pro-track-pickers .module-titlebar .module-collapse { left: calc(4 * var(--kp)); }
-:root[data-layout=kit] .app-shell .pro-track-pickers .module-titlebar .module-remove { left: calc(14 * var(--kp)); }
+:root[data-layout=kit] .app-shell .track-pickers .module-titlebar { position: absolute; top: 0; left: calc(25 * var(--kp)); right: calc(25 * var(--kp)); height: calc(20 * var(--kp)); background: none; }
+:root[data-layout=kit] .app-shell .track-pickers .module-titlebar > strong { left: 50%; top: calc(4 * var(--kp)); transform: translateX(-50%); max-width: 100%; padding: var(--kp) calc(3 * var(--kp)); box-shadow: 0 0 0 var(--kp) var(--k-title-bg); }
+:root[data-layout=kit] .app-shell .track-pickers .module-window-actions { right: calc(-25 * var(--kp)); width: calc(25 * var(--kp)); height: calc(20 * var(--kp)); }
+:root[data-layout=kit] .app-shell .track-pickers .module-titlebar .module-collapse { left: calc(4 * var(--kp)); }
+:root[data-layout=kit] .app-shell .track-pickers .module-titlebar .module-remove { left: calc(14 * var(--kp)); }
 :root[data-layout=kit] .app-shell .track-picker { display: grid; gap: calc(4 * var(--kp)); padding: 0; background: none; border: 0; }
 :root[data-layout=kit] .app-shell .track-picker label { display: grid; gap: calc(2 * var(--kp)); font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; color: var(--k-list-dim); }
 :root[data-layout=kit] .app-shell .track-picker select { width: 100%; }
@@ -866,6 +869,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .picker-current strong { font: var(--k-text)/1 var(--k-pixel); color: var(--k-list-hi); }
 :root[data-layout=kit] .app-shell .source-settings { display: flex; align-items: end; gap: calc(4 * var(--kp)); flex-wrap: wrap; }
 :root[data-layout=kit] .app-shell .track-picker > small:not(.library-count) { display: none; }
+:root[data-layout=kit] .app-shell .loop-vibe { margin: 0; font: var(--k-text)/16px var(--k-pixel); color: var(--k-list-fg); }
 
 /* Rack footer, play-both and tips. */
 :root[data-layout=kit] .app-shell .under-decks { display: flex; align-items: center; justify-content: flex-end; gap: calc(6 * var(--kp)); margin: calc(6 * var(--kp)) 0 0; }
@@ -880,6 +884,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .play-both-button small { font: var(--k-text)/var(--k-text) var(--k-pixel); height: calc(8 * var(--kp)); display: inline-flex; align-items: center; padding: 0 calc(2 * var(--kp)); background: color-mix(in srgb, var(--k-accent-text) 22%, transparent); color: inherit; border: 0; border-radius: 0; }
 :root[data-layout=kit] .app-shell .under-decks .muted { font: var(--k-text)/14px var(--k-pixel); color: var(--k-desk-dim); }
 :root[data-layout=kit] .app-shell .footer { margin-top: calc(10 * var(--kp)); padding: calc(4 * var(--kp)) 0 0; border: 0; border-top: var(--kp) solid color-mix(in srgb, var(--k-list-fg) 14%, transparent); background: none; color: var(--k-desk-dim); }
+:root[data-layout=kit] .app-shell .skin-attribution a { color: var(--k-accent); }
 :root[data-layout=kit] .app-shell .footer a { color: var(--k-accent); font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; }
 :root[data-layout=kit] .app-shell .footer-separator { opacity: .5; padding: 0 calc(3 * var(--kp)); }
 :root[data-layout=kit] .app-shell .keep-together { white-space: nowrap; }
@@ -1194,7 +1199,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 /* Below two windows' width the decks stack: everything keeps one window's width, so edges still line up. */
 @media (max-width: 1179px) {
   :root[data-layout=kit] .app-shell:not(.session-focus-view) { max-width: calc(var(--deck-w) + 40px); }
-  :root[data-layout=kit] .app-shell :is(.decks, .pro-track-pickers) { grid-template-columns: var(--deck-w); justify-content: center; }
+  :root[data-layout=kit] .app-shell :is(.decks, .track-pickers) { grid-template-columns: var(--deck-w); justify-content: center; }
   :root[data-layout=kit] .app-shell .mode-list { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   :root[data-layout=kit] .app-shell .topbar { grid-template-columns: auto minmax(0, 1fr); height: auto; row-gap: calc(3 * var(--kp)); padding-bottom: calc(3 * var(--kp)); background-color: var(--k-frame); }
   :root[data-layout=kit] .app-shell .topbar > .brand { grid-column: 1; grid-row: 1; margin-top: calc(5 * var(--kp)); }
@@ -1240,7 +1245,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   :root[data-layout=kit] { --kp: 1px; }
   /* Phones: the windows stay at one screen pixel per skin pixel and the consoles use the full width. */
   :root[data-layout=kit] .app-shell:not(.session-focus-view) { max-width: none; }
-  :root[data-layout=kit] .app-shell :is(.decks, .pro-track-pickers) { grid-template-columns: minmax(0, 1fr); }
+  :root[data-layout=kit] .app-shell :is(.decks, .track-pickers) { grid-template-columns: minmax(0, 1fr); }
   :root[data-layout=kit] .app-shell .deck-console { --pz: 2; }
   :root[data-layout=kit] .app-shell .deck-module-grid.has-pitch { grid-template-columns: minmax(0, 1fr) calc(96 * var(--kp)); }
   /* Phone widths: buttons and pitch settings stack instead of clipping; no wheel or keys to mention. */

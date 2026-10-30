@@ -1,5 +1,6 @@
 import { pitchSensitivity } from './pitch-control.js';
 export const DECK_MODULES = ['screen', 'pitch', 'volume', 'jog', 'waveform', 'eq', 'vu', 'loop', 'composer', 'picker'];
+export const LAYOUT_VERSION = 2;
 export const GLOBAL_MODULES = ['crossfader', 'master', 'monitor', 'outputs', 'coach', 'tap', 'discovery'];
 export function validateLayout(layout) {
   if (!layout || typeof layout !== 'object' || !layout.modes || typeof layout.modes !== 'object') return null;
@@ -22,5 +23,9 @@ export function validateLayout(layout) {
     modes[mode] = { decks, global };
   }
   if (!Object.keys(modes).length) return null;
-  return { modes, sensitivity: [0, 1].map(index => pitchSensitivity(layout.sensitivity?.[index])) };
+  // Version 2 gave the Loop builder its loop picker: layouts saved before then get it once.
+  if (!(layout.version >= LAYOUT_VERSION) && modes.builder) {
+    modes.builder.decks = modes.builder.decks.map(items => items.some(item => item.id === 'picker') ? items : [...items, { id: 'picker', collapsed: false }]);
+  }
+  return { version: LAYOUT_VERSION, modes, sensitivity: [0, 1].map(index => pitchSensitivity(layout.sensitivity?.[index])) };
 }

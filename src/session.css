@@ -188,11 +188,11 @@
 .session-focus-view .focus-transport button:disabled{opacity:.68}
 
 /* Pro track selection lives below the paired player housings. */
-.app-shell .pro-track-pickers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px;align-items:start}
-.app-shell .pro-track-pickers:empty{display:none}
-.app-shell .pro-track-pickers>[data-scope=deck-a]{grid-column:1}
-.app-shell .pro-track-pickers>[data-scope=deck-b]{grid-column:2}
-@media(max-width:760px){.app-shell .pro-track-pickers{grid-template-columns:minmax(0,1fr)}.app-shell .pro-track-pickers>[data-scope]{grid-column:1}}
+.app-shell .track-pickers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px;align-items:start}
+.app-shell .track-pickers:empty{display:none}
+.app-shell .track-pickers>[data-scope=deck-a]{grid-column:1}
+.app-shell .track-pickers>[data-scope=deck-b]{grid-column:2}
+@media(max-width:760px){.app-shell .track-pickers{grid-template-columns:minmax(0,1fr)}.app-shell .track-pickers>[data-scope]{grid-column:1}}
 .app-shell .folder-browser{display:flex;flex-direction:column;gap:6px;border:2px inset var(--border);background:var(--screen);padding:6px;min-width:0}
 .app-shell .folder-browser-bar{display:flex;gap:5px;align-items:center;min-width:0}
 .app-shell .folder-browser-bar>.small-button{flex:0 0 auto}

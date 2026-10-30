@@ -27,17 +27,24 @@ type Page
 
 
 type alias Voice =
-    { gain : Float, pan : Float, pattern : Int, preview : Int }
+    { gain : Float, pan : Float, pattern : Int, preview : Int, sound : Int }
 
 
-voiceNames : List String
-voiceNames =
-    [ "Kick", "Closed hat", "Snare", "Clap", "Bass", "Perc", "Synth", "Open hat", "Shaker", "Ride", "Crash", "Rim", "Low tom", "High tom", "Cowbell", "Conga", "Acid", "Chord", "Noise", "Zap" ]
+{-| One voice of the twenty-voice bank and its named sound versions (src/instruments.js).
+-}
+type alias Instrument =
+    { name : String, sounds : List String }
+
+
+{-| A named generated loop from src/loops.js.
+-}
+type alias LoopTrack =
+    { id : String, name : String, vibe : String }
 
 
 defaultVoice : Voice
 defaultVoice =
-    { gain = 1, pan = 0, pattern = -1, preview = -1 }
+    { gain = 1, pan = 0, pattern = -1, preview = -1, sound = 0 }
 
 
 type alias Deck =
@@ -62,6 +69,8 @@ type alias Deck =
     , sensitivity : Float
     , genre : String
     , selectedTrack : String
+    , loopId : String
+    , loopChoice : String
     }
 
 
@@ -115,7 +124,7 @@ type alias ModuleLayout =
 
 
 type alias Flags =
-    { basePath : String, kit : Bool, render : String }
+    { basePath : String, kit : Bool, render : String, instruments : List Instrument, loops : List LoopTrack }
 
 
 type alias Model =
@@ -165,6 +174,8 @@ type alias Model =
     , folders : Dict Int FolderPanel
     , folderChosen : Bool
     , folderFilters : Dict Int String
+    , instruments : List Instrument
+    , loops : List LoopTrack
     }
 
 
@@ -194,6 +205,7 @@ type Msg
     | VoiceValue Int Int String String
     | VoiceStep Int Int Int
     | ResetVoicePattern Int Int
+    | VoiceSound Int Int String
     | SoloVoice Int Int
     | Chaos Int
     | FocusSession Bool
@@ -204,6 +216,8 @@ type Msg
     | DeckGenre Int String
     | SelectTrack Int String
     | LoadSelectedTrack Int
+    | SelectLoop Int String
+    | LoadSelectedLoop Int
     | PreviousTrack Int
     | NextTrack Int
     | DeckValue Int String String
@@ -256,7 +270,19 @@ main =
 
 initialDeck : String -> Float -> Deck
 initialDeck name bpm =
-    { name = name, bpm = bpm, pitch = 0, playing = False, position = 0, duration = 32 * 60 / bpm, beat = 0, peak = 0, elements = [ 0 ], volume = 0.8, low = 0, mid = 0, high = 0, range = 8, loop = True, source = "generated", voices = List.repeat 20 defaultVoice, solo = -1, sensitivity = 0.05, genre = "All genres", selectedTrack = "" }
+    { name = name, bpm = bpm, pitch = 0, playing = False, position = 0, duration = 32 * 60 / bpm, beat = 0, peak = 0, elements = [ 0 ], volume = 0.8, low = 0, mid = 0, high = 0, range = 8, loop = True, source = "generated", voices = List.repeat 20 defaultVoice, solo = -1, sensitivity = 0.05, genre = "All genres", selectedTrack = "", loopId = "", loopChoice = "" }
+
+
+{-| Foundation's deck title names its kick, like src/instruments.js kickStudyName. The decks start
+on two different kicks: sound 0 on A, sound 1 on B.
+-}
+kickStudyDeck : List Instrument -> Int -> Float -> Deck
+kickStudyDeck instruments kick bpm =
+    let
+        deck =
+            initialDeck ("KICK STUDY · " ++ String.toUpper (soundName instruments 0 kick)) bpm
+    in
+    { deck | voices = List.indexedMap (\index voice -> if index == 0 then { voice | sound = kick } else voice) deck.voices }
 
 
 init : Flags -> ( Model, Cmd Msg )
@@ -264,8 +290,8 @@ init flags =
     ( { page = Practice
       , basePath = flags.basePath
       , mode = "foundation"
-      , a = initialDeck "KICK STUDY · 01" 120
-      , b = initialDeck "KICK STUDY · 02" 124
+      , a = kickStudyDeck flags.instruments 0 120
+      , b = kickStudyDeck flags.instruments 1 124
       , crossfade = 0.5
       , master = 0.75
       , splitCue = False
@@ -306,6 +332,8 @@ init flags =
       , folders = Dict.empty
       , folderChosen = False
       , folderFilters = Dict.empty
+      , instruments = flags.instruments
+      , loops = flags.loops
       , layouts = Dict.fromList (List.map (\mode -> ( mode, defaultModuleLayout mode )) [ "foundation", "builder", "blind", "star", "pro" ])
       }
     , send "init" []
@@ -579,6 +607,18 @@ update msg model =
         ResetVoicePattern deck voice ->
             ( mapVoice deck voice (\old -> { old | pattern = -1, preview = -1 }) model, sendVoice deck voice "reset" 0 )
 
+        VoiceSound deck voice raw ->
+            case String.toInt raw of
+                Just sound ->
+                    if sound >= 0 && sound < List.length (instrumentSounds model.instruments voice) then
+                        ( mapVoice deck voice (\old -> { old | sound = sound }) model, sendVoice deck voice "sound" (toFloat sound) )
+
+                    else
+                        ( model, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
         SoloVoice deck voice ->
             let
                 solo =
@@ -658,6 +698,17 @@ update msg model =
             case selectedPlayable model (getDeck deck model) of
                 Just track ->
                     ( model, send "loadTrack" [ ( "deck", E.int deck ), ( "track", E.string track.id ) ] )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        SelectLoop deck loopId ->
+            ( mapDeck deck (\current -> { current | loopChoice = loopId }) model, Cmd.none )
+
+        LoadSelectedLoop deck ->
+            case chosenLoop model (getDeck deck model) of
+                Just loop ->
+                    ( model, send "loadLoop" [ ( "deck", E.int deck ), ( "loop", E.string loop.id ) ] )
 
                 Nothing ->
                     ( model, Cmd.none )
@@ -961,11 +1012,48 @@ sendVoice deck voice param val =
 
 voiceDecoder : D.Decoder Voice
 voiceDecoder =
-    D.map4 Voice
+    D.map5 Voice
         (D.oneOf [ D.field "gain" D.float, D.succeed 1 ])
         (D.oneOf [ D.field "pan" D.float, D.succeed 0 ])
         (D.oneOf [ D.field "pattern" D.int, D.succeed -1 ])
         (D.oneOf [ D.field "preview" D.int, D.succeed -1 ])
+        (D.oneOf [ D.field "sound" D.int, D.succeed 0 ])
+
+
+instrumentName : List Instrument -> Int -> String
+instrumentName instruments voice =
+    List.head (List.drop voice instruments) |> Maybe.map .name |> Maybe.withDefault ("Voice " ++ String.fromInt (voice + 1))
+
+
+instrumentSounds : List Instrument -> Int -> List String
+instrumentSounds instruments voice =
+    List.head (List.drop voice instruments) |> Maybe.map .sounds |> Maybe.withDefault []
+
+
+soundName : List Instrument -> Int -> Int -> String
+soundName instruments voice sound =
+    List.head (List.drop sound (instrumentSounds instruments voice)) |> Maybe.withDefault ""
+
+
+{-| The loop the picker shows: the one chosen in its list, else the loaded one, else the first.
+-}
+chosenLoop : Model -> Deck -> Maybe LoopTrack
+chosenLoop model deck =
+    let
+        find loopId =
+            List.head (List.filter (\loop -> loop.id == loopId) model.loops)
+    in
+    case find deck.loopChoice of
+        Just loop ->
+            Just loop
+
+        Nothing ->
+            case find deck.loopId of
+                Just loop ->
+                    Just loop
+
+                Nothing ->
+                    List.head model.loops
 
 
 resetDeck : List Int -> Deck -> Deck
@@ -1140,7 +1228,17 @@ receive data model =
                         , voices = field "voices" (D.list voiceDecoder) current.voices data
                         , solo = field "solo" D.int current.solo data
                         , selectedTrack = field "trackId" D.string current.selectedTrack data
+                        , loopId = loopId
+                        , loopChoice =
+                            if String.isEmpty loopId then
+                                current.loopChoice
+
+                            else
+                                loopId
                     }
+
+                loopId =
+                    field "loopId" (D.oneOf [ D.string, D.null "" ]) "" data
             in
             ( mapDeck deck change { model | result = Nothing }, Cmd.none )
 
@@ -1152,7 +1250,7 @@ receive data model =
                 bpm =
                     field "bpm" D.float 120 data
             in
-            ( mapDeck deck (\d -> { d | name = field "name" D.string d.name data, bpm = bpm, duration = field "duration" D.float (32 * 60 / bpm) data, pitch = 0, position = 0, playing = False, source = "pcm", selectedTrack = field "trackId" D.string d.selectedTrack data }) model, Cmd.none )
+            ( mapDeck deck (\d -> { d | name = field "name" D.string d.name data, bpm = bpm, duration = field "duration" D.float (32 * 60 / bpm) data, pitch = 0, position = 0, playing = False, source = "pcm", selectedTrack = field "trackId" D.string d.selectedTrack data, loopId = "" }) model, Cmd.none )
 
         "randomized" ->
             let
@@ -1167,7 +1265,7 @@ receive data model =
                         bpm =
                             List.head (List.drop index bpms) |> Maybe.withDefault d.bpm
                     in
-                    { d | bpm = bpm, name = List.head (List.drop index names) |> Maybe.withDefault d.name, pitch = 0, position = 0, duration = 32 * 60 / bpm, source = "generated" }
+                    { d | bpm = bpm, name = List.head (List.drop index names) |> Maybe.withDefault d.name, pitch = 0, position = 0, duration = 32 * 60 / bpm, source = "generated", loopId = "" }
             in
             ( { model | a = apply 0 model.a, b = apply 1 model.b }, Cmd.none )
 
@@ -1859,7 +1957,7 @@ practiceView model =
         , div [ class "deck-rack" ]
             [ div [ class "rack-title" ] [ span [] [ text "BIT.CHEER / DUAL DECK SYSTEM" ], span [ class "rack-grip" ] [ text "▥ ▥ ▥ ▥ ▥ ▥ ▥" ], span [] [ text "STEREO · 32-BIT FLOAT" ] ]
             , div [ class "decks" ] [ deckView model 0 model.a, deckView model 1 model.b ]
-            , proTrackPickers model
+            , trackPickers model
             , globalModulesView model
             ]
         , div [ class "under-decks" ]
@@ -1903,14 +2001,21 @@ defaultModuleLayout : String -> ModuleLayout
 defaultModuleLayout mode =
     let
         ids =
-            if mode == "pro" then
-                [ "screen", "pitch", "volume", "picker" ]
+            case mode of
+                "pro" ->
+                    [ "screen", "pitch", "volume", "picker" ]
 
-            else if mode == "builder" || mode == "blind" || mode == "star" then
-                [ "screen", "pitch", "volume", "composer" ]
+                "builder" ->
+                    [ "screen", "pitch", "volume", "composer", "picker" ]
 
-            else
-                [ "screen", "pitch", "volume" ]
+                "blind" ->
+                    [ "screen", "pitch", "volume", "composer" ]
+
+                "star" ->
+                    [ "screen", "pitch", "volume", "composer" ]
+
+                _ ->
+                    [ "screen", "pitch", "volume" ]
 
         modules names =
             List.map (\name -> { id = name, collapsed = False }) names
@@ -1948,7 +2053,8 @@ availableModules scope model =
                         model.mode == "builder" || model.mode == "blind" || model.mode == "star"
 
                     else if name == "picker" then
-                        model.mode == "pro"
+                        -- Pro picks recordings; the generated modes pick named loops.
+                        model.mode /= "foundation"
 
                     else
                         True
@@ -1995,7 +2101,7 @@ persistLayout model =
         encodeMode layout =
             E.object [ ( "decks", E.list (E.list encodeModule) [ layout.a, layout.b ] ), ( "global", E.list encodeModule layout.global ) ]
     in
-    send "layout" [ ( "layout", E.object [ ( "modes", E.object (List.map (\( mode, layout ) -> ( mode, encodeMode layout )) (Dict.toList model.layouts)) ), ( "sensitivity", E.list E.float [ model.a.sensitivity, model.b.sensitivity ] ) ] ) ]
+    send "layout" [ ( "layout", E.object [ ( "version", E.int 2 ), ( "modes", E.object (List.map (\( mode, layout ) -> ( mode, encodeMode layout )) (Dict.toList model.layouts)) ), ( "sensitivity", E.list E.float [ model.a.sensitivity, model.b.sensitivity ] ) ] ) ]
 
 
 moduleLayoutDecoder : D.Decoder ModuleLayout
@@ -2238,7 +2344,7 @@ deckModuleContent model number deck moduleId =
             div [ class "loop-module" ] [ toggle "Loop" deck.loop (Loop number), small [] [ text "Repeat at the end of this track." ] ]
 
         "composer" ->
-            composerView number deck
+            composerView model.instruments number deck
 
         "picker" ->
             trackPickerView model number deck
@@ -2472,11 +2578,14 @@ equalizerView number deck =
     div [ class "eq-controls" ] (List.map (\( param, val ) -> label [ class "eq-control" ] [ span [] [ text (String.toUpper param) ], input [ type_ "range", A.min "-24", A.max "12", step "0.5", value (String.fromFloat val), onInput (DeckValue number param), attribute "aria-label" ("Deck " ++ deckLetter number ++ " " ++ param ++ " EQ"), rangeVar ((val + 24) / 36) ] [], small [] [ text (signed 1 val ++ " dB") ] ]) [ ( "low", deck.low ), ( "mid", deck.mid ), ( "high", deck.high ) ])
 
 
-composerView : Int -> Deck -> Html Msg
-composerView number deck =
+composerView : List Instrument -> Int -> Deck -> Html Msg
+composerView instruments number deck =
     let
         letter =
             deckLetter number
+
+        voiceNames =
+            List.map .name instruments
     in
     div [ class "element-panel" ]
         [ div [ class "control-label" ] [ span [] [ text "COMPOSER / 20-VOICE BANK" ], small [] [ text (String.fromInt (List.length deck.elements) ++ " / 20 ACTIVE") ] ]
@@ -2487,7 +2596,7 @@ composerView number deck =
             , button [ class "deck-add-element", onClick (AddElement number), disabled (List.length deck.elements == 20), attribute "aria-label" ("Add an element to deck " ++ letter) ] [ text "+ Add next" ]
             , button [ class "chaos-button", onClick (Chaos number), attribute "aria-label" ("Chaos deck " ++ letter), title "Create a dense arrangement on this deck only" ] [ text "CHAOS!" ]
             ]
-        , div [ class "elements composer-rack" ] (List.indexedMap Tuple.pair voiceNames |> List.filter (\( index, _ ) -> List.member index deck.elements) |> List.map (\( index, name ) -> voiceView number deck index name))
+        , div [ class "elements composer-rack" ] (List.indexedMap Tuple.pair voiceNames |> List.filter (\( index, _ ) -> List.member index deck.elements) |> List.map (\( index, name ) -> voiceView number deck index name (instrumentSounds instruments index)))
         , if List.isEmpty deck.elements then
             p [ class "composer-empty" ] [ text "Add an instrument to start your rhythm." ]
 
@@ -2694,21 +2803,73 @@ folderBrowserView model number deck listing =
         ]
 
 
-proTrackPickers : Model -> Html Msg
-proTrackPickers model =
-    if model.mode == "pro" then
-        div [ class "pro-track-pickers", attribute "aria-label" "Pro track selection" ]
+{-| The decks' track pickers, below the decks: recordings in Pro, named generated loops elsewhere.
+-}
+trackPickers : Model -> Html Msg
+trackPickers model =
+    let
+        content number =
+            if model.mode == "pro" then
+                trackPickerView model number (getDeck number model)
+
+            else
+                loopPickerView model number (getDeck number model)
+    in
+    if model.mode == "foundation" then
+        text ""
+
+    else
+        div
+            [ class "track-pickers"
+            , attribute "aria-label"
+                (if model.mode == "pro" then
+                    "Pro track selection"
+
+                 else
+                    "Loop selection"
+                )
+            ]
             (List.concatMap
                 (\number ->
                     scopeModules number (activeLayout model)
                         |> List.filter (\item -> item.id == "picker")
-                        |> List.map (\item -> playerModule number item (trackPickerView model number (getDeck number model)))
+                        |> List.map (\item -> playerModule number item (content number))
                 )
                 [ 0, 1 ]
             )
 
-    else
-        text ""
+
+{-| The named loops (src/loops.js): pick one, Load it, or step through them.
+-}
+loopPickerView : Model -> Int -> Deck -> Html Msg
+loopPickerView model number deck =
+    let
+        letter =
+            deckLetter number
+
+        chosen =
+            chosenLoop model deck
+    in
+    div [ class "track-picker loop-picker" ]
+        [ label [ class "track-picker-selection" ]
+            [ span [] [ text "GENERATED LOOP" ]
+            , select [ onInput (SelectLoop number), attribute "aria-label" ("Deck " ++ letter ++ " loop") ]
+                (List.map (\loop -> option [ value loop.id, selected (Just loop.id == Maybe.map .id chosen) ] [ text loop.name ]) model.loops)
+            ]
+        , small [ class "library-count", attribute "aria-label" ("Deck " ++ letter ++ " loop library size") ] [ text (String.fromInt (List.length model.loops) ++ " loops made by the rhythm model") ]
+        , case chosen of
+            Just loop ->
+                p [ class "loop-vibe" ] [ text loop.vibe ]
+
+            Nothing ->
+                text ""
+        , div [ class "track-picker-actions" ]
+            [ button [ class "primary-button load-track-button", onClick (LoadSelectedLoop number), attribute "aria-label" ("Load selected loop deck " ++ letter) ] [ text "Load" ]
+            , button [ class "small-button", onClick (PreviousTrack number), attribute "aria-label" ("Previous loop deck " ++ letter) ] [ text "◀ Previous" ]
+            , button [ class "small-button", onClick (NextTrack number), attribute "aria-label" ("Next loop deck " ++ letter) ] [ text "Next ▶" ]
+            ]
+        , div [ class "picker-current" ] [ strong [] [ text "LOADED" ], span [] [ text deck.name ] ]
+        ]
 
 
 globalModulesView : Model -> Html Msg
@@ -2837,8 +2998,8 @@ lcdDigits number =
             )
 
 
-voiceView : Int -> Deck -> Int -> String -> Html Msg
-voiceView deckNumber deck voiceIndex name =
+voiceView : Int -> Deck -> Int -> String -> List String -> Html Msg
+voiceView deckNumber deck voiceIndex name sounds =
     let
         voice =
             getVoice voiceIndex deck
@@ -2876,6 +3037,8 @@ voiceView deckNumber deck voiceIndex name =
     div [ classList [ ( "voice-row", True ), ( "soloed", deck.solo == voiceIndex ), ( "muted-by-solo", deck.solo /= -1 && deck.solo /= voiceIndex ) ], attribute "data-voice" (String.fromInt voiceIndex) ]
         [ div [ class "voice-strip" ]
             [ button [ class "element enabled voice-name", onClick (Element deckNumber voiceIndex), attribute "aria-pressed" "true", attribute "aria-label" ("Deck " ++ letter ++ " " ++ name), title ("Remove " ++ name ++ " from this deck") ] [ span [ class "element-light" ] [], text name, span [ class "voice-remove" ] [ text " ×" ] ]
+            , select [ class "voice-sound", onInput (VoiceSound deckNumber voiceIndex), attribute "aria-label" ("Deck " ++ letter ++ " " ++ name ++ " sound"), title ("Choose how the " ++ String.toLower name ++ " sounds") ]
+                (List.indexedMap (\index sound -> option [ value (String.fromInt index), selected (index == voice.sound) ] [ text sound ]) sounds)
             , label [ class "voice-gain" ]
                 [ span [] [ text ("LEVEL " ++ fixed 0 (voice.gain * 100) ++ "%") ]
                 , input [ type_ "range", A.min "0", A.max "1.5", step "0.01", value (String.fromFloat voice.gain), onInput (VoiceValue deckNumber voiceIndex "gain"), attribute "aria-label" ("Deck " ++ letter ++ " " ++ name ++ " level"), rangeVar (voice.gain / 1.5) ] []
@@ -3574,18 +3737,23 @@ nowWearing model =
             , h2 [ id "now-wearing-title" ] [ text model.skinName ]
             , p []
                 [ text
-                    (if model.skin == "custom" then
-                        "This is the skin as it looks in Winamp. Its buttons, sliders, digits, window frames and colors now dress your decks."
+                    (case model.skin of
+                        "custom" ->
+                            "This is the skin as it looks in Winamp. Its buttons, sliders, digits, window frames and colors now dress your decks."
 
-                     else
-                        "The original bit.cheer skin, drawn pixel by pixel as a real Winamp 2 skin: brushed chrome, cobalt LCDs and a lime glow."
+                        "mochi" ->
+                            "A soft, sweet bit.cheer skin, drawn pixel by pixel as a real Winamp 2 skin: strawberry milk, mint, little hearts and a mochi friend in the corner."
+
+                        _ ->
+                            "The original bit.cheer skin, drawn pixel by pixel as a real Winamp 2 skin: brushed chrome, cobalt LCDs and a lime glow."
                     )
                 ]
-            , if model.skin == "millennium" then
-                a [ class "now-wearing-link", href (model.basePath ++ "skins/millennium.wsz"), attribute "download" "Millennium_Chrome.wsz" ] [ text "Download it for Winamp or Webamp ↓" ]
+            , case List.filter (\( skin, _, _ ) -> skin == model.skin) builtinSkins of
+                ( skin, name, _ ) :: _ ->
+                    a [ class "now-wearing-link", href (model.basePath ++ "skins/" ++ skin ++ ".wsz"), attribute "download" (String.replace " " "_" name ++ ".wsz") ] [ text "Download it for Winamp or Webamp ↓" ]
 
-              else
-                text ""
+                [] ->
+                    text ""
             , if String.isEmpty model.skinSource then
                 text ""
 
@@ -3663,14 +3831,23 @@ skinDna =
 
 exampleSkinUrl : String
 exampleSkinUrl =
-    "https://skins.webamp.org/skin/f240348986b9e19578b033d639b263e5/Excel_Saga.wsz"
+    "https://skins.webamp.org/skin/2a0453c5c41414a4e359f0797f47a830/cuteamp.wsz"
+
+
+{-| bit.cheer's own skins (src/skins.js SELECTABLE_SKINS): id, name and card text.
+-}
+builtinSkins : List ( String, String, String )
+builtinSkins =
+    [ ( "millennium", "Millennium Chrome", "Brushed chrome, cobalt LCDs and a lime glow. Drawn pixel by pixel for bit.cheer." )
+    , ( "mochi", "Strawberry Mochi", "Strawberry milk, mint, little hearts and a mochi friend. Drawn pixel by pixel for bit.cheer." )
+    ]
 
 
 skinsView : Model -> Html Msg
 skinsView model =
     let
         builtin =
-            [ ( "millennium", "Millennium Chrome", "Brushed chrome, cobalt LCDs and a lime glow. Drawn pixel by pixel for bit.cheer." ) ]
+            builtinSkins
 
         externalLink url label =
             a [ href url, target "_blank", attribute "rel" "noopener noreferrer" ] [ text label ]
@@ -3766,7 +3943,7 @@ skinsView model =
                 ]
             , div [ class "skin-import-actions" ] [ button [ class "primary-button", onClick ImportSkin ] [ text "↥ Import a skin file" ], button [ class "secondary-button", onClick ExportSkin ] [ text "↓ Download template" ] ]
             ]
-        , p [ class "skin-attribution" ] [ text "Millennium Chrome is an original bit.cheer skin. Museum skins belong to their creators and load straight from ", externalLink "https://skins.webamp.org/" "skins.webamp.org ↗", text ". ", a [ href (model.basePath ++ "credits.html"), target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Credits ↗" ] ]
+        , p [ class "skin-attribution" ] [ text "Millennium Chrome and Strawberry Mochi are original bit.cheer skins. Museum skins belong to their creators and load straight from ", externalLink "https://skins.webamp.org/" "skins.webamp.org ↗", text ". ", a [ href (model.basePath ++ "credits.html"), target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Credits ↗" ] ]
         ]
 
 

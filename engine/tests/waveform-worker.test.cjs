@@ -51,3 +51,14 @@ test('newer worker jobs cancel superseded rendering and muted synth produces act
   assert.ok(result.peaks.every(value => value === 0));
   assert.equal(worker.messages.some(message => message.data.type === 'waveform' && message.data.version === 1), false);
 });
+
+test('waveform previews follow each voice\'s chosen sound', async () => {
+  const worker = create();
+  const render = async (version, sound) => {
+    worker.send({ type: 'render', deck: 0, version, bpm: 120, seed: 17, elements: 1, voices: [{ gain: 1, pan: 0, pattern: -1, sound }] });
+    return worker.wait(data => data.type === 'waveform' && data.version === version);
+  };
+  const boom = await render(1, 2), knock = await render(2, 4);
+  // 808 Boom rings long after the beat; Knock is gone by then.
+  assert.ok(boom.peaks[10] > knock.peaks[10] * 2);
+});

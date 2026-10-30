@@ -123,3 +123,7 @@ button,input,select{font-family:Tahoma,Verdana,Arial,sans-serif}button{transitio
   :root[data-layout=alien] .focused-deck .jog-wheel{width:180px;height:180px;min-width:180px}
 }
 @media(prefers-reduced-motion:reduce){.jog-wheel,.jog-wheel.is-playing{animation:none!important}}
+/* Each composer row's sound choice sits under the instrument name. */
+.voice-strip>.voice-name{grid-row:1}.voice-strip>.voice-sound{grid-column:1;grid-row:2;min-width:0;width:100%;background:var(--screen);color:var(--accent);border:1px inset var(--border);border-radius:0;font:9px Tahoma,sans-serif;padding:2px}.voice-strip>:is(.voice-gain,.voice-pan,.voice-solo){grid-row:1/span 2}
+@media(max-width:760px){.voice-strip>.voice-sound{grid-column:1/-1;grid-row:4}.voice-strip>.voice-gain{grid-row:2}.voice-strip>.voice-pan{grid-row:3}.voice-strip>.voice-solo{grid-row:1}}
+.loop-vibe{margin:0;font:10px/1.5 Tahoma,sans-serif;color:var(--muted)}

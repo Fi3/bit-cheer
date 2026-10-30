@@ -13,7 +13,7 @@ async function render(request) {
   engine.engine_randomize(0, seed, bpm);
   engine.engine_set(0, 3, elements);
   if (Array.isArray(voices)) voices.slice(0, engine.engine_voice_count()).forEach((voice, index) => {
-    for (const [param, key] of ['gain', 'pan', 'pattern'].entries()) if (Number.isFinite(voice[key])) engine.engine_voice(0, index, param, voice[key]);
+    for (const [param, key] of [[0, 'gain'], [1, 'pan'], [2, 'pattern'], [4, 'sound']]) if (Number.isFinite(voice[key])) engine.engine_voice(0, index, param, voice[key]);
   });
   engine.engine_set(0, 0, 1);
   const frames = Math.ceil(engine.engine_duration(0) * RATE);

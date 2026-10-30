@@ -280,7 +280,8 @@ async function decode(bytes, path) {
 }
 
 // files: { path: Uint8Array } from the archive. fetchBase: () => Promise<files of the base skin>.
-export async function buildKit(files, { fetchBase } = {}) {
+// desk: an optional page color for bit.cheer's own skins; imported skins derive it from their art.
+export async function buildKit(files, { fetchBase, desk } = {}) {
   const paths = Object.keys(files);
   const find = (name, list = paths) => list.find(p => p.split('/').at(-1).toLowerCase() === name) ;
   const findSheet = (name, list = paths) => find(`${name}.bmp`, list) || find(`${name}.png`, list);
@@ -376,7 +377,7 @@ export async function buildKit(files, { fetchBase } = {}) {
   if (genArt) { parts.genBtn = url(genArt.up); parts.genBtnDown = url(genArt.down); }
   else { delete parts.genBtn; delete parts.genBtnDown; }
 
-  const colors = derivePalette({ sheets, pledit, vis, menu, genex });
+  const colors = derivePalette({ sheets, pledit, vis, menu, genex, desk });
   const visColors = vis.length >= 18 ? vis : DEFAULT_VIS;
   // The console's transport: the skin's own buttons when they are whole buttons, else its icons (or clear
   // symbols) on its generic button. Fixed-size cuts can carry bits of window art (Garfield's teddy bear):
@@ -721,7 +722,7 @@ function jogPlatter(c) {
 }
 
 // ---------- palette ----------
-function derivePalette({ sheets, pledit, vis, menu, genex }) {
+function derivePalette({ sheets, pledit, vis, menu, genex, desk: chosenDesk }) {
   const valid = c => typeof c === 'string' && HEX.test(c);
   const main = sheets.main;
   const mainColors = histogram(main, [[0, 0, Math.min(275, main.width), Math.min(116, main.height)]]);
@@ -791,7 +792,7 @@ function derivePalette({ sheets, pledit, vis, menu, genex }) {
 
   // A vivid highlight: the most saturated, readable color the skin already uses.
   const candidates = [listHi, lcdFg, num, ...vis.slice(2, 18), listFg].filter(valid);
-  const desk = mix(mix(mix(tone, '#000000', 0.78), frame, 0.08), listBg, 0.32);
+  const desk = valid(chosenDesk) ? chosenDesk : mix(mix(mix(tone, '#000000', 0.78), frame, 0.08), listBg, 0.32);
   const accent = readable(candidates.sort((a, b) => saturation(b) * (0.4 + luminance(b)) - saturation(a) * (0.4 + luminance(a)))[0] || listHi, desk, 4.5);
   const accentText = readable(desk, accent, 4.5);
   const title = readable(lcdFg, lcdBg, 4.5);
