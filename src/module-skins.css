@@ -45,7 +45,7 @@
 :root[data-layout=classic] .app-shell .player-module{border:2px groove #827c97}
 :root[data-layout=classic] .app-shell .module-titlebar{background:linear-gradient(#56526b,#29283e 45%,#191a2c 51%,#3a3650);color:#e6d497;text-shadow:1px 1px #080917;border-top-color:#bcae6d}
 :root[data-layout=classic] .app-shell .module-titlebar button{background:linear-gradient(#d8cc98,#a29463 50%,#c0b077);color:#252035}
-:root[data-layout=classic] .app-shell .global-module-grid>.player-module,:root[data-layout=classic] .app-shell .pro-track-pickers .player-module{background:linear-gradient(110deg,#39384e,#25263a)}
+:root[data-layout=classic] .app-shell .global-module-grid>.player-module,:root[data-layout=classic] .app-shell .track-pickers .player-module{background:linear-gradient(110deg,#39384e,#25263a)}
 
 /* Classified 3: champagne cast metal and square dark-purple window strips. */
 :root[data-layout=classified3] .app-shell .player-module{border:2px groove #b5aa92}
@@ -60,7 +60,7 @@
 :root[data-layout=classified5] .app-shell .module-screen .deck-screen{border-radius:6px 6px 3px 3px}
 :root[data-layout=classified5] .app-shell .module-pitch .pitch-section{background-image:var(--skin-pitch),repeating-linear-gradient(0deg,#ffffff0c 0 1px,#64758a08 1px 2px),linear-gradient(90deg,#8997a84a,#ffffff6b 28%,#f7faff35 70%,#667b9255)}
 :root[data-layout=classified5] .app-shell .module-volume input{background:#14263f;border:1px inset #8294ac;box-shadow:0 1px #fff9}
-:root[data-layout=classified5] .app-shell .pro-track-pickers .track-picker select{background:#183f77;color:#eaf6ff;font-family:Tahoma,Arial,sans-serif}
+:root[data-layout=classified5] .app-shell .track-pickers .track-picker select{background:#183f77;color:#eaf6ff;font-family:Tahoma,Arial,sans-serif}
 :root[data-layout=classified5] .app-shell .track-picker button{background:linear-gradient(#fff,#c9d7e5 44%,#8b9eb5 51%,#dde6ef);color:#1b2f49;border:1px solid #526981;box-shadow:inset 0 1px #fff;border-radius:9px}
 :root[data-layout=classified5] .app-shell .track-picker .load-track-button{background:linear-gradient(#4b78a9,#173d6a 50%,#0e294b 54%,#305780);color:#f1f8ff;border-color:#172a43}
 :root[data-layout=classified5] .app-shell .focus-transport button{border-radius:18px;background:linear-gradient(#fff,#d0deec 40%,#7c91aa 48%,#c5d5e8 56%,#8fa3bb);color:#142943;border:2px outset #cedbea;text-shadow:0 1px #fff}

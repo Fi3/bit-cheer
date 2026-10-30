@@ -6,10 +6,10 @@ import { buildKit, renderPreview, mix, KIT_PART_KEYS, KIT_COLOR_KEYS, KIT_VERSIO
 const COLORS = ['background', 'panel', 'panelLight', 'text', 'muted', 'accent', 'secondary', 'screen', 'border'];
 export const SKIN_BASES = ['millennium', 'classic', 'classified3', 'classified5', 'bento', 'alien'];
 // Skins offered in the app. The others stay in code for later, but are not selectable.
-export const SELECTABLE_SKINS = ['millennium'];
+export const SELECTABLE_SKINS = ['millennium', 'mochi'];
 export const DEFAULT_SKIN = 'millennium';
 // Some skins reuse another skin's structural layout (CSS) with their own art.
-const LAYOUTS = { millennium: 'classified5' };
+const LAYOUTS = { millennium: 'classified5', mochi: 'classified5' };
 const layoutOf = base => LAYOUTS[base] || base;
 export const SKIN_ASSETS = ['panel', 'titlebar', 'background', 'frame', 'buttons', 'numbers', 'platter', 'pitch'];
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
@@ -22,6 +22,8 @@ const IMAGE_DATA = /^data:image\/(?:png|jpeg|bmp|webp);base64,[a-zA-Z0-9+/=]+$/;
 export const themes = {
   // Original bit.cheer skin, drawn by scripts/make-millennium-skin.mjs.
   millennium: { name: 'Millennium Chrome', background: '#121b2a', panel: '#41597a', panelLight: '#d6e0ec', text: '#f2f8ff', muted: '#c9d8e8', accent: '#eaf6ff', secondary: '#b8ee75', screen: '#1f56a0', border: '#c4d0e0' },
+  // bit.cheer's cute skin, drawn by scripts/make-mochi-skin.mjs.
+  mochi: { name: 'Strawberry Mochi', background: '#3a1a35', panel: '#a8557f', panelLight: '#ffd3e5', text: '#fff3f8', muted: '#ffc7dd', accent: '#fff3f8', secondary: '#8fe6c3', screen: '#4b1f47', border: '#f0b3cc' },
   classic: { name: 'base-2.91', background: '#15151e', panel: '#2c2d46', panelLight: '#595a73', text: '#e4e4f0', muted: '#b1b3ca', accent: '#44ff55', secondary: '#d8bb63', screen: '#050608', border: '#77788d' },
   classified3: { name: 'Winamp3_Classified_v5.5', background: '#222221', panel: '#62625e', panelLight: '#c8c7b8', text: '#fffef1', muted: '#deddd0', accent: '#f0d16d', secondary: '#d9ddc3', screen: '#060706', border: '#b9b8ab' },
   classified5: { name: 'Winamp5_Classified_v5.5', background: '#192332', panel: '#48627d', panelLight: '#d8dfe7', text: '#f2f8ff', muted: '#d3e1ed', accent: '#d9edff', secondary: '#f5ca67', screen: '#164884', border: '#c4d0e0' },
@@ -29,7 +31,7 @@ export const themes = {
   alien: { name: 'Headspace · Alien Lime', background: '#10170c', panel: '#29551b', panelLight: '#6c9f27', text: '#f1ffdb', muted: '#bed49a', accent: '#aeef29', secondary: '#ce9aef', screen: '#081204', border: '#7fa53a' }
 };
 
-const builtinAssets = base => base === 'millennium' ? {
+const builtinAssets = base => base === 'millennium' || base === 'mochi' ? {
   titlebar: '/skins/millennium/titlebar.png',
   frame: null,
   buttons: '/skins/millennium/cbuttons.png',
@@ -132,17 +134,32 @@ function fetchBaseSkin() {
   return baseArchive;
 }
 
-// Built-in skins drawn as Winamp skins get the same kit as imports, built once at startup.
-const builtinKits = {};
-export async function prepareBuiltinSkins() {
-  try {
-    const files = await fetchBaseSkin();
-    const kit = await buildKit(files);
-    const preview = renderPreview(kit, kit._pledit);
-    delete kit._sheets; delete kit._pledit;
-    builtinKits.millennium = { base: 'classic', theme: { name: themes.millennium.name }, images: {}, kit, preview };
-  } catch { /* the classic CSS look still works without it */ }
-  return !!builtinKits.millennium;
+// Built-in skins drawn as Winamp skins get the same kit as imports, each built once, when first needed.
+// Strawberry Mochi's windows sit on soft lavender; the others keep the page color drawn from their art.
+const BUILTIN_DESKS = { mochi: '#7d63a8' };
+const builtinKits = {}, builtinBuilds = {};
+async function buildBuiltin(id) {
+  const files = id === 'millennium' ? await fetchBaseSkin() : await fetch(assetUrl(`/skins/${id}.wsz`)).then(async response => {
+    if (!response.ok) throw new Error(`Built-in skin ${id} unavailable`);
+    return readArchive(new Uint8Array(await response.arrayBuffer()));
+  });
+  const kit = await buildKit(files, { fetchBase: fetchBaseSkin, desk: BUILTIN_DESKS[id] });
+  const preview = renderPreview(kit, kit._pledit);
+  delete kit._sheets; delete kit._pledit;
+  builtinKits[id] = { base: 'classic', theme: { name: themes[id].name }, images: {}, kit, preview };
+}
+/** Builds a built-in skin's kit (once); resolves to whether it is ready. */
+export function prepareBuiltinSkin(id) {
+  if (!SELECTABLE_SKINS.includes(id)) return Promise.resolve(false);
+  builtinBuilds[id] ||= buildBuiltin(id).then(() => true, () => { delete builtinBuilds[id]; return false; }); // the classic CSS look still works without it
+  return builtinBuilds[id];
+}
+/** Builds the skin the page starts with first (the default when none is saved); the others follow. */
+export async function prepareBuiltinSkins(first = DEFAULT_SKIN) {
+  const start = SELECTABLE_SKINS.includes(first) ? first : DEFAULT_SKIN;
+  const ready = await prepareBuiltinSkin(start);
+  for (const id of SELECTABLE_SKINS) if (id !== start) prepareBuiltinSkin(id);
+  return ready;
 }
 export const builtinKit = id => builtinKits[id] || null;
 
@@ -181,7 +198,7 @@ export async function importSkin(file) {
 }
 
 // Accepts a Winamp Skin Museum link, e.g.
-// https://skins.webamp.org/skin/f240348986b9e19578b033d639b263e5/Excel_Saga.wsz
+// https://skins.webamp.org/skin/2a0453c5c41414a4e359f0797f47a830/cuteamp.wsz
 // The museum page itself is HTML, so we download the .wsz from its file server.
 const MUSEUM_FILES = 'https://r2.webampskins.org/skins/';
 export function museumSkinUrl(input) {
@@ -189,7 +206,7 @@ export function museumSkinUrl(input) {
   try { url = new URL(String(input).trim()); } catch { throw new Error('That doesn’t look like a link. Copy the full address from skins.webamp.org and paste it here.'); }
   const md5 = url.pathname.match(/[a-f0-9]{32}/i)?.[0]?.toLowerCase();
   const museum = /(^|\.)webamp\.org$|(^|\.)webampskins\.org$/i.test(url.hostname);
-  if (!museum || !md5) throw new Error('Paste a skin link from skins.webamp.org, like https://skins.webamp.org/skin/f240348986b9e19578b033d639b263e5/Excel_Saga.wsz');
+  if (!museum || !md5) throw new Error('Paste a skin link from skins.webamp.org, like https://skins.webamp.org/skin/2a0453c5c41414a4e359f0797f47a830/cuteamp.wsz');
   const name = decodeURIComponent(url.pathname.split('/').filter(Boolean).at(-1) || '');
   return { download: `${MUSEUM_FILES}${md5}.wsz`, filename: /\.wsz$/i.test(name) ? name : `${md5}.wsz` };
 }

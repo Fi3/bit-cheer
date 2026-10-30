@@ -94,3 +94,25 @@ test('twenty-voice worklet supports actual manual pattern playback, panning and 
   processor.process([], outputs);
   assert.ok(outputs[0][1].every(value => value === 0));
 });
+
+test('every instrument offers the sound versions named in src/instruments.js, and a sound change is heard', async () => {
+  const { INSTRUMENTS } = await import('../../src/instruments.js');
+  const { processor, outputs } = create();
+  const e = processor.engine;
+  assert.equal(INSTRUMENTS.length, e.engine_voice_count());
+  INSTRUMENTS.forEach((instrument, voice) => assert.equal(e.engine_voice_sounds(voice), instrument.sounds.length, `${instrument.name} sound count`));
+  const take = sound => {
+    processor.message({ type: 'reset' });
+    processor.message({ type: 'voice', deck: 0, voice: 0, param: 'sound', value: sound });
+    processor.message({ type: 'set', deck: 0, param: 'play', value: 1 });
+    const samples = [];
+    for (let i = 0; i < 40; i++) { processor.process([], outputs); samples.push(...outputs[0][0]); }
+    return samples;
+  };
+  const velvet = take(0), punch = take(1);
+  assert.ok(velvet.some(value => Math.abs(value) > .05));
+  assert.notDeepEqual(velvet, punch);
+  const before = processor.port.messages.filter(message => message.type === 'patterns').length;
+  processor.message({ type: 'voice', deck: 0, voice: 3, param: 'sound', value: 2 });
+  assert.equal(processor.port.messages.filter(message => message.type === 'patterns').length, before, 'A sound change keeps the pattern, so no new preview');
+});

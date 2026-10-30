@@ -3,6 +3,8 @@ import { zipSync, strToU8 } from 'fflate';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { assetUrl } from '../src/assets.js';
+import { LOOPS } from '../src/loops.js';
+import { INSTRUMENTS } from '../src/instruments.js';
 
 const root = process.cwd();
 const asset = name => path.join(root, 'public', name);
@@ -451,7 +453,7 @@ test('jog bends temporarily, dragging seeks, and CUE returns to saved position p
 
 test('skin studio applies Millennium Chrome and imports persistent TOML and original WSZ', async ({ page }, testInfo) => {
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
-  await expect(page.locator('.skin-card')).toHaveCount(1);
+  await expect(page.locator('.skin-card')).toHaveCount(2);
   await page.locator('.skin-card').filter({ has: page.locator('.skin-card-copy strong', { hasText: 'Millennium Chrome' }) }).click();
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'millennium');
   await page.reload();
@@ -745,11 +747,11 @@ test('Pro selectors load playable genres and reuse a local import on either deck
   await page.getByRole('button', { name: /Pro decks/ }).click();
   await expect(page.getByRole('heading', { name: 'Make the mix yours.' })).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(d => d.source === 'pcm'))).toBe(true);
-  await expect(page.locator('.pro-track-pickers .module-picker')).toHaveCount(2);
+  await expect(page.locator('.track-pickers .module-picker')).toHaveCount(2);
   await expect(page.locator('.deck .module-picker')).toHaveCount(0);
   const pickerPosition = await page.evaluate(() => {
     const decks = document.querySelector('.decks');
-    const pickers = document.querySelector('.pro-track-pickers');
+    const pickers = document.querySelector('.track-pickers');
     return { follows: !!(decks.compareDocumentPosition(pickers) & Node.DOCUMENT_POSITION_FOLLOWING), deckBottom: decks.getBoundingClientRect().bottom, pickerTop: pickers.getBoundingClientRect().top };
   });
   expect(pickerPosition.follows).toBe(true);
@@ -1334,6 +1336,68 @@ test('Builder independently adds instruments and changes only the selected gener
   await expect(page.locator('button.element')).toHaveCount(0);
 });
 
+test('Foundation plays two different kicks and names them, with no sound controls on screen', async ({ page }) => {
+  const kicks = () => page.evaluate(() => window.bitCheer.audio.state.map(deck => ({ sound: deck.voices[0].sound, name: deck.name })));
+  for (let round = 0; round < 3; round++) {
+    const [a, b] = await kicks();
+    expect(a.sound).not.toBe(b.sound);
+    expect(a.name).toMatch(/^KICK STUDY · /); expect(b.name).toMatch(/^KICK STUDY · /);
+    expect(a.name).not.toBe(b.name);
+    await expect(page.locator('.deck-a .track-title strong')).toHaveText(a.name);
+    await page.getByRole('button', { name: 'Change track deck B', exact: true }).click();
+    await expect.poll(async () => (await kicks())[1].name).not.toBe(b.name);
+  }
+  await expect(page.locator('.voice-sound, .loop-picker')).toHaveCount(0);
+});
+
+test('the loop builder picks named loops, and every instrument row chooses its sound', async ({ page }) => {
+  const loops = LOOPS;
+  await page.getByRole('button', { name: /02 Loop builder/ }).click();
+  await expect(moduleElement(page, 'picker', 'A')).toBeVisible();
+  await expect(moduleElement(page, 'picker', 'B')).toBeVisible();
+  await expect(page.getByLabel('Deck A loop', { exact: true }).locator('option')).toHaveCount(loops.length);
+
+  // Load: the chosen loop, paused, at its home tempo, with its own instruments, sounds and mix.
+  const loop = loops[3];
+  await playBoth(page);
+  await page.getByLabel('Deck A loop', { exact: true }).selectOption(loop.id);
+  await expect(page.locator('.track-pickers [data-scope="deck-a"] .loop-vibe')).toHaveText(loop.vibe);
+  await page.getByRole('button', { name: 'Load selected loop deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].loopId)).toBe(loop.id);
+  const loaded = (await deckSnapshots(page))[0];
+  expect(loaded.name).toBe(loop.name); expect(loaded.bpm).toBe(loop.bpm); expect(loaded.elements).toBe(loop.elements); expect(loaded.pitch).toBe(0);
+  await expect.poll(() => page.evaluate(() => window.bitCheer.telemetry[0].playing)).toBe(false);
+  for (const [voice, spec] of Object.entries(loop.voices)) expect(loaded.voices[voice].sound).toBe(spec.sound);
+  await expect(page.locator('.deck-a .track-title strong')).toHaveText(loop.name);
+  await expect(page.locator('.track-pickers [data-scope="deck-a"] .picker-current span')).toHaveText(loop.name);
+
+  // Next and Previous walk the library; deck B never changes.
+  const material = async () => { const { seed, name, bpm, pitch, elements, voices } = (await deckSnapshots(page))[1]; return { seed, name, bpm, pitch, elements, voices }; };
+  const deckB = await material();
+  await page.getByRole('button', { name: 'Next loop deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].loopId)).toBe(loops[4].id);
+  await page.getByRole('button', { name: 'Previous loop deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].loopId)).toBe(loop.id);
+  expect(await material()).toEqual(deckB);
+
+  // Change track stays, and now lands on another named loop.
+  await page.getByRole('button', { name: 'Change track deck B', exact: true }).click();
+  await expect.poll(async () => { const { name } = (await deckSnapshots(page))[1]; return loops.some(item => item.name === name); }).toBe(true);
+  expect((await deckSnapshots(page))[1].name).not.toBe(loop.name);
+
+  // A row's sound list names that instrument's versions, and choosing one reaches the engine.
+  const kickSound = page.getByLabel('Deck A Kick sound', { exact: true });
+  await expect(kickSound.locator('option')).toHaveText(INSTRUMENTS[0].sounds);
+  const previousWave = await page.evaluate(() => Array.from(window.bitCheer.audio.waveforms[0]));
+  const target = (loop.voices[0].sound + 2) % INSTRUMENTS[0].sounds.length;
+  await kickSound.selectOption(String(target));
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].voices[0].sound)).toBe(target);
+  await expect(kickSound).toHaveValue(String(target));
+  await expect.poll(() => page.evaluate(() => Array.from(window.bitCheer.audio.waveforms[0]))).not.toEqual(previousWave);
+  await page.getByRole('button', { name: 'Play deck A', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.telemetry[0].peak)).toBeGreaterThan(.001);
+});
+
 test('Pro tempo preserves PCM while independent track changes reset to native tempo', async ({ page }) => {
   await page.getByRole('button', { name: /Pro decks/ }).click();
   await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(deck => deck.source === 'pcm'))).toBe(true);
@@ -1610,7 +1674,7 @@ test('module hide remove and restore preserve audio and persist independently pe
   // Every optional module uses the same reversible window controls. Exercise
   // each actual body, including canvas/jog/routing bodies with event bindings.
   for (const [owner, ids] of [
-    ['A', ['screen', 'pitch', 'volume', 'jog', 'waveform', 'eq', 'vu', 'loop', 'composer']],
+    ['A', ['screen', 'pitch', 'volume', 'jog', 'waveform', 'eq', 'vu', 'loop', 'composer', 'picker']],
     ['B', ['pitch', 'volume']],
     ['session', ['crossfader', 'master', 'monitor', 'outputs', 'coach', 'tap', 'discovery']],
   ]) {
@@ -1730,8 +1794,8 @@ test('configured hosting path serves the actual engine catalog skin bitmaps and 
   await playBoth(page);
   await expect.poll(() => page.evaluate(() => window.bitCheer.telemetry.every(deck => deck.peak > .001))).toBe(true);
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
-  await expect.poll(() => page.locator('.skin-card img').evaluateAll(images => images.length === 1 && images.every(image => image.complete && image.naturalWidth > 0))).toBe(true);
-  for (const [id, name] of [['millennium', 'Millennium Chrome']]) {
+  await expect.poll(() => page.locator('.skin-card img').evaluateAll(images => images.length === 2 && images.every(image => image.complete && image.naturalWidth > 0))).toBe(true);
+  for (const [id, name] of [['mochi', 'Strawberry Mochi'], ['millennium', 'Millennium Chrome']]) {
     await page.locator('.skin-card').filter({ has: page.locator('.skin-card-copy strong', { hasText: name }) }).click();
     await expect(page.locator('html')).toHaveAttribute('data-skin', id);
     await page.getByRole('button', { name: 'Practice', exact: true }).click();

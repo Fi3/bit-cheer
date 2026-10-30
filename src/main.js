@@ -9,7 +9,7 @@ import './kit.css';
 import { AudioEngine } from './audio.js';
 import { assetUrl, BASE_PATH } from './assets.js';
 import { clamp, tapTempo, matchScore, estimateTempo, STAR, createStar, stepDrift, stepScore, starStats, starResult } from './training.js';
-import { applySkin, applyRenderedKit, importSkin, importSkinFromUrl, downloadTemplate, skinPicture, validKit, prepareBuiltinSkins, builtinKit, SELECTABLE_SKINS, DEFAULT_SKIN } from './skins.js';
+import { applySkin, applyRenderedKit, importSkin, importSkinFromUrl, downloadTemplate, skinPicture, validKit, prepareBuiltinSkins, prepareBuiltinSkin, builtinKit, SELECTABLE_SKINS, DEFAULT_SKIN } from './skins.js';
 import { SessionLibrary, DeckSelections } from './library.js';
 import { pickFolder, AUDIO_EXTENSIONS } from './folder-browser.js';
 import { adjustedPitch, wheelPitchDelta, keyPitchDelta, pitchSensitivity } from './pitch-control.js';
@@ -18,15 +18,18 @@ import { validateLayout } from './layout.js';
 import { createWinampLive } from './winamp-live.js';
 import { enhanceKit, RENDER_MODES } from './skin-enhance.js';
 import { installSkinSelect } from './skin-select.js';
+import { INSTRUMENTS } from './instruments.js';
+import { LOOPS } from './loops.js';
 
 // Apply the saved skin before Elm mounts, so the first app frame has its final theme.
 // Skins that are no longer offered fall back to the default.
-// Millennium Chrome is drawn as a Winamp skin; build it before the first frame when it's quick,
-// otherwise start on the classic CSS look and dress the app as soon as it's ready.
-const builtinReady = prepareBuiltinSkins();
-const builtinInTime = await Promise.race([builtinReady, new Promise(resolve => setTimeout(() => resolve(false), 2500))]);
+// The built-in skins are drawn as Winamp skins; build the one we start on before the first frame when
+// it's quick, otherwise start on the classic CSS look and dress the app as soon as it's ready.
 const savedSkin = restore('bit-cheer-skin');
 const startupSkin = savedSkin?.id === 'custom' || SELECTABLE_SKINS.includes(savedSkin?.id) ? savedSkin : null;
+// The built-in skin the page starts with is built first (Millennium Chrome also backs custom skins).
+const builtinReady = prepareBuiltinSkins(startupSkin?.id === 'custom' ? DEFAULT_SKIN : startupSkin?.id);
+const builtinInTime = await Promise.race([builtinReady, new Promise(resolve => setTimeout(() => resolve(false), 2500))]);
 let startupSkinName;
 try { startupSkinName = applySkin(startupSkin?.id || DEFAULT_SKIN, startupSkin?.custom); }
 catch { startupSkinName = applySkin(DEFAULT_SKIN); }
@@ -43,7 +46,9 @@ if (renderMode !== 'original' && document.documentElement.dataset.layout === 'ki
 }
 // Dropdowns open the skin's own list (kit layout), the same in every browser.
 installSkinSelect();
-const app = Elm.Main.init({ node: document.getElementById('app'), flags: { basePath: BASE_PATH, kit: document.documentElement.dataset.layout === 'kit', render: renderMode } });
+// The instrument bank's names and the named loops are static, so they reach Elm with its flags.
+const app = Elm.Main.init({ node: document.getElementById('app'), flags: { basePath: BASE_PATH, kit: document.documentElement.dataset.layout === 'kit', render: renderMode,
+  instruments: INSTRUMENTS.map(({ name, sounds }) => ({ name, sounds })), loops: LOOPS.map(({ id, name, vibe }) => ({ id, name, vibe })) } });
 let telemetry = [], recent = [], lastStart = performance.now(), mode = 'foundation', catalog = {tracks:[]}, taps = [], zoom = [1,1], mic = null, drill = '', configVersion = 0, micEpoch = 0, micPending = false, focusActive = false, wasFullscreen = false, activeLesson = 1, transition = null;
 const send = event => {
   if(event.type==='telemetry') {
@@ -162,6 +167,8 @@ async function constrainDrill() {
   if(mode!=='star')await engine.set(1,'seek',(drill==='phase'?.28:4)*60/bpm);
   send({type:'randomized',bpms:[bpm,bpm],names:engine.state.map(d=>d.name)});
 }
+// Drills that set both decks to one tempo, and Star mode, keep that tempo when a deck changes loop.
+const fixedTempo=()=>drill==='phase'||drill==='phrase'||mode==='star';
 async function configure(command) {
   const version=++configVersion;selections.invalidate();engine.loadVersions=engine.loadVersions.map(value=>value+1);pendingProCatalog=false;
   const requestedMode=command.mode||'foundation';mode=requestedMode;recent=[];lastStart=performance.now();zoom=[1,1];
@@ -223,11 +230,16 @@ async function handle(command) {
       await engine.randomizeTempo(deck,mode);recent=[];lastStart=performance.now();break;
     case 'changeTrack': {
       if(mode==='pro')await navigateTrack(deck,command.genre,'random');
-      else {beginSelection(deck);await engine.changeGeneratedTrack(deck,mode);}
+      else {beginSelection(deck);await engine.changeGeneratedTrack(deck,mode,{keepTempo:fixedTempo()});}
       recent=[];lastStart=performance.now();break;
     }
-    case 'nextTrack': await navigateTrack(deck,command.genre,1);break;
-    case 'previousTrack': await navigateTrack(deck,command.genre,-1);break;
+    case 'nextTrack': case 'previousTrack': {
+      const direction=type==='nextTrack'?1:-1;
+      if(mode==='pro')await navigateTrack(deck,command.genre,direction);
+      else if(mode!=='foundation'){beginSelection(deck);await engine.stepLoop(deck,direction,{keepTempo:fixedTempo()});recent=[];lastStart=performance.now();}
+      break;
+    }
+    case 'loadLoop': if(mode!=='pro'&&mode!=='foundation'){beginSelection(deck);await engine.loadLoop(deck,command.loop,{keepTempo:fixedTempo()});recent=[];lastStart=performance.now();}break;
     case 'trackGenre': break;
     case 'voice': if(mode!=='foundation')await engine.setVoice(deck,command.voice,param,value);break;
     case 'solo': if(mode!=='foundation')await engine.setSolo(deck,command.voice);break;
@@ -275,7 +287,7 @@ async function handle(command) {
       const track=library.addLinked(source.key(path,name),name,()=>source.file(path,name));
       publishLibrary();await loadTrack(deck,track.id,false,'Local files');break;
     }
-    case 'skin': {if(!SELECTABLE_SKINS.includes(command.id))break;skinEpoch++;const name=applySkin(command.id);store('bit-cheer-skin',{id:command.id});skinChanged(command.id,name);break;}
+    case 'skin': {if(!SELECTABLE_SKINS.includes(command.id))break;const epoch=++skinEpoch;await prepareBuiltinSkin(command.id);if(epoch!==skinEpoch)break;const name=applySkin(command.id);store('bit-cheer-skin',{id:command.id});skinChanged(command.id,name);break;}
     case 'importSkin': chooseFile('.toml,.zip,.wsz',async file=>{const epoch=++skinEpoch;const custom=await importSkin(file);if(epoch!==skinEpoch)return;const name=applySkin('custom',custom);store('bit-cheer-skin',{id:'custom',custom});skinChanged('custom',name,custom);notice(`Skin loaded: ${name}`);});break;
     case 'loadSkinUrl': {
       const epoch=++skinEpoch;
@@ -567,7 +579,7 @@ queueMicrotask(async()=>{
     }).catch(()=>{});
     else notice('Import your Winamp skin again to see its full look on every control.');
   }
-  if(!builtinInTime){const epoch=skinEpoch;builtinReady.then(ok=>{if(ok&&epoch===skinEpoch&&document.documentElement.dataset.skin===DEFAULT_SKIN){const name=applySkin(DEFAULT_SKIN);skinChanged(DEFAULT_SKIN,name);}});}
+  if(!builtinInTime){const epoch=skinEpoch;builtinReady.then(ok=>{const id=document.documentElement.dataset.skin;if(ok&&epoch===skinEpoch&&SELECTABLE_SKINS.includes(id)){const name=applySkin(id);skinChanged(id,name);}});}
   try{const hidden=restore('bit-cheer-console-hidden');if(typeof hidden==='string'&&/^[ab ]*$/.test(hidden))document.documentElement.dataset.consoleHidden=hidden;}catch{}
   try{const response=await fetch(assetUrl('/catalog.json'));if(!response.ok)throw new Error('Library catalog unavailable. Local imports still work.');catalog=await response.json();library.setBundled(catalog.tracks);publishLibrary();send({type:'skins',skins:(catalog.skins||[]).map(skin=>({...skin,preview:skin.preview?assetUrl(skin.preview):'',archive:skin.archive?assetUrl(skin.archive):''}))});send({type:'referenceCatalog',tracks:(catalog.referenceTracks||[]).map(t=>({id:String(t.id),name:t.title,source:t.source,genre:primaryGenre(t.tags||[]),bpm:Number(t.bpm)||0}))});if(pendingProCatalog&&mode==='pro'&&catalog.tracks.length>=2){pendingProCatalog=false;const version=configVersion;await loadTrack(0,catalog.tracks[0].id);if(version===configVersion&&mode==='pro')await loadTrack(1,catalog.tracks[1].id);}}catch(error){fail(error);}
 });

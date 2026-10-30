@@ -2,11 +2,12 @@
 //! The C ABI is single-threaded and intended for an AudioWorkletGlobalScope.
 mod rhythm_model;
 mod rhythm_weights;
+mod sounds;
 
 use std::f64::consts::PI;
 
 const BLOCK: usize = 128;
-const VOICE_COUNT: usize = 20;
+pub(crate) const VOICE_COUNT: usize = 20;
 const ELEMENT_MASK: u32 = (1 << VOICE_COUNT) - 1;
 const MAX_PCM_FRAMES: usize = 28_800_000; // Ten minutes at 48 kHz.
 const TAU: f64 = PI * 2.0;
@@ -96,6 +97,7 @@ impl Biquad {
 }
 
 struct Synth {
+    rate: f64,
     last_step: i64,
     env: [f64; VOICE_COUNT],
     phase: [f64; VOICE_COUNT],
@@ -105,62 +107,57 @@ struct Synth {
     left: [f64; VOICE_COUNT],
     right: [f64; VOICE_COUNT],
     overrides: [i32; VOICE_COUNT],
+    /// Each voice's sound version (see sounds.rs); kept when the track changes, like gain and pan.
+    sound: [usize; VOICE_COUNT],
     bass_frequency: f64,
-    kick_base: f64,
-    kick_sweep: f64,
-    kick_punch: f64,
     kick_level: f64,
     noise: u32,
     previous_noise: f64,
+    soft_noise: f64,
+    soft_coefficient: f64,
+    chord_phase: [f64; 4],
     pattern: [u32; rhythm_model::STEPS],
 }
 impl Synth {
     fn new(rate: f64, seed: u32) -> Self {
         let mut synth = Self {
+            rate,
             last_step: -1,
             env: [0.0; VOICE_COUNT],
             phase: [0.0; VOICE_COUNT],
-            decay: [
-                0.19, 0.035, 0.12, 0.085, 0.23, 0.10, 0.4, 0.24, 0.055, 0.45, 0.85, 0.025, 0.22,
-                0.14, 0.12, 0.15, 0.20, 0.65, 0.30, 0.16,
-            ]
-            .map(|seconds| (-1.0 / (rate * seconds)).exp()),
+            decay: [0.0; VOICE_COUNT],
             gain: [1.0; VOICE_COUNT],
             pan: [0.0; VOICE_COUNT],
             left: [1.0; VOICE_COUNT],
             right: [1.0; VOICE_COUNT],
             overrides: [-1; VOICE_COUNT],
+            sound: [0; VOICE_COUNT],
             bass_frequency: 55.0,
-            kick_base: 45.0,
-            kick_sweep: 115.0,
-            kick_punch: 0.0,
             kick_level: 0.85,
             noise: seed.max(1),
             previous_noise: 0.0,
+            soft_noise: 0.0,
+            // A gentle one-pole low-pass around 1.5 kHz for the soft noise shade.
+            soft_coefficient: 1.0 - (-TAU * 1500.0 / rate).exp(),
+            chord_phase: [0.0; 4],
             pattern: [0; rhythm_model::STEPS],
         };
-        synth.apply_seed(rate, seed);
+        for voice in 0..VOICE_COUNT {
+            synth.configure(voice);
+        }
+        synth.apply_seed(seed);
         synth
     }
-    fn apply_seed(&mut self, rate: f64, seed: u32) {
-        // Coefficients and model sampling change off the render path.
-        let palettes = [
-            (40.0, 80.0, 0.22, 0.03),
-            (55.0, 155.0, 0.15, 0.08),
-            (70.0, 95.0, 0.10, 0.14),
-            (48.0, 220.0, 0.13, 0.10),
-            (44.0, 110.0, 0.26, 0.02),
-            (62.0, 180.0, 0.095, 0.18),
-            (52.0, 75.0, 0.18, 0.06),
-            (58.0, 260.0, 0.12, 0.12),
-        ];
-        let (base, sweep, seconds, punch) = palettes[(seed & 7) as usize];
-        self.kick_base = base;
-        self.kick_sweep = sweep;
-        self.kick_punch = punch;
-        self.decay[0] = (-1.0 / (rate * seconds)).exp();
+    /// Envelope coefficients for a voice's current sound, computed off the render path.
+    fn configure(&mut self, voice: usize) {
+        let seconds = sounds::DECAY_SECONDS[voice][self.sound[voice]];
+        self.decay[voice] = (-1.0 / (self.rate * seconds)).exp();
+    }
+    fn apply_seed(&mut self, seed: u32) {
+        // Model sampling changes off the render path.
         self.noise = seed.max(1);
         self.previous_noise = 0.0;
+        self.soft_noise = 0.0;
         let original = rhythm_model::generate(seed);
         for (step, mask) in original.iter().enumerate() {
             self.pattern[step] = *mask as u32;
@@ -203,6 +200,11 @@ impl Synth {
                 }
             }
             3 => self.overrides[voice] = -1,
+            4 => {
+                self.sound[voice] = (value.max(0.0) as usize).min(sounds::SOUND_COUNTS[voice] - 1);
+                self.configure(voice);
+                return;
+            }
             _ => return,
         }
         let pan = self.pan[voice];
@@ -238,9 +240,11 @@ impl Synth {
         self.last_step = -1;
         self.env = [0.0; VOICE_COUNT];
         self.phase = [0.0; VOICE_COUNT];
+        self.chord_phase = [0.0; 4];
     }
     #[inline]
-    fn render(&mut self, beat: f64, elements: u32, seed: u32, rate: f64) -> [f64; 2] {
+    fn render(&mut self, beat: f64, elements: u32, seed: u32) -> [f64; 2] {
+        let rate = self.rate;
         let step = (beat * 4.0).floor() as i64;
         if step != self.last_step {
             self.last_step = step;
@@ -279,62 +283,48 @@ impl Synth {
         let noise = (self.noise as f64 / u32::MAX as f64) * 2.0 - 1.0;
         let bright = (noise - self.previous_noise) * 0.5;
         self.previous_noise = noise;
-        let square = self.env[0] * self.env[0];
-        let fourth = square * square;
-        let frequencies = [
-            self.kick_base + self.kick_sweep * fourth,
-            8350.0,
-            185.0,
-            1100.0,
-            self.bass_frequency,
-            340.0 + 300.0 * self.env[5],
-            self.bass_frequency * 4.0,
-            7100.0,
-            9200.0,
-            3100.0,
-            4300.0,
-            1800.0,
-            92.0 + 60.0 * self.env[12],
-            155.0 + 90.0 * self.env[13],
-            540.0,
-            205.0 + 35.0 * self.env[15],
-            self.bass_frequency * 2.0,
-            self.bass_frequency * 4.0,
-            1200.0,
-            180.0 + 2200.0 * self.env[19] * self.env[19],
-        ];
-        let mut voices = [0.0; VOICE_COUNT];
+        self.soft_noise += (noise - self.soft_noise) * self.soft_coefficient;
+        let sources = sounds::Sources {
+            noise,
+            bright,
+            soft: self.soft_noise,
+            bass: self.bass_frequency,
+        };
+        // The smooth chords keep one oscillator per note so they never click; they only run while heard.
+        if self.sound[17] > 0 && self.env[17] > 1e-7 {
+            let root = sources.bass * 4.0 / rate;
+            let intervals = &sounds::CHORDS[self.sound[17]];
+            for note in 0..4 {
+                let phase = self.chord_phase[note] + root * intervals[note];
+                self.chord_phase[note] = if phase >= 1.0 { phase - 1.0 } else { phase };
+            }
+        }
+        let mut output = [0.0; 2];
+        let period = 1.0 / rate;
         for voice in 0..VOICE_COUNT {
-            self.phase[voice] = (self.phase[voice] + frequencies[voice] / rate).fract();
-            if self.env[voice] > 1e-7 && self.gain[voice] > 0.0 {
-                let p = TAU * self.phase[voice];
-                let tone = match voice {
-                    0 => {
-                        (p.sin() * 0.68 + noise * self.kick_punch * fourth * square)
-                            * self.kick_level
-                    }
-                    1 => (bright * 0.7 + p.sin() * 0.3) * 0.13,
-                    2 => (noise * 0.7 + p.sin() * 0.3) * 0.24,
-                    3 => noise * 0.18,
-                    4 => (p.sin() + 0.25 * (p * 2.0).sin()) * 0.23,
-                    5 => p.sin() * 0.18,
-                    6 => (p.sin() + 0.35 * (p * 1.5).sin()) * 0.10,
-                    7 => (bright * 0.8 + p.sin() * 0.2) * 0.16,
-                    8 => bright * (0.65 + 0.35 * (p * 0.17).sin()) * 0.18,
-                    9 => (p.sin() + (p * 1.417).sin() * 0.7 + (p * 1.923).sin() * 0.45) * 0.075,
-                    10 => (bright * 0.8 + (p * 1.731).sin() * 0.2) * 0.18,
-                    11 => (p.sin() + (p * 1.333).sin() * 0.55) * 0.14,
-                    12 => p.sin() * 0.27,
-                    13 => (p.sin() + (p * 1.8).sin() * 0.12) * 0.23,
-                    14 => (p.sin().signum() * 0.6 + (p * 1.48148).sin().signum() * 0.4) * 0.13,
-                    15 => (p.sin() + (p * 2.19).sin() * 0.14) * 0.22,
-                    16 => ((self.phase[voice] * 2.0 - 1.0) * 2.4).tanh() * 0.18,
-                    17 => (p.sin() + (p * 1.2599).sin() * 0.65 + (p * 1.4983).sin() * 0.6) * 0.09,
-                    18 => noise * (0.5 + 0.5 * (p * 0.013).sin()) * 0.16,
-                    19 => p.sin() * 0.20,
-                    _ => 0.0,
-                };
-                voices[voice] = tone * self.env[voice];
+            let env = self.env[voice];
+            if env == 0.0 {
+                continue; // Silent until its next hit restarts the envelope.
+            }
+            let sound = self.sound[voice];
+            self.phase[voice] = (self.phase[voice]
+                + sounds::frequency(voice, sound, env, sources.bass) * period)
+                .fract();
+            if env > 1e-7 && self.gain[voice] > 0.0 {
+                let mut tone = sounds::tone(
+                    voice,
+                    sound,
+                    self.phase[voice],
+                    env,
+                    &sources,
+                    &self.chord_phase,
+                );
+                if voice == 0 {
+                    tone *= self.kick_level;
+                }
+                let sample = tone * env;
+                output[0] += sample * self.left[voice];
+                output[1] += sample * self.right[voice];
             }
             self.env[voice] *= self.decay[voice];
             if elements & (1 << voice) == 0 {
@@ -343,11 +333,6 @@ impl Synth {
             if self.env[voice] < 1e-12 {
                 self.env[voice] = 0.0;
             }
-        }
-        let mut output = [0.0; 2];
-        for (voice, sample) in voices.iter().enumerate() {
-            output[0] += sample * self.left[voice];
-            output[1] += sample * self.right[voice];
         }
         output
     }
@@ -470,7 +455,7 @@ impl Deck {
     }
     fn randomize(&mut self, seed: u32, bpm: f64) {
         self.seed = seed.max(1);
-        self.synth.apply_seed(self.rate, self.seed);
+        self.synth.apply_seed(self.seed);
         self.pcm_active = false;
         self.set(1, bpm);
         self.pitch = 0.0;
@@ -539,8 +524,7 @@ impl Deck {
                     + self.pcm[next * 2 + 1] as f64 * frac,
             ]
         } else {
-            self.synth
-                .render(self.beat(), self.elements, self.seed, self.rate)
+            self.synth.render(self.beat(), self.elements, self.seed)
         };
         for (ch, value) in sample.iter_mut().enumerate() {
             for eq in &mut self.eq {
@@ -700,6 +684,14 @@ pub extern "C" fn engine_playing(deck: u32) -> u32 {
 pub extern "C" fn engine_voice_count() -> u32 {
     VOICE_COUNT as u32
 }
+/// How many sound versions a voice has (its names are in src/instruments.js).
+#[no_mangle]
+pub extern "C" fn engine_voice_sounds(voice: u32) -> u32 {
+    sounds::SOUND_COUNTS
+        .get(voice as usize)
+        .map_or(0, |count| *count as u32)
+}
+/// Voice parameters: 0 gain, 1 pan, 2 pattern, 3 reset pattern, 4 sound version.
 #[no_mangle]
 pub extern "C" fn engine_voice(deck: u32, voice: u32, param: u32, value: f64) {
     with_engine((), |e| {
@@ -892,27 +884,86 @@ mod tests {
         assert_eq!(e.decks[0].position, 3.0);
         assert_eq!(e.decks[0].beat(), 5.5);
     }
+    /// `cargo test --release render_benchmark -- --ignored --nocapture`
     #[test]
-    fn kick_only_seeds_have_reproducible_distinct_timbres() {
-        fn sound(seed: u32) -> Vec<f32> {
-            let mut deck = Deck::new(48000.0, 120.0, seed);
+    #[ignore]
+    fn render_benchmark() {
+        let mut e = Engine::new(48000.0);
+        for d in &mut e.decks {
+            d.set(3, ELEMENT_MASK as f64);
+            d.set(0, 1.0);
+        }
+        let start = std::time::Instant::now();
+        for _ in 0..3750 * 4 {
+            e.render(BLOCK);
+        }
+        eprintln!("40 s of two decks, all voices: {:?}", start.elapsed());
+    }
+    #[test]
+    fn kick_sounds_are_reproducible_and_clearly_distinct() {
+        fn sound(kick: usize) -> Vec<f32> {
+            let mut deck = Deck::new(48000.0, 120.0, 1);
+            deck.synth.set_voice(0, 4, kick as f64);
             deck.set(0, 1.0);
             (0..12000).map(|_| deck.sample()[0]).collect()
         }
-        let a = sound(1);
-        let repeat = sound(1);
-        let b = sound(2);
-        assert_eq!(a, repeat);
-        let difference: f32 =
-            a.iter().zip(&b).map(|(x, y)| (x - y).abs()).sum::<f32>() / a.len() as f32;
-        assert!(
-            difference > 0.08,
-            "Changing a kick palette must be clearly audible"
-        );
-        for seed in 1..=8 {
-            assert!(sound(seed)
+        let kicks: Vec<_> = (0..sounds::SOUND_COUNTS[0]).map(sound).collect();
+        assert_eq!(kicks[0], sound(0));
+        for (a, first) in kicks.iter().enumerate() {
+            assert!(first
                 .iter()
                 .all(|value| value.is_finite() && value.abs() <= 1.0));
+            for (b, second) in kicks.iter().enumerate().skip(a + 1) {
+                let difference: f32 = first
+                    .iter()
+                    .zip(second)
+                    .map(|(x, y)| (x - y).abs())
+                    .sum::<f32>()
+                    / first.len() as f32;
+                assert!(
+                    difference > 0.15,
+                    "Kick sounds {a} and {b} must be clearly different ({difference})"
+                );
+            }
+        }
+    }
+    #[test]
+    fn seeds_change_the_rhythm_but_not_the_chosen_sounds() {
+        let mut deck = Deck::new(48000.0, 120.0, 927);
+        deck.synth.set_voice(0, 4, 3.0);
+        deck.synth.set_voice(17, 4, 2.0);
+        deck.randomize(928, 120.0);
+        assert_eq!(deck.synth.sound[0], 3);
+        assert_eq!(deck.synth.sound[17], 2);
+        // Out-of-range choices clamp to the voice's last sound.
+        deck.synth.set_voice(1, 4, 99.0);
+        assert_eq!(deck.synth.sound[1], sounds::SOUND_COUNTS[1] - 1);
+        deck.synth.set_voice(1, 4, -5.0);
+        assert_eq!(deck.synth.sound[1], 0);
+        assert_eq!(engine_voice_sounds(0), 6);
+        assert_eq!(engine_voice_sounds(VOICE_COUNT as u32), 0);
+    }
+    #[test]
+    fn every_sound_of_every_voice_is_audible_bounded_and_its_own() {
+        for voice in 0..VOICE_COUNT {
+            let mut takes = Vec::new();
+            for sound in 0..sounds::SOUND_COUNTS[voice] {
+                let mut deck = Deck::new(12000.0, 120.0, 927);
+                deck.set(3, (1 << voice) as f64);
+                deck.set(0, 1.0);
+                deck.synth.set_voice(voice, 2, 1.0);
+                deck.synth.set_voice(voice, 4, sound as f64);
+                let take: Vec<f32> = (0..4096).map(|_| deck.sample()[0]).collect();
+                let energy: f32 = take.iter().map(|x| x.abs()).sum();
+                assert!(energy > 0.1, "Voice {voice} sound {sound} must be audible");
+                assert!(take.iter().all(|x| x.is_finite() && x.abs() <= 1.0));
+                takes.push(take);
+            }
+            for (a, first) in takes.iter().enumerate() {
+                for second in takes.iter().skip(a + 1) {
+                    assert_ne!(first, second, "Voice {voice} sounds must differ");
+                }
+            }
         }
     }
     #[test]
@@ -976,8 +1027,9 @@ mod tests {
     }
     #[test]
     fn phrase_downbeat_kick_is_audibly_accented_every_sixteen_beats() {
-        for seed in 1..=8 {
-            let mut deck = Deck::new(12000.0, 120.0, seed);
+        for kick in 0..sounds::SOUND_COUNTS[0] {
+            let mut deck = Deck::new(12000.0, 120.0, 17);
+            deck.synth.set_voice(0, 4, kick as f64);
             deck.set(0, 1.0);
             deck.smooth_gain = 1.0;
             let mut energy = [0.0_f64; 32];
@@ -989,11 +1041,11 @@ mod tests {
             }
             assert!(
                 energy[0] > energy[1] * 1.5,
-                "First phrase accent missing for seed {seed}"
+                "First phrase accent missing for kick {kick}"
             );
             assert!(
                 energy[16] > energy[17] * 1.5,
-                "Second phrase accent missing for seed {seed}"
+                "Second phrase accent missing for kick {kick}"
             );
             assert!((energy[16] / energy[0] - 1.0).abs() < 0.1);
         }

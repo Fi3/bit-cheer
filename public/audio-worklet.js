@@ -42,10 +42,10 @@ class BitCheerProcessor extends AudioWorkletProcessor {
         this.peaks[0] = this.peaks[1] = 0;
       } else if (message.type === 'voice' && (deck === 0 || deck === 1)) {
         const voice = Number(message.voice);
-        const param = { gain: 0, pan: 1, pattern: 2, reset: 3 }[message.param];
+        const param = { gain: 0, pan: 1, pattern: 2, reset: 3, sound: 4 }[message.param];
         if (Number.isInteger(voice) && voice >= 0 && voice < e.engine_voice_count() && param !== undefined && Number.isFinite(Number(message.value))) {
           e.engine_voice(deck, voice, param, Number(message.value));
-          if (param >= 2) this.patterns(deck);
+          if (param === 2 || param === 3) this.patterns(deck);
         }
       } else if (message.type === 'set' && (deck === 0 || deck === 1)) {
         const param = PARAMS[message.param];

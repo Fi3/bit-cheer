@@ -1,6 +1,8 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { AudioEngine } from '../src/audio.js';
+import { LOOPS } from '../src/loops.js';
+import { INSTRUMENTS } from '../src/instruments.js';
 
 const original = Object.fromEntries(['window', 'AudioContext', 'AudioWorkletNode', 'fetch', 'requestAnimationFrame'].map(k => [k, globalThis[k]]));
 const wasm = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]);
@@ -192,13 +194,17 @@ test('randomizing a PCM tempo only changes playback rate and rejects impossible 
 test('changing one foundation track resets pitch to native tempo, preserves playback, and leaves its peer unchanged', async () => {
   const { engine, worklet } = await create();
   engine.state[0].pitch = 5; engine.state[0].playing = true; engine.state[0].position = 3;
-  engine.state[0].voices[0] = { gain: .7, pan: -.4, pattern: 5, preview: 5 };
+  engine.state[0].voices[0] = { gain: .7, pan: -.4, pattern: 5, preview: 5, sound: 0 };
   const before = structuredClone(engine.state[0]), other = structuredClone(engine.state[1]);
   worklet.messages.length = 0;
   await engine.changeGeneratedTrack(0, 'foundation');
   const changed = engine.state[0];
   assert.deepEqual(engine.state[1], other);
-  assert.notEqual(changed.seed, before.seed); assert.notEqual(changed.seed & 7, before.seed & 7);
+  assert.notEqual(changed.seed, before.seed);
+  // Another kick, never the one deck B plays.
+  assert.notEqual(changed.voices[0].sound, 0); assert.notEqual(changed.voices[0].sound, other.voices[0].sound);
+  assert.equal(changed.name, `KICK STUDY · ${INSTRUMENTS[0].sounds[changed.voices[0].sound].toUpperCase()}`);
+  assert.ok(worklet.messages.some(message => message.type === 'voice' && message.voice === 0 && message.param === 'sound' && message.value === changed.voices[0].sound));
   assert.equal(changed.elements, 1); assert.equal(changed.playing, true); assert.equal(changed.position, 0);
   assert.equal(changed.pitch, 0); assert.equal(changed.bpm, before.bpm);
   assert.equal(changed.bpm * (1 + changed.pitch / 100), before.bpm);
@@ -206,17 +212,41 @@ test('changing one foundation track resets pitch to native tempo, preserves play
   assert.ok(worklet.messages.every(message => message.deck === 0));
 });
 
-test('builder track changes choose a different enabled combination without touching the reference deck', async () => {
-  const { engine, worklet } = await create();
+test('builder track changes load another named loop near the reference tempo without touching the reference deck', async () => {
+  const { engine, worklet, events } = await create();
+  engine.state[0].bpm = 118; engine.state[0].loopId = LOOPS[0].id;
   engine.state[1].elements = 7;
   const other = structuredClone(engine.state[0]);
   for (let i = 0; i < 8; i++) {
-    const previous = engine.state[1].elements; worklet.messages.length = 0;
+    const previous = engine.state[1].loopId; worklet.messages.length = 0;
     await engine.changeGeneratedTrack(1, 'builder');
-    const mask = engine.state[1].elements, count = mask.toString(2).replaceAll('0', '').length;
-    assert.notEqual(mask, previous); assert.equal(mask & 1, 1); assert.ok(count >= 3 && count <= 6);
+    const state = engine.state[1], loop = LOOPS.find(item => item.id === state.loopId);
+    assert.ok(loop); assert.notEqual(loop.id, previous); assert.notEqual(loop.id, other.loopId);
+    assert.equal(state.name, loop.name); assert.equal(state.seed, loop.seed); assert.equal(state.elements, loop.elements);
+    assert.equal(state.bpm, loop.bpm); assert.equal(state.pitch, 0); assert.ok(Math.abs(loop.bpm / 118 - 1) <= .06);
+    for (const [voice, spec] of Object.entries(loop.voices)) assert.deepEqual([state.voices[voice].sound, state.voices[voice].gain, state.voices[voice].pan], [spec.sound, spec.gain, spec.pan]);
     assert.deepEqual(engine.state[0], other); assert.ok(worklet.messages.every(message => message.deck === 1));
+    assert.equal(events.at(-1).loopId, loop.id);
   }
+  // Fixed-tempo drills keep the deck's tempo.
+  const tempo = engine.state[1].bpm;
+  await engine.changeGeneratedTrack(1, 'builder', { keepTempo: true });
+  assert.equal(engine.state[1].bpm, tempo);
+});
+
+test('the loop picker loads a loop paused and steps through the library keeping playback', async () => {
+  const { engine, worklet } = await create();
+  engine.state[0].playing = true; worklet.messages.length = 0;
+  await engine.loadLoop(0, LOOPS[2].id);
+  assert.equal(engine.state[0].loopId, LOOPS[2].id); assert.equal(engine.state[0].playing, false);
+  assert.ok(worklet.messages.some(message => message.type === 'set' && message.param === 'play' && message.value === 0));
+  engine.state[0].playing = true;
+  await engine.stepLoop(0, 1);
+  assert.equal(engine.state[0].loopId, LOOPS[3].id); assert.equal(engine.state[0].playing, true);
+  await engine.loadLoop(0, LOOPS[0].id); await engine.stepLoop(0, -1);
+  assert.equal(engine.state[0].loopId, LOOPS.at(-1).id);
+  await assert.rejects(engine.loadLoop(0, 'not-a-loop'), /not in the library/);
+  assert.ok(worklet.messages.every(message => message.deck === 0));
 });
 
 test('all twenty voice controls and solo preserve the enabled mask and other deck', async () => {
@@ -224,7 +254,9 @@ test('all twenty voice controls and solo preserve the enabled mask and other dec
   engine.state[0].elements = 3;
   const other = structuredClone(engine.state[1]); worklet.messages.length = 0;
   await engine.setVoice(0, 19, 'gain', .45); await engine.setVoice(0, 19, 'pan', -.8); await engine.setVoice(0, 19, 'pattern', 0x8421);
-  assert.deepEqual(engine.state[0].voices[19], { gain: .45, pan: -.8, pattern: 0x8421, preview: 0x8421 });
+  await engine.setVoice(0, 19, 'sound', 2); await engine.setVoice(0, 18, 'sound', 99);
+  assert.deepEqual(engine.state[0].voices[19], { gain: .45, pan: -.8, pattern: 0x8421, preview: 0x8421, sound: 2 });
+  assert.equal(engine.state[0].voices[18].sound, INSTRUMENTS[18].sounds.length - 1);
   await engine.setSolo(0, 19);
   assert.equal(worklet.messages.at(-1).value, 1 << 19); assert.equal(engine.state[0].elements, 3);
   await engine.set(0, 'elements', 7);
@@ -251,14 +283,39 @@ test('CHAOS creates a bounded dense composition on only the chosen deck at the s
 
 test('new mode or drill resets voice mixes so a muted builder kick cannot silence foundation', async () => {
   const { engine, worklet } = await create();
-  engine.state[0].voices[0] = { gain: 0, pan: -1, pattern: 0, preview: 0 };
+  engine.state[0].voices[0] = { gain: 0, pan: -1, pattern: 0, preview: 0, sound: 0 };
   engine.state[0].solo = 19;
-  engine.state[0].trackId = 'previous-pcm-track';
+  engine.state[0].trackId = 'previous-pcm-track'; engine.state[0].loopId = LOOPS[0].id;
   worklet.messages.length = 0;
   await engine.randomize('foundation', 1);
   for (const state of engine.state) {
-    assert.equal(state.solo, -1); assert.equal(state.elements, 1); assert.equal(state.trackId, null);
+    assert.equal(state.solo, -1); assert.equal(state.elements, 1); assert.equal(state.trackId, null); assert.equal(state.loopId, null);
     assert.ok(state.voices.every(voice => voice.gain === 1 && voice.pan === 0 && voice.pattern === -1));
+    assert.ok(state.voices.slice(1).every(voice => voice.sound === 0));
   }
   assert.ok(worklet.messages.some(message => message.type === 'voice' && message.deck === 0 && message.voice === 0 && message.param === 'gain' && message.value === 1));
+});
+
+test('Foundation always gives the two decks two different kicks, named on each deck', async () => {
+  const { engine, events } = await create();
+  assert.notEqual(engine.state[0].voices[0].sound, engine.state[1].voices[0].sound);
+  for (let round = 0; round < 24; round++) {
+    await engine.randomize('foundation', 1);
+    const [a, b] = engine.state.map(state => state.voices[0].sound);
+    assert.notEqual(a, b);
+    assert.deepEqual(events.at(-1).names, engine.state.map(state => `KICK STUDY · ${INSTRUMENTS[0].sounds[state.voices[0].sound].toUpperCase()}`));
+    await engine.changeGeneratedTrack(round % 2, 'foundation');
+    assert.notEqual(engine.state[0].voices[0].sound, engine.state[1].voices[0].sound);
+  }
+});
+
+test('builder study loops get random sounds and two different kicks', async () => {
+  const { engine, worklet } = await create();
+  worklet.messages.length = 0;
+  await engine.randomize('builder', 3);
+  assert.notEqual(engine.state[0].voices[0].sound, engine.state[1].voices[0].sound);
+  for (const [deck, state] of engine.state.entries()) {
+    state.voices.forEach((voice, index) => assert.ok(voice.sound >= 0 && voice.sound < INSTRUMENTS[index].sounds.length));
+    for (let voice = 0; voice < 20; voice++) assert.ok(worklet.messages.some(message => message.type === 'voice' && message.deck === deck && message.voice === voice && message.param === 'sound' && message.value === state.voices[voice].sound));
+  }
 });

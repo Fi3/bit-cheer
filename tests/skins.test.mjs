@@ -72,6 +72,9 @@ test('applying a different skin clears stale custom images and ignores unsafe st
   applySkin('classified3'); assert.equal(root.dataset.artwork, ''); assert.equal(properties.get('--skin-panel'), 'none'); assert.equal(root.dataset.layout, 'classified3');
   applySkin('unknown'); assert.equal(root.dataset.skin, 'millennium'); assert.equal(root.dataset.layout, 'classified5');
   assert.equal(properties.get('--skin-titlebar'), 'url("/skins/millennium/titlebar.png")');
+  // Strawberry Mochi, bit.cheer's cute skin, keeps its own name and colors before its kit is ready.
+  assert.equal(applySkin('mochi'), 'Strawberry Mochi'); assert.equal(root.dataset.skin, 'mochi'); assert.equal(root.dataset.layout, 'classified5');
+  assert.equal(properties.get('--secondary'), '#8fe6c3');
   applySkin('alien'); assert.equal(properties.get('--skin-platter'), 'none'); assert.equal(properties.get('--skin-pitch'), 'none'); assert.equal(root.dataset.artwork, '');
 });
 
