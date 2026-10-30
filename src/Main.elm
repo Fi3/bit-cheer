@@ -159,6 +159,7 @@ type alias Model =
     , referencePage : Int
     , genre : String
     , help : Bool
+    , helpMore : Bool
     , focused : Bool
     , layouts : Dict String ModuleLayout
     , folders : Dict Int FolderPanel
@@ -241,6 +242,7 @@ type Msg
     | StartLesson Int
     | StartDrill String
     | ToggleHelp
+    | MoreHelp Bool
     | FocusHelp String
     | Receive D.Value
     | DismissNotice
@@ -299,6 +301,7 @@ init flags =
       , referencePage = 0
       , genre = "All genres"
       , help = False
+      , helpMore = False
       , focused = False
       , folders = Dict.empty
       , folderChosen = False
@@ -877,7 +880,8 @@ update msg model =
             ( { next | drill = drill, currentLesson = Nothing, notice = drillInstruction drill, error = False }, send "drill" [ ( "drill", E.string drill ), ( "mode", E.string mode ), ( "elements", E.int (mask next.a.elements) ) ] )
 
         ToggleHelp ->
-            ( { model | help = not model.help }
+            -- The help always opens on the essentials; Show more reveals the rest.
+            ( { model | help = not model.help, helpMore = False }
             , Task.attempt (\_ -> NoOp)
                 (Browser.Dom.focus
                     (if model.help then
@@ -888,6 +892,9 @@ update msg model =
                     )
                 )
             )
+
+        MoreHelp more ->
+            ( { model | helpMore = more }, Cmd.none )
 
         FocusHelp controlId ->
             ( model, Task.attempt (\_ -> NoOp) (Browser.Dom.focus controlId) )
@@ -3853,11 +3860,17 @@ helpView model =
                        , ( "?", "Open or close this help" )
                        , ( "Esc", "Close this help · let go of a control" )
                        ]
-    in
-    div [ class "modal-backdrop" ]
-        [ section [ class "help-modal", attribute "role" "dialog", attribute "aria-modal" "true", attribute "aria-labelledby" "help-title", custom "keydown" helpKeyDecoder ]
-            [ div [ class "section-heading" ] [ h2 [ id "help-title" ] [ text "Hands on. Ears open." ], button [ id "help-close", class "help-button", onClick ToggleHelp, attribute "aria-label" "Close help" ] [ text "×" ] ]
-            , div [ class "help-body" ]
+        -- What a first beatmatch needs: play, pitch, nudge. Everything else is behind Show more.
+        essentials =
+            [ ( "Space", "Play / pause both decks" )
+            , ( "F · J", "Play / pause deck A · deck B" )
+            , ( "W E · I O", "Pitch down / up, " ++ percent 1 ++ " a press. Hold to keep going" )
+            , ( "S D · K L", "Nudge back / forward. Hold to bend the speed" )
+            , ( "↓ ↑ · ← →", "Deck B: pitch · nudge" )
+            ]
+
+        body =
+            if model.helpMore then
                 [ p [] [ text "Left hand plays deck A, right hand plays deck B, the mixer sits in between. Index fingers on F and J play. Match the tempo with pitch, then line up the beats with nudge." ]
                 , keyboardMap model
                 , div [ class "help-columns" ]
@@ -3877,7 +3890,28 @@ helpView model =
                     ]
                 , p [] [ text "Keys go by position, so they sit in the same place on any keyboard. A field you type in keeps its keys; Esc lets go of it." ]
                 ]
-            , button [ id "help-return", class "primary-button", onClick ToggleHelp ] [ text "Back to the groove" ]
+
+            else
+                [ p [] [ text "Left hand: deck A. Right hand: deck B. Match the tempo with pitch, then line up the beats with nudge." ]
+                , ul [ class "shortcut-list help-essentials" ] (List.map (\( key, action ) -> li [] [ strong [] [ text key ], span [] [ text action ] ]) essentials)
+                ]
+    in
+    div [ class "modal-backdrop" ]
+        [ section [ classList [ ( "help-modal", True ), ( "is-short", not model.helpMore ) ], attribute "role" "dialog", attribute "aria-modal" "true", attribute "aria-labelledby" "help-title", custom "keydown" helpKeyDecoder ]
+            [ div [ class "section-heading" ] [ h2 [ id "help-title" ] [ text "Hands on. Ears open." ], button [ id "help-close", class "help-button", onClick ToggleHelp, attribute "aria-label" "Close help" ] [ text "×" ] ]
+            , div [ class "help-body" ] body
+            , div [ class "help-actions" ]
+                [ button [ id "help-more", class "secondary-button", onClick (MoreHelp (not model.helpMore)), attribute "aria-expanded" (if model.helpMore then "true" else "false") ]
+                    [ text
+                        (if model.helpMore then
+                            "Show less"
+
+                         else
+                            "Show more"
+                        )
+                    ]
+                , button [ id "help-return", class "primary-button", onClick ToggleHelp ] [ text "Back to the groove" ]
+                ]
             ]
         ]
 
@@ -3923,25 +3957,36 @@ keyboardMap model =
 
 helpKeyDecoder : D.Decoder { message : Msg, stopPropagation : Bool, preventDefault : Bool }
 helpKeyDecoder =
+    let
+        -- The dialog's buttons in Tab order; Tab and Shift+Tab go round them.
+        order =
+            [ "help-close", "help-more", "help-return" ]
+
+        next controlId backwards =
+            let
+                index =
+                    List.indexedMap Tuple.pair order |> List.filter (\( _, item ) -> item == controlId) |> List.head |> Maybe.map Tuple.first |> Maybe.withDefault -1
+
+                step =
+                    if backwards then
+                        if index < 0 then
+                            List.length order - 1
+
+                        else
+                            index - 1
+
+                    else
+                        index + 1
+            in
+            List.drop (modBy (List.length order) step) order |> List.head |> Maybe.withDefault "help-close"
+    in
     D.field "key" D.string
         |> D.andThen
             (\key ->
                 if key == "Tab" then
-                    D.at [ "target", "id" ] D.string
-                        |> D.map
-                            (\controlId ->
-                                { message =
-                                    FocusHelp
-                                        (if controlId == "help-close" then
-                                            "help-return"
-
-                                         else
-                                            "help-close"
-                                        )
-                                , stopPropagation = True
-                                , preventDefault = True
-                                }
-                            )
+                    D.map2 (\controlId backwards -> { message = FocusHelp (next controlId backwards), stopPropagation = True, preventDefault = True })
+                        (D.oneOf [ D.at [ "target", "id" ] D.string, D.succeed "" ])
+                        (D.oneOf [ D.field "shiftKey" D.bool, D.succeed False ])
 
                 else
                     D.fail "Only trap Tab inside the help dialog"

@@ -1104,7 +1104,10 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .help-modal .help-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(170 * var(--kp)), 1fr)); gap: 0 calc(8 * var(--kp)); }
 :root[data-layout=kit] .help-modal h3 { font: var(--k-text)/16px var(--k-pixel); text-transform: uppercase; color: var(--k-list-dim); letter-spacing: 0; }
 :root[data-layout=kit] .help-modal .help-column .shortcut-list strong { min-width: calc(48 * var(--kp)); flex-shrink: 0; }
-:root[data-layout=kit] .help-modal > .primary-button { align-self: center; margin-top: calc(2 * var(--kp)); }
+:root[data-layout=kit] .help-modal .help-actions { display: flex; justify-content: center; gap: calc(6 * var(--kp)); margin-top: calc(2 * var(--kp)); }
+/* The first look is just the essentials, in a narrower window. */
+:root[data-layout=kit] .help-modal.is-short { max-width: min(calc(100vw - 40px), calc(260 * var(--kp))); }
+:root[data-layout=kit] .help-modal .help-essentials strong { min-width: calc(48 * var(--kp)); flex-shrink: 0; }
 /* A key just used: its control glows for a moment, like a keyboard focus ring. */
 :root[data-layout=kit] [data-key-flash] { outline: var(--kp) solid var(--k-accent); outline-offset: var(--kp); }
 

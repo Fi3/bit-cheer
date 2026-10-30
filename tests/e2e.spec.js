@@ -141,12 +141,20 @@ test('desktop renders real waveform canvases and accessible two-deck controls', 
   await page.getByRole('button', { name: 'Keyboard shortcuts and help', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Close help', exact: true })).toBeFocused();
+  // Tab goes round the dialog's three buttons; Show more opens the full key list and keeps the focus.
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Show more', exact: true })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'Show less', exact: true })).toBeFocused();
+  await expect(page.getByRole('dialog')).toContainText('Pitch: match the tempo');
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Back to the groove', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Close help', exact: true })).toBeFocused();
   await page.keyboard.press('Shift+Tab');
   await expect(page.getByRole('button', { name: 'Back to the groove', exact: true })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(page.getByRole('button', { name: 'Show less', exact: true })).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Keyboard shortcuts and help', exact: true })).toBeFocused();
@@ -302,10 +310,15 @@ test('keyboard control: digits switch views, ` and Esc enter and leave Focus ses
   await expect(page.getByTestId('bpm-a')).toHaveAttribute('aria-label', 'BPM hidden');
   await page.keyboard.press('b');
   await expect(page.getByTestId('bpm-a')).not.toHaveAttribute('aria-label', 'BPM hidden');
-  // The help shows the keys of the view you're in.
+  // The help opens on the essentials only: play, pitch, nudge.
   await page.keyboard.press('Shift+Slash');
   const dialog = page.getByRole('dialog');
+  const more = () => dialog.getByRole('button', { name: 'Show more', exact: true }).click();
   await expect(dialog).toBeVisible();
+  await expect(dialog.locator('.help-essentials li')).toHaveText([/^Space/, /^F · J/, /^W E · I O.*Pitch down \/ up, 0\.05% a press/, /^S D · K L.*Nudge/, /^↓ ↑ · ← →/]);
+  await expect(dialog.getByRole('group')).toHaveCount(0);
+  // Show more: the key map and the keys of the view you're in.
+  await more();
   await expect(dialog.getByRole('group', { name: 'Deck A keys' })).toContainText('Tempo');
   // Pitch leads the help, with the real step sizes of the decks' Wheel / keys setting.
   await expect(dialog.locator('.help-column').first()).toContainText('Pitch: match the tempo');
@@ -320,7 +333,11 @@ test('keyboard control: digits switch views, ` and Esc enter and leave Focus ses
   // Pro decks: the track key reads Next.
   await page.keyboard.press('5');
   await expect(page.getByRole('heading', { name: 'Make the mix yours.' })).toBeVisible();
+  // A track that finishes loading starts paused, so wait for both before playing with the keys.
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(deck => deck.source === 'pcm'))).toBe(true);
   await page.keyboard.press('Shift+Slash');
+  await expect(dialog.locator('.help-essentials')).toBeVisible();
+  await more();
   await expect(dialog.getByRole('group', { name: 'Deck B keys' })).toContainText('Next');
   await expect(dialog).toContainText('Start or stop a ★ Star run');
   await page.keyboard.press('Escape');
@@ -334,6 +351,7 @@ test('keyboard control: digits switch views, ` and Esc enter and leave Focus ses
   await expect(page.locator('.focus-channel')).toHaveCount(2);
   expect(await page.evaluate(() => window.bitCheer.mode)).toBe('pro');
   await page.keyboard.press('Shift+Slash');
+  await more();
   await expect(dialog).toContainText('Leave Focus session');
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);

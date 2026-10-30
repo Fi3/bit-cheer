@@ -83,7 +83,7 @@ Shortcuts work wherever the page has the keyboard. A focused control keeps only 
 | A button or toggle **reached with Tab** | `Space` and `Enter` press it | shortcuts |
 | A button or toggle **clicked with the mouse**, or focused by the app (the `?` button after the help closes) | none | shortcuts, `Space` and `Enter` included |
 | A link reached with Tab | `Enter` follows it | shortcuts |
-| The keyboard help dialog | `Tab` / `Shift`+`Tab` move between its two buttons; `Space` and `Enter` press them | only `?` and `Esc` (both close it) |
+| The keyboard help dialog | `Tab` / `Shift`+`Tab` go round its three buttons; `Space` and `Enter` press them | only `?` and `Esc` (both close it) |
 
 A button counts as reached with Tab only when the focus arrived there by a `Tab` or `Shift`+`Tab` press. A keyboard-only user can still Tab to any button and press it with `Space`, while someone who just clicked **Randomize tempo** and then presses `Space` plays both decks instead of randomizing again. (The browser's `:focus-visible` can't make this distinction: it switches on for any focused button as soon as a key is pressed.)
 
@@ -252,9 +252,19 @@ Lessons (Learning path) and drills (Training) run in the views above, so the sam
 
 ### 7.8 Keyboard help
 
-`?` opens a dialog with the three letter rows drawn as key caps in the skin's style (deck A, the mixer keys, deck B), with the pitch row labelled. Below it, pitch comes first, because matching the tempo is what the app teaches: a **Pitch** list gives every pitch key with the real step sizes taken from each deck's Wheel / keys setting (for example "Down / up one step: 0.05%", or "A 0.05%, B 0.25%" when the decks differ), the Shift step, the arrows, pitch to 0 and holding. Then come the other deck keys (with the track key's meaning in this view) and the keys of the current view. In Focus session it lists only Focus session's keys and leaves the unused caps blank.
+`?` opens a short dialog with only what a first beatmatch needs, every time it opens:
 
-While it is open, `Tab` and `Shift`+`Tab` move between its two buttons, `Space` / `Enter` press them, and `?` or `Esc` close it. On the practice page, closing returns the keyboard focus to the `?` button in the top bar.
+| Key | Says |
+| --- | --- |
+| `Space` | Play / pause both decks |
+| `F` · `J` | Play / pause deck A · deck B |
+| `W` `E` · `I` `O` | Pitch down / up, with the real step of a press (for example 0.05%). Hold to keep going |
+| `S` `D` · `K` `L` | Nudge back / forward. Hold to bend the speed |
+| `↓` `↑` · `←` `→` | Deck B: pitch · nudge |
+
+**Show more** opens the rest: the three letter rows drawn as key caps in the skin's style (deck A, the mixer keys, deck B) with the pitch row labelled, then a **Pitch** list (every pitch key with the real step sizes from each deck's Wheel / keys setting, such as "A 0.05%, B 0.25%" when the decks differ, plus the Shift step, pitch to 0 and holding), the other deck keys with the track key's meaning in this view, and the keys of the current view. **Show less** goes back to the short version. In Focus session the full version lists only Focus session's keys and leaves the unused caps blank.
+
+While the dialog is open, `Tab` and `Shift`+`Tab` go round its three buttons (close, Show more, Back to the groove), `Space` / `Enter` press them, and `?` or `Esc` close it. On the practice page, closing returns the keyboard focus to the `?` button in the top bar.
 
 ### 7.9 Learning path, Training and Skin studio
 
