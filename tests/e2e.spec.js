@@ -248,6 +248,62 @@ test('invalid skins report an error and preserve the current design', async ({ p
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'millennium');
 });
 
+// A 24-bit BMP from a pixel function, for synthetic skins.
+function bmp(width, height, color) {
+  const row = Math.ceil(width * 3 / 4) * 4, bytes = new Uint8Array(54 + row * height), view = new DataView(bytes.buffer);
+  bytes.set([66, 77]); view.setUint32(2, bytes.length, true); view.setUint32(10, 54, true); view.setUint32(14, 40, true);
+  view.setInt32(18, width, true); view.setInt32(22, height, true); view.setUint16(26, 1, true); view.setUint16(28, 24, true); view.setUint32(34, row * height, true);
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+    const [r, g, b] = color(x, y), i = 54 + (height - 1 - y) * row + x * 3;
+    bytes[i] = b; bytes[i + 1] = g; bytes[i + 2] = r;
+  }
+  return bytes;
+}
+
+test('skins that paint their controls on a picture still get usable console controls and lettering', async ({ page }) => {
+  // A "picture" main window, transport icons painted straight onto it (all alike), a volume bar that is
+  // only that picture, and lettering in two inks (red letters, white digits), like Excel Saga or SimCity.
+  const art = (x, y) => [(x * 37 + y * 11) % 256, (x * 13 + y * 29) % 256, (x * 7 + y * 53) % 256];
+  const transport = [[0, 16, 88], [23, 39, 88], [46, 62, 88], [69, 85, 88], [92, 108, 88], [114, 136, 89]];
+  const icon = (x, y) => x >= 8 && x <= 13 && y >= 5 && y <= 12;
+  const cbuttons = bmp(136, 36, (x, y) => {
+    const cell = transport.findLast(([cx]) => x >= cx), [cx, mx, my] = cell, local = x - cx, top = y % 18;
+    return icon(local, top) ? [60, 60, 70] : art(mx + local, my + top);
+  });
+  const volume = bmp(68, 433, (x, y) => art(107 + x, 57 + y % 15));
+  const text = bmp(155, 18, (x, y) => (x % 5 < 4 && y % 6 < 5 && (x + y) % 2 === 0) ? (y < 6 ? [255, 0, 0] : [255, 255, 255]) : [0, 0, 0]);
+  const files = { 'Painted/main.bmp': bmp(275, 116, art), 'Painted/cbuttons.bmp': cbuttons, 'Painted/volume.bmp': volume, 'Painted/text.bmp': text };
+  await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
+  await importFile(page, page.getByRole('button', { name: /Import a skin/ }), { name: 'painted.wsz', mimeType: 'application/zip', buffer: Buffer.from(zipSync(files)) });
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'custom');
+  await expect(page.locator('html')).toHaveAttribute('data-layout', 'kit');
+  const result = await page.evaluate(async () => {
+    const style = getComputedStyle(document.documentElement);
+    const image = async name => {
+      const src = style.getPropertyValue(name).trim().match(/url\("?(.*?)"?\)$/)[1];
+      const img = new Image(); img.src = src; await img.decode();
+      const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
+      const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
+      return (x, y) => '#' + [...ctx.getImageData(x, y, 1, 1).data.slice(0, 3)].map(v => v.toString(16).padStart(2, '0')).join('');
+    };
+    const transportAt = await image('--k-cb-clean'), volumeAt = await image('--k-vol-strip');
+    await document.fonts.load('12px "Kit Pixel"');
+    const canvas = document.createElement('canvas'); canvas.width = 40; canvas.height = 20;
+    const ctx = canvas.getContext('2d'); ctx.font = '12px "Kit Pixel"'; ctx.fillStyle = '#000'; ctx.fillText('A', 4, 14);
+    const ink = [...ctx.getImageData(0, 0, 40, 20).data].filter((v, i) => i % 4 === 3 && v > 0).length;
+    return {
+      // The play button's symbol (a triangle centered on the cell) in the button text color.
+      playSymbol: transportAt(32, 8), faceText: style.getPropertyValue('--k-face-text').trim(),
+      // An empty volume frame: the groove's inside, in the display color.
+      groove: volumeAt(30, 6), lcdBg: style.getPropertyValue('--k-lcd-bg').trim(),
+      letterInk: ink,
+    };
+  });
+  expect(result.playSymbol, 'Look-alike icons on a picture become a clear play symbol on the skin button').toBe(result.faceText);
+  expect(result.groove, 'A volume bar that is only the picture becomes a plain groove').toBe(result.lcdBg);
+  expect(result.letterInk, 'Letters drawn in a second ink still make it into the skin font').toBeGreaterThan(5);
+});
+
 test('a custom TOML and graphic ZIP applies colors and image assets and survives reload', async ({ page }) => {
   const manifest = 'version = 1\nname = "Pixel Harbor Test"\nbase = "bento"\n[colors]\naccent = "#25c4ee"\n[assets]\npanel = "panel.png"\n';
   const bytes = zipSync({

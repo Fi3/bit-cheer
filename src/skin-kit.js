@@ -4,7 +4,7 @@
 // missing comes from the bundled base skin, and sprites outside a sheet stay transparent.
 import { buildPixelFont, TEXT_GLYPHS, SYMBOL_GLYPHS, symbolBits } from './pixel-font.js';
 
-export const KIT_VERSION = 5;
+export const KIT_VERSION = 6;
 export const KIT_SHEETS = ['main', 'titlebar', 'cbuttons', 'posbar', 'volume', 'balance', 'numbers', 'nums_ex', 'text', 'playpaus', 'monoster', 'shufrep', 'eqmain', 'pledit', 'genex'];
 // Sheets the live windows draw from at runtime (the rest only feed pieces and colors).
 export const LIVE_SHEETS = ['main', 'titlebar', 'cbuttons', 'posbar', 'volume', 'balance', 'numbers', 'nums_ex', 'text', 'playpaus', 'monoster', 'shufrep', 'eqmain'];
@@ -139,11 +139,36 @@ function textClusters(sheet) {
     if (!na || !nb) break;
     a = sa.map(v => v / na); b = sb.map(v => v / nb);
   }
-  const [bg, ink] = na >= nb ? [a, b] : [b, a];
+  let [bg, ink] = na >= nb ? [a, b] : [b, a];
+  let isInk = p => distance(p, ink) < distance(p, bg);
+  // Fonts drawn in two inks (red letters, white digits on black) split wrongly in two clusters: the
+  // dimmer ink lands with the background and its letters vanish. Then the most common color is the
+  // background and every clearly different pixel is ink.
+  if (!balancedGlyphs(sheet, isInk)) {
+    const top = histogram(sheet, [[0, 0, Math.min(155, sheet.width), Math.min(18, sheet.height)]])[0];
+    const base = top && rgb(top.color), inkOf = p => distance(p, base) > 60;
+    if (base && balancedGlyphs(sheet, inkOf)) {
+      const inks = pts.filter(inkOf);
+      bg = base; ink = inks.reduce((acc, p) => acc.map((v, i) => v + p[i] / inks.length), [0, 0, 0]); isInk = inkOf;
+    }
+  }
   if (distance(bg, ink) < 40) return null;
   // The most common real color of each side, so solid fonts keep their exact palette.
-  const pick = side => { const counts = new Map(); for (const p of pts) { const isInk = distance(p, ink) < distance(p, bg); if (isInk !== side) continue; const k = p.join(','); counts.set(k, (counts.get(k) || 0) + 1); } const top = [...counts.entries()].sort((m, n) => n[1] - m[1])[0]; return top ? top[0].split(',').map(Number) : null; };
-  return { bg, ink, bgColor: hex(...(pick(false) || bg)), inkColor: hex(...(pick(true) || ink)), isInk: p => distance(p, ink) < distance(p, bg) };
+  const pick = side => { const counts = new Map(); for (const p of pts) { if (isInk(p) !== side) continue; const k = p.join(','); counts.set(k, (counts.get(k) || 0) + 1); } const top = [...counts.entries()].sort((m, n) => n[1] - m[1])[0]; return top ? top[0].split(',').map(Number) : null; };
+  return { bg, ink, bgColor: hex(...(pick(false) || bg)), inkColor: hex(...(pick(true) || ink)), isInk };
+}
+
+// Whether both the letters and the digits of TEXT.BMP come out with ink (a few pixels per glyph on average).
+function balancedGlyphs(sheet, isInk) {
+  let letters = 0, digits = 0;
+  for (const [ch, [row, col]] of Object.entries(TEXT_GLYPHS)) {
+    const letter = ch >= 'A' && ch <= 'Z', digit = ch >= '0' && ch <= '9';
+    if (!letter && !digit) continue;
+    let n = 0;
+    for (let y = 0; y < 6; y++) for (let x = 0; x < 5; x++) { const p = sheet.px(col * 5 + x, row * 6 + y); if (p && isInk(p)) n++; }
+    if (letter) letters += n; else digits += n;
+  }
+  return letters / 26 >= 3 && digits / 10 >= 3;
 }
 
 // ---------- text files ----------
@@ -292,11 +317,19 @@ export async function buildKit(files, { fetchBase } = {}) {
   if (menu) { parts.genBtn = url(menu.up); parts.genBtnDown = url(menu.down); }
   else if (!genex) { delete parts.genBtn; delete parts.genBtnDown; }
   const genSlice = menu ? 3 : genex ? measureButtonSlice(sheets.genex) : 3;
-  // Transport sprites are cut at fixed sizes, so some carry bits of the window art around them
-  // (Garfield's teddy bear): keep only the part of each button that changes when pressed.
-  if (sheets.cbuttons) parts.cbClean = url(cleanTransport(sheets.cbuttons));
 
   const colors = derivePalette({ sheets, pledit, vis, menu, genex });
+  const visColors = vis.length >= 18 ? vis : DEFAULT_VIS;
+  // The console's transport: the skin's own buttons when they are whole buttons, else its icons (or clear
+  // symbols) on its generic button. Fixed-size cuts can carry bits of window art (Garfield's teddy bear):
+  // cleanTransport keeps only the part of each button that changes when pressed.
+  const genArt = menu ? { up: menu.up, down: menu.down, slice: genSlice }
+    : genex ? { up: crop(sheets.genex, 0, 0, 47, 15), down: crop(sheets.genex, 0, 16, 47, 15), slice: genSlice } : null;
+  const transport = transportSheet(sheets, colors, genArt);
+  if (transport) parts.cbClean = url(transport);
+  // Sliders painted straight onto the main window's picture get a plain groove in the console.
+  if (sheets.volume && !borrowed.includes('volume') && staticFrames(sheets.volume) && paintedOn(sheets.volume, [0, 0], sheets.main, [107, 57], 68, 13)) parts.volStrip = url(volumeGroove(colors, visColors));
+  if (sheets.posbar && !borrowed.includes('posbar') && paintedOn(sheets.posbar, [0, 0], sheets.main, [16, 72], 248, 10)) parts.posBg = url(seekGroove(colors));
   parts.jogPlatter = url(jogPlatter(colors));
   // Toggles light the EQ's ON button, unless lit and unlit are different pictures (some skins draw
   // a scene there): then a small switch in the skin's colors keeps the state readable.
@@ -386,6 +419,178 @@ function cleanTransport(sheet) {
       g.clearRect(x, top + y0, x0, y1 - y0 + 1); g.clearRect(x + x1 + 1, top + y0, w - x1 - 1, y1 - y0 + 1);
     }
   }
+  return out;
+}
+
+// Where each transport sprite sits in CBUTTONS and in the main window (Winamp's layout):
+// prev, play, pause, stop, next, eject as [x in CBUTTONS, w, h, main x, main y].
+const TRANSPORT = [[0, 23, 18, 16, 88], [23, 23, 18, 39, 88], [46, 23, 18, 62, 88], [69, 23, 18, 85, 88], [92, 22, 18, 108, 88], [114, 22, 16, 136, 89]];
+// Clear symbols for the same six buttons, when a skin's own icons can't be used.
+const PREV = ['X.....X', 'X....XX', 'X...XXX', 'X..XXXX', 'X.XXXXX', 'X..XXXX', 'X...XXX', 'X....XX', 'X.....X'];
+const TRANSPORT_GLYPHS = [
+  PREV,
+  ['X....', 'XX...', 'XXX..', 'XXXX.', 'XXXXX', 'XXXX.', 'XXX..', 'XX...', 'X....'],
+  ['XX..XX', 'XX..XX', 'XX..XX', 'XX..XX', 'XX..XX', 'XX..XX', 'XX..XX', 'XX..XX', 'XX..XX'],
+  ['XXXXXXX', 'XXXXXXX', 'XXXXXXX', 'XXXXXXX', 'XXXXXXX', 'XXXXXXX', 'XXXXXXX'],
+  PREV.map(row => row.split('').reverse().join('')),
+  ['....X....', '...XXX...', '..XXXXX..', '.XXXXXXX.', 'XXXXXXXXX', '.........', 'XXXXXXXXX'],
+];
+
+// The console's transport (the live main window always draws the skin's own CBUTTONS):
+// - most skins draw whole buttons, used as they are;
+// - when the main window holds the art the buttons are painted on (icons over a picture, like Excel Saga),
+//   a cut-out sprite is just a piece of that picture: the icon is lifted off the art and set on the skin's
+//   generic button, the same one SET and the other console buttons use;
+// - buttons that all look alike (orbs, domes) get a clear symbol.
+function transportSheet(sheets, c, gen) {
+  const cb = sheets.cbuttons, main = sheets.main;
+  if (!cb) return null;
+  const cleaned = cleanTransport(cb);
+  if (!cb.data || !main?.data) return cleaned;
+  // The icon of each button: the pixels where the sprite differs from the main window behind it.
+  const icons = TRANSPORT.map(([x, w, h, mx, my]) => {
+    const mask = new Uint8Array(w * h); let n = 0;
+    for (let y = 0; y < h; y++) for (let i = 0; i < w; i++) {
+      const a = cb.px(x + i, y), b = main.px(mx + i, my + y);
+      if (!a || !b || distance(a, b) > 30) { mask[y * w + i] = 1; n++; }
+    }
+    return { mask, n, share: n / (w * h) };
+  });
+  const share = icons.slice(0, 5).map(icon => icon.share).sort((p, q) => p - q)[2];
+  // How plain the main window is around the icons: a flat plate (labels on buttons) or a picture (Excel Saga).
+  const plate = TRANSPORT.slice(0, 5).map(([x, w, h, mx, my], i) => {
+    let flat = 0, pairs = 0;
+    for (let y = 0; y < h; y++) for (let k = 0; k + 1 < w; k++) {
+      if (icons[i].mask[y * w + k] || icons[i].mask[y * w + k + 1]) continue;
+      const a = main.px(mx + k, my + y), b = main.px(mx + k + 1, my + y);
+      if (!a || !b) continue;
+      pairs++; if (distance(a, b) <= 12) flat++;
+    }
+    return pairs ? flat / pairs : 1;
+  }).sort((p, q) => p - q)[2];
+  // Look-alike buttons: play and stop have (nearly) the same middle.
+  const middle = (ax, bx) => { let changed = 0, n = 0; for (let y = 3; y < 15; y++) for (let x = 3; x < 19; x++) { const a = cb.px(ax + x, y), b = cb.px(bx + x, y); if (!a || !b) continue; n++; if (distance(a, b) > 48) changed++; } return n ? changed / n : 1; };
+  const lookAlike = middle(23, 69) < 0.05;
+  if (share > 0.6 || share < 0.05 || plate >= 0.6) {
+    // Whole buttons (the main window doesn't contain them), buttons the main window repeats exactly, or
+    // icons on plain plates: the sprites are proper buttons.
+    if (lookAlike) TRANSPORT.forEach(([x, w, h], i) => {
+      for (const top of [0, h]) {
+        const g = cleaned.getContext('2d'), ink = inkFor(cleaned, x, top, w, h, c);
+        drawGlyph(g, TRANSPORT_GLYPHS[i], x, top + (top ? 1 : 0), w, h, ink, top ? 1 : 0);
+      }
+    });
+    return cleaned;
+  }
+  // Icons painted over the main window's art: lift them onto the skin's generic button.
+  const out = document.createElement('canvas'); out.width = 136; out.height = 36;
+  const g = out.getContext('2d');
+  const same = (p, q) => { let both = 0, either = 0; for (let k = 0; k < p.mask.length && k < q.mask.length; k++) { if (p.mask[k] && q.mask[k]) both++; if (p.mask[k] || q.mask[k]) either++; } return either ? both / either : 1; };
+  // The skin's own icons are kept when every one of them is a distinct shape whose own colors read on the
+  // button face; otherwise (soft glows, embossing on a picture, look-alikes) all get crisp symbols.
+  const fits = TRANSPORT.every(([x, w, h], i) => {
+    const icon = icons[i]; let readable = 0;
+    for (let y = 1; y < h - 1; y++) for (let k = 1; k < w - 1; k++) { const p = icon.mask[y * w + k] && cb.px(x + k, y); if (p && contrast(hex(...p), c.face) >= 2.2) readable++; }
+    return icon.n >= 10 && icon.share <= 0.6 && readable >= 0.7 * icon.n;
+  });
+  const own = fits && same(icons[1], icons[3]) <= 0.8;
+  TRANSPORT.forEach(([x, w, h], i) => {
+    const icon = icons[i];
+    for (const [top, pressed] of [[0, false], [h, true]]) {
+      buttonPlate(g, x, top, w, h, c, gen, pressed);
+      const shift = pressed ? 1 : 0;
+      if (!own) { drawGlyph(g, TRANSPORT_GLYPHS[i], x, top, w, h, c.faceText, shift); continue; }
+      for (let y = 1; y < h - 1; y++) for (let k = 1; k < w - 1; k++) {
+        const p = icon.mask[y * w + k] && cb.px(x + k, y);
+        const tx = k + shift, ty = y + shift;
+        if (!p || tx >= w - 1 || ty >= h - 1) continue;
+        g.fillStyle = hex(...p);
+        g.fillRect(x + tx, top + ty, 1, 1);
+      }
+    }
+  });
+  return out;
+}
+
+// A console button's plate: the skin's generic button (its playlist menu button or GENEX, 9-sliced),
+// else a one-pixel bevel in the skin's button colors with a dark outline, like the page's other buttons.
+function buttonPlate(g, x, y, w, h, c, gen, pressed) {
+  const art = gen && (pressed ? gen.down : gen.up);
+  if (art) {
+    const s = gen.slice, aw = art.width, ah = art.height, cw = Math.max(1, aw - 2 * s), ch = Math.max(1, ah - 2 * s);
+    const piece = (sx, sy, sw, sh, dx, dy, dw, dh) => { if (sw > 0 && sh > 0 && dw > 0 && dh > 0) g.drawImage(art, sx, sy, sw, sh, x + dx, y + dy, dw, dh); };
+    piece(0, 0, s, s, 0, 0, s, s); piece(aw - s, 0, s, s, w - s, 0, s, s);
+    piece(0, ah - s, s, s, 0, h - s, s, s); piece(aw - s, ah - s, s, s, w - s, h - s, s, s);
+    piece(s, 0, cw, s, s, 0, w - 2 * s, s); piece(s, ah - s, cw, s, s, h - s, w - 2 * s, s);
+    piece(0, s, s, ch, 0, s, s, h - 2 * s); piece(aw - s, s, s, ch, w - s, s, s, h - 2 * s);
+    piece(s, s, cw, ch, s, s, w - 2 * s, h - 2 * s);
+    return;
+  }
+  const box = (bx, by, bw, bh, color) => { g.fillStyle = color; g.fillRect(x + bx, y + by, bw, bh); };
+  box(0, 0, w, h, mix(c.frameDark, '#000000', 0.2));
+  box(1, 1, w - 2, h - 2, pressed ? mix(c.face, c.faceDark, 0.18) : c.face);
+  box(1, 1, w - 2, 1, pressed ? c.faceDark : c.faceLight); box(1, 1, 1, h - 2, pressed ? c.faceDark : c.faceLight);
+  box(1, h - 2, w - 2, 1, pressed ? c.faceLight : c.faceDark); box(w - 2, 1, 1, h - 2, pressed ? c.faceLight : c.faceDark);
+}
+
+// A symbol centered on a button, one pixel lower right when pressed.
+function drawGlyph(g, rows, x, y, w, h, color, shift = 0) {
+  const gw = rows[0].length, gh = rows.length, ox = x + Math.floor((w - gw) / 2) + shift, oy = y + Math.floor((h - gh) / 2) + shift;
+  g.fillStyle = color;
+  rows.forEach((row, j) => { for (let i = 0; i < gw; i++) if (row[i] === 'X') g.fillRect(ox + i, oy + j, 1, 1); });
+}
+
+// The color that stands out most on the middle of a button.
+function inkFor(canvas, x, y, w, h, c) {
+  const d = canvas.getContext('2d').getImageData(x + 4, y + 4, Math.max(1, w - 8), Math.max(1, h - 8)).data;
+  let r = 0, gr = 0, b = 0, n = 0;
+  for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 0) { r += d[i]; gr += d[i + 1]; b += d[i + 2]; n++; }
+  const under = n ? hex(r / n, gr / n, b / n) : c.face;
+  return [c.faceText, c.listHi, c.lcdFg, '#ffffff', '#000000'].sort((p, q) => contrast(q, under) - contrast(p, under))[0];
+}
+
+// Whether a slider strip is only the main window's picture behind it (no groove of its own, like
+// Excel Saga's volume): then the console draws a plain groove instead of a cut-out of the picture.
+function paintedOn(sheet, [sx, sy], main, [mx, my], w, h) {
+  if (!sheet?.data || !main?.data) return false;
+  let same = 0, n = 0, steps = 0, pairs = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const a = sheet.px(sx + x, sy + y), b = main.px(mx + x, my + y);
+    if (!a || !b) continue;
+    n++; if (distance(a, b) <= 30) same++;
+    const right = x + 1 < w ? sheet.px(sx + x + 1, sy + y) : null;
+    if (right) { steps += distance(a, right); pairs++; }
+  }
+  return n > 0 && same / n >= 0.9 && steps / Math.max(1, pairs) > 20;
+}
+
+// Whether the 28 volume frames are all the same picture (the level never shows in the bar itself).
+function staticFrames(sheet) {
+  if (!sheet?.data || !sheet.has(0, 0, 68, 418)) return false;
+  let changed = 0, n = 0;
+  for (let y = 0; y < 13; y++) for (let x = 0; x < 68; x++) { const a = sheet.px(x, y), b = sheet.px(x, y + 405); if (!a || !b) continue; n++; if (distance(a, b) > 40) changed++; }
+  return n > 0 && changed / n < 0.03;
+}
+
+// 28 volume frames (68 × 13, every 15 pixels): a groove that fills with the skin's analyser colors.
+function volumeGroove(c, vis) {
+  const out = document.createElement('canvas'); out.width = 68; out.height = 420;
+  const g = out.getContext('2d'), low = vis[17] || c.accent, high = vis[2] || c.accent;
+  for (let i = 0; i < 28; i++) {
+    const y = i * 15, fill = Math.round(64 * i / 27);
+    g.fillStyle = mix(c.frameDark, '#000000', 0.2); g.fillRect(0, y + 3, 68, 7);
+    g.fillStyle = c.lcdBg; g.fillRect(1, y + 4, 66, 5);
+    if (fill) { g.fillStyle = mix(low, high, i / 27); g.fillRect(2, y + 5, fill, 3); }
+  }
+  return out;
+}
+
+// A seek-bar groove (248 × 10) in the skin's colors.
+function seekGroove(c) {
+  const out = document.createElement('canvas'); out.width = 248; out.height = 10;
+  const g = out.getContext('2d');
+  g.fillStyle = mix(c.frameDark, '#000000', 0.2); g.fillRect(0, 3, 248, 4);
+  g.fillStyle = c.lcdBg; g.fillRect(1, 4, 246, 2);
   return out;
 }
 

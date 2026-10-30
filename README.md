@@ -106,6 +106,13 @@ Winamp skins (Millennium Chrome and imports alike) dress every control through a
 - Controls use the skin's own sprites at whole-pixel scale: transport (CBUTTONS), the pitch fader and EQ bands (equalizer sliders), volume (VOLUME), crossfader (seek bar), toggles (equalizer ON button, REPEAT for loop), digits (NUMBERS), window frames (PLEDIT) and generic buttons (the playlist's own menu buttons when they are real rectangular buttons, else GENEX, else a bevel in the skin's colors). When a skin's ON button is a picture rather than a light, toggles become a small switch in the skin's colors.
 - The skin's TEXT.BMP becomes a real web font (`src/pixel-font.js`), so labels are set in its own pixel lettering. Colors come from `pledit.txt`, `viscolor.txt` and the bitmaps, with contrast checks.
 - The main window is live: time, scrolling title, BPM and pitch, a real spectrum analyser or oscilloscope from the deck's audio (click it to switch), and `region.txt` window shapes. Its buttons work: play/pause/stop, previous/next nudge, eject changes track (imports a file in Pro), shuffle randomizes tempo, repeat toggles loop, EQ opens the equalizer module, PL shows or hides the console, and clicking the time shows remaining time.
+- Skins drawn for Winamp's main window don't always survive being cut into separate controls, so the importer adapts them:
+  - Some skins paint their transport icons straight onto a picture in the main window (Excel Saga). For those, the console's buttons become the skin's own generic button with the skin's icon or label, or a clear symbol when the icon doesn't read.
+  - Look-alike buttons (orbs, domes) get a symbol.
+  - Volume and seek bars that are only a piece of the picture become a plain groove in the skin's colors.
+  - Lettering drawn in two inks (red letters, white digits) keeps both.
+
+  The live main window always shows the skin's original art.
 - Like Winamp, the importer accepts real-world variations (odd sheet sizes, nested folders, RLE bitmaps, upper/lower case names). As in Winamp, a skin without a balance slider uses its volume slider; anything else a skin leaves out comes from Millennium Chrome.
 
 The earlier museum-based themes (base-2.91, Classified 3/5, Bento, Headspace) are still in the code and `public/skins/`, but are not selectable.
