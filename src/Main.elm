@@ -5,7 +5,7 @@ import Browser
 import Browser.Dom
 import Browser.Events
 import Dict exposing (Dict)
-import Html exposing (Html, a, article, aside, button, canvas, div, footer, h1, h2, h3, header, img, input, label, li, main_, nav, option, p, section, select, small, span, strong, text, ul)
+import Html exposing (Html, a, article, aside, br, button, canvas, div, footer, h1, h2, h3, header, img, input, label, li, main_, nav, option, p, section, select, small, span, strong, text, ul)
 import Html.Attributes as A exposing (alt, attribute, checked, class, classList, disabled, href, id, selected, src, step, style, target, title, type_, value)
 import Html.Events exposing (custom, on, onCheck, onClick, onInput, targetValue)
 import Html.Keyed as Keyed
@@ -116,7 +116,7 @@ type alias ModuleLayout =
 
 
 type alias Flags =
-    { basePath : String }
+    { basePath : String, kit : Bool }
 
 
 type alias Model =
@@ -144,6 +144,7 @@ type alias Model =
     , skinName : String
     , skinPreview : String
     , skinSource : String
+    , skinKit : Bool
     , skinUrl : String
     , skinUrlLoading : Bool
     , skinUrlResult : Maybe ( Bool, String )
@@ -260,8 +261,8 @@ init flags =
     ( { page = Practice
       , basePath = flags.basePath
       , mode = "foundation"
-      , a = initialDeck "Four to the floor · 01" 120
-      , b = initialDeck "Four to the floor · 02" 124
+      , a = initialDeck "KICK STUDY · 01" 120
+      , b = initialDeck "KICK STUDY · 02" 124
       , crossfade = 0.5
       , master = 0.75
       , splitCue = False
@@ -281,6 +282,7 @@ init flags =
       , skinName = "Millennium Chrome"
       , skinPreview = ""
       , skinSource = ""
+      , skinKit = flags.kit
       , skinUrl = ""
       , skinUrlLoading = False
       , skinUrlResult = Nothing
@@ -1165,7 +1167,7 @@ receive data model =
                     field "bpms" (D.list D.float) [ 120, 124 ] data
 
                 names =
-                    field "names" (D.list D.string) [ "Four to the floor · 01", "Four to the floor · 02" ] data
+                    field "names" (D.list D.string) [ "KICK STUDY · 01", "KICK STUDY · 02" ] data
 
                 apply index d =
                     let
@@ -1201,10 +1203,32 @@ receive data model =
 
                     "eject" ->
                         if model.mode == "pro" then
-                            ( model, Cmd.none )
+                            update (ImportTrack deck) model
 
                         else
                             update (ChangeTrack deck) model
+
+                    "repeat" ->
+                        update (Loop deck (not (getDeck deck model).loop)) model
+
+                    "shuffle" ->
+                        if model.drill == "phase" || model.drill == "phrase" then
+                            ( model, Cmd.none )
+
+                        else
+                            update (RandomizeTempo deck) model
+
+                    "eq" ->
+                        let
+                            existing =
+                                scopeModules deck (activeLayout model) |> List.filter (\item -> item.id == "eq") |> List.head
+                        in
+                        case existing of
+                            Just _ ->
+                                update (ToggleModule deck "eq") model
+
+                            Nothing ->
+                                update (AddModule deck "eq") model
 
                     "volume" ->
                         update (DeckValue deck "volume" (String.fromFloat (field "value" D.float 0.8 data))) model
@@ -1235,7 +1259,7 @@ receive data model =
             ( { model | micBpm = field "bpm" D.float 0 data, micActive = field "active" D.bool False data }, Cmd.none )
 
         "skin" ->
-            ( { model | skin = field "id" D.string model.skin data, skinName = field "name" D.string model.skinName data, skinPreview = field "preview" D.string "" data, skinSource = field "source" D.string "" data }, Cmd.none )
+            ( { model | skin = field "id" D.string model.skin data, skinName = field "name" D.string model.skinName data, skinPreview = field "preview" D.string "" data, skinSource = field "source" D.string "" data, skinKit = field "kit" D.bool False data }, Cmd.none )
 
         "skinUrlResult" ->
             ( { model | skinUrlLoading = False, skinUrlResult = Just ( field "ok" D.bool False data, field "message" D.string "" data ) }, Cmd.none )
@@ -1418,6 +1442,7 @@ focusView model =
                             ]
                         , pitchView number deck
                         , volumeView number deck
+                        , consoleBar model number
                         ]
                 )
                 [ 0, 1 ]
@@ -1677,13 +1702,16 @@ practiceView model =
                 , small [] [ text "SPACE" ]
                 ]
             , if model.mode == "foundation" then
-                button [ class "builder-invitation", onClick (SetMode "builder") ] [ text "Ready for more? Build a layered loop →" ]
+                button [ class "builder-invitation", onClick (SetMode "builder") ] [ text "Ready for more? Build a layered ", span [ class "keep-together" ] [ text "loop →" ] ]
 
               else if model.mode /= "pro" && model.a.source == "generated" && model.b.source == "generated" then
                 button [ class "add-element-button", onClick AddBothElements, disabled (List.length model.a.elements == 20 && List.length model.b.elements == 20) ] [ text "+ Add an element to both decks" ]
 
-              else
+              else if List.any (\number -> List.any (\item -> item.id == "waveform" && not item.collapsed) (scopeModules number (activeLayout model))) [ 0, 1 ] then
                 span [ class "muted" ] [ text "Drag the waveforms to seek. Scroll to zoom." ]
+
+              else
+                text ""
             ]
         , div [ class "practice-tip" ] [ span [] [ text "A LITTLE POINTER" ], text "Match the speed first. Then use nudge to bring the kicks into the same moment." ]
         ]
@@ -1955,6 +1983,157 @@ addModuleMenu model scope =
         ]
 
 
+{-| A Winamp playlist's bottom bar under each console, drawn by the skin (kit skins only).
+The add-module menu sits on the skin's ADD button, the displays show time, and the mini transport works.
+Its buttons repeat controls that exist elsewhere, so the bar is hidden from assistive technology.
+-}
+consoleBar : Model -> Int -> Html Msg
+consoleBar =
+    barWith False
+
+
+{-| The same bar under a track picker: its mini transport's ends step through the tracks.
+-}
+pickerBar : Model -> Int -> Html Msg
+pickerBar =
+    barWith True
+
+
+barWith : Bool -> Model -> Int -> Html Msg
+barWith picker model scope =
+    if not model.skinKit then
+        text ""
+
+    else
+        let
+            clock seconds =
+                let
+                    total =
+                        max 0 (floor seconds)
+                in
+                String.fromInt (total // 60) ++ ":" ++ pad2 (modBy 60 total)
+
+            anyPlaying =
+                model.a.playing || model.b.playing
+
+            ( running, mini, transport ) =
+                if scope == -1 then
+                    ( "A " ++ clock model.a.position ++ " B " ++ clock model.b.position
+                    , ( "", "" )
+                    , [ ( "prev", NoOp )
+                      , ( "play", ifThen (not anyPlaying) PlayBoth )
+                      , ( "pause", ifThen anyPlaying PlayBoth )
+                      , ( "stop", ifThen anyPlaying PlayBoth )
+                      , ( "next", NoOp )
+                      , ( "eject", NoOp )
+                      ]
+                    )
+
+                else
+                    let
+                        deck =
+                            getDeck scope model
+
+                        total =
+                            max 0 (floor deck.position)
+                    in
+                    ( clock deck.position ++ "/" ++ clock deck.duration
+                    , ( pad2 (min 99 (total // 60)), pad2 (modBy 60 total) )
+                    , [ ( "prev"
+                        , if picker then
+                            PreviousTrack scope
+
+                          else
+                            Nudge scope -0.04
+                        )
+                      , ( "play", ifThen (not deck.playing) (Play scope) )
+                      , ( "pause", ifThen deck.playing (Play scope) )
+                      , ( "stop", Cue scope )
+                      , ( "next"
+                        , if picker then
+                            NextTrack scope
+
+                          else
+                            Nudge scope 0.04
+                        )
+                      , ( "eject"
+                        , if model.mode == "pro" then
+                            ImportTrack scope
+
+                          else
+                            ChangeTrack scope
+                        )
+                      ]
+                    )
+
+            ifThen condition msg =
+                if condition then
+                    msg
+
+                else
+                    NoOp
+        in
+        div [ class "console-bar", attribute "aria-hidden" "true" ]
+            [ span [ class "bar-time" ] [ text running ]
+            , span [ class "bar-mini" ]
+                [ text
+                    (if String.isEmpty (Tuple.first mini) then
+                        ""
+
+                     else
+                        Tuple.first mini ++ ":" ++ Tuple.second mini
+                    )
+                ]
+            , div [ class "bar-transport" ] (List.map (\( name, msg ) -> button [ class ("bar-" ++ name), attribute "tabindex" "-1", title (barTip picker scope model.mode name), onClick msg ] []) transport)
+            ]
+
+
+barTip : Bool -> Int -> String -> String -> String
+barTip picker scope mode name =
+    case ( scope == -1, name ) of
+        ( True, "play" ) ->
+            "Play both decks"
+
+        ( True, "pause" ) ->
+            "Pause both decks"
+
+        ( True, "stop" ) ->
+            "Pause both decks"
+
+        ( True, _ ) ->
+            ""
+
+        ( False, "prev" ) ->
+            if picker then
+                "Previous track"
+
+            else
+                "Nudge back"
+
+        ( False, "play" ) ->
+            "Play"
+
+        ( False, "pause" ) ->
+            "Pause"
+
+        ( False, "stop" ) ->
+            "Stop and return to cue"
+
+        ( False, "next" ) ->
+            if picker then
+                "Next track"
+
+            else
+                "Nudge forward"
+
+        ( False, _ ) ->
+            if mode == "pro" then
+                "Import a track"
+
+            else
+                "Change track"
+
+
 deckView : Model -> Int -> Deck -> Html Msg
 deckView model number deck =
     let
@@ -1968,13 +2147,15 @@ deckView model number deck =
             List.any (\item -> item.id == "pitch" && not item.collapsed) modules
     in
     section [ class ("deck deck-" ++ String.toLower letter), attribute "data-deck" (String.fromInt number), attribute "aria-label" ("Deck " ++ letter) ]
-        [ if model.skin == "custom" then
+        [ if model.skinKit then
             div [ class "winamp-live", attribute "data-deck" (String.fromInt number) ]
                 [ canvas [ attribute "width" "275", attribute "height" "116", attribute "role" "img", attribute "aria-label" ("Deck " ++ letter ++ " in the skin's Winamp window. Its buttons control this deck.") ] [] ]
 
           else
             text ""
-        , div [ class "deck-heading" ]
+        , div [ class "deck-console" ]
+          [ button [ class "console-shade", attribute "data-deck" (String.fromInt number), attribute "aria-label" ("Fold or unfold deck " ++ letter ++ " console"), title "Fold or unfold this deck's console (like Winamp's playlist shade)" ] []
+          , div [ class "deck-heading" ]
             [ span [ class "deck-label" ]
                 [ span [ class "deck-letter" ] [ text letter ]
                 , strong [] [ text ("DECK " ++ letter) ]
@@ -2010,6 +2191,8 @@ deckView model number deck =
           else
             text ""
         , addModuleMenu model number
+        , consoleBar model number
+          ]
         ]
 
 
@@ -2023,7 +2206,15 @@ deckModuleContent model number deck moduleId =
             pitchView number deck
 
         "volume" ->
-            volumeView number deck
+            if model.skinKit then
+                -- Winamp skins add a level meter in the skin's analyser colors under the slider.
+                div [ class "volume-stack" ]
+                    [ volumeView number deck
+                    , div [ class "deck-level", attribute "aria-hidden" "true", attribute "style" ("--level:" ++ String.fromFloat (clamp 0 1 deck.peak)) ] []
+                    ]
+
+            else
+                volumeView number deck
 
         "jog" ->
             jogView number deck
@@ -2044,7 +2235,7 @@ deckModuleContent model number deck moduleId =
             composerView number deck
 
         "picker" ->
-            trackPickerView model number deck
+            div [ class "picker-stack" ] [ trackPickerView model number deck, pickerBar model number ]
 
         _ ->
             text ""
@@ -2116,7 +2307,12 @@ screenView model number deck =
                 , small [] [ text "BPM" ]
                 ]
             , div [ class "time-display" ]
-                [ span [ class "lcd-time" ] [ text (timeDisplay deck.position) ]
+                [ if model.skinKit then
+                    -- Winamp skins show time in their own NUMBERS digits, like the BPM.
+                    span [ class "lcd-time lcd-number", attribute "role" "img", attribute "aria-label" (timeDisplay deck.position) ] (lcdDigits (timeDisplay deck.position))
+
+                  else
+                    span [ class "lcd-time" ] [ text (timeDisplay deck.position) ]
                 , small []
                     [ text
                         (if model.hideBpm then
@@ -2238,7 +2434,7 @@ pitchView number deck =
     in
     div [ class "pitch-section", attribute "data-deck" (String.fromInt number) ]
         [ div [ class "control-label" ] [ text "PITCH" ]
-        , div [ class "pitch-track", attribute "style" ("--pitch-position: " ++ String.fromFloat position ++ "%;") ]
+        , div [ class "pitch-track", attribute "style" ("--pitch-position: " ++ String.fromFloat position ++ "%; --pv: " ++ String.fromFloat (1 - position / 100) ++ ";") ]
             [ div [ class "pitch-rail" ] []
             , div [ class "pitch-ticks" ] [ span [] [ text ("+" ++ String.fromFloat deck.range) ], span [] [ text "0" ], span [] [ text ("−" ++ String.fromFloat deck.range) ] ]
             , div [ class "pitch-marker-layer", attribute "aria-hidden" "true" ] [ div [ class "pitch-handle" ] [ span [ class "pitch-handle-line" ] [] ] ]
@@ -2254,7 +2450,7 @@ pitchView number deck =
 
 volumeView : Int -> Deck -> Html Msg
 volumeView number deck =
-    div [ class "deck-volume-row" ] [ label [] [ text ("DECK " ++ deckLetter number ++ " VOLUME"), input [ type_ "range", A.min "0", A.max "1", step "0.01", value (String.fromFloat deck.volume), onInput (DeckValue number "volume"), attribute "aria-label" ("Deck " ++ deckLetter number ++ " volume") ] [] ], strong [] [ text (fixed 0 (deck.volume * 100) ++ "%") ] ]
+    div [ class "deck-volume-row" ] [ label [] [ text ("DECK " ++ deckLetter number ++ " VOLUME"), input [ type_ "range", A.min "0", A.max "1", step "0.01", value (String.fromFloat deck.volume), onInput (DeckValue number "volume"), attribute "aria-label" ("Deck " ++ deckLetter number ++ " volume"), rangeVar deck.volume ] [] ], strong [] [ text (fixed 0 (deck.volume * 100) ++ "%") ] ]
 
 
 jogView : Int -> Deck -> Html Msg
@@ -2271,7 +2467,7 @@ jogView number deck =
 
 equalizerView : Int -> Deck -> Html Msg
 equalizerView number deck =
-    div [ class "eq-controls" ] (List.map (\( param, val ) -> label [ class "eq-control" ] [ span [] [ text (String.toUpper param) ], input [ type_ "range", A.min "-24", A.max "12", step "0.5", value (String.fromFloat val), onInput (DeckValue number param), attribute "aria-label" ("Deck " ++ deckLetter number ++ " " ++ param ++ " EQ") ] [], small [] [ text (signed 1 val ++ " dB") ] ]) [ ( "low", deck.low ), ( "mid", deck.mid ), ( "high", deck.high ) ])
+    div [ class "eq-controls" ] (List.map (\( param, val ) -> label [ class "eq-control" ] [ span [] [ text (String.toUpper param) ], input [ type_ "range", A.min "-24", A.max "12", step "0.5", value (String.fromFloat val), onInput (DeckValue number param), attribute "aria-label" ("Deck " ++ deckLetter number ++ " " ++ param ++ " EQ"), rangeVar ((val + 24) / 36) ] [], small [] [ text (signed 1 val ++ " dB") ] ]) [ ( "low", deck.low ), ( "mid", deck.mid ), ( "high", deck.high ) ])
 
 
 composerView : Int -> Deck -> Html Msg
@@ -2504,7 +2700,7 @@ proTrackPickers model =
                 (\number ->
                     scopeModules number (activeLayout model)
                         |> List.filter (\item -> item.id == "picker")
-                        |> List.map (\item -> playerModule number item (trackPickerView model number (getDeck number model)))
+                        |> List.map (\item -> playerModule number item (div [ class "picker-stack" ] [ trackPickerView model number (getDeck number model), pickerBar model number ]))
                 )
                 [ 0, 1 ]
             )
@@ -2518,6 +2714,7 @@ globalModulesView model =
     div [ class "session-modules" ]
         [ div [ class "global-module-grid" ] (List.map (\item -> playerModule -1 item (globalModuleContent model item.id)) (activeLayout model).global)
         , addModuleMenu model -1
+        , consoleBar model -1
         ]
 
 
@@ -2565,14 +2762,14 @@ crossfaderView model =
                 ]
             , strong [] [ text "B" ]
             ]
-        , input [ type_ "range", A.min "0", A.max "1", step "0.01", value (String.fromFloat model.crossfade), onInput (Mixer "crossfade"), attribute "aria-label" "Crossfader", disabled (model.routing.mode /= "mix") ] []
+        , input [ type_ "range", A.min "0", A.max "1", step "0.01", value (String.fromFloat model.crossfade), onInput (Mixer "crossfade"), attribute "aria-label" "Crossfader", disabled (model.routing.mode /= "mix"), rangeVar model.crossfade ] []
         , div [ class "fader-scale" ] [ span [] [ text "╵ ╵ ╵ ╵ ╵" ], span [] [ text "│" ], span [] [ text "╵ ╵ ╵ ╵ ╵" ] ]
         ]
 
 
 masterView : Model -> Html Msg
 masterView model =
-    label [ class "master-volume" ] [ span [ class "control-label" ] [ text "MASTER", strong [] [ text (fixed 0 (model.master * 100) ++ "%") ] ], input [ type_ "range", A.min "0", A.max "1", step "0.01", value (String.fromFloat model.master), onInput (Mixer "master"), attribute "aria-label" "Master volume" ] [] ]
+    label [ class "master-volume" ] [ span [ class "control-label" ] [ text "MASTER", strong [] [ text (fixed 0 (model.master * 100) ++ "%") ] ], input [ type_ "range", A.min "0", A.max "1", step "0.01", value (String.fromFloat model.master), onInput (Mixer "master"), attribute "aria-label" "Master volume", rangeVar model.master ] [] ]
 
 
 monitorView : Model -> Html Msg
@@ -2626,6 +2823,9 @@ lcdDigits number =
                         if character == '.' then
                             "lcd-dot"
 
+                        else if character == ':' then
+                            "lcd-colon"
+
                         else if character == '-' || character == '−' then
                             "lcd-dash"
 
@@ -2677,11 +2877,11 @@ voiceView deckNumber deck voiceIndex name =
             [ button [ class "element enabled voice-name", onClick (Element deckNumber voiceIndex), attribute "aria-pressed" "true", attribute "aria-label" ("Deck " ++ letter ++ " " ++ name), title ("Remove " ++ name ++ " from this deck") ] [ span [ class "element-light" ] [], text name, span [ class "voice-remove" ] [ text " ×" ] ]
             , label [ class "voice-gain" ]
                 [ span [] [ text ("LEVEL " ++ fixed 0 (voice.gain * 100) ++ "%") ]
-                , input [ type_ "range", A.min "0", A.max "1.5", step "0.01", value (String.fromFloat voice.gain), onInput (VoiceValue deckNumber voiceIndex "gain"), attribute "aria-label" ("Deck " ++ letter ++ " " ++ name ++ " level") ] []
+                , input [ type_ "range", A.min "0", A.max "1.5", step "0.01", value (String.fromFloat voice.gain), onInput (VoiceValue deckNumber voiceIndex "gain"), attribute "aria-label" ("Deck " ++ letter ++ " " ++ name ++ " level"), rangeVar (voice.gain / 1.5) ] []
                 ]
             , label [ class "voice-pan" ]
                 [ span [] [ text ("PAN " ++ panLabel) ]
-                , input [ type_ "range", A.min "-1", A.max "1", step "0.01", value (String.fromFloat voice.pan), onInput (VoiceValue deckNumber voiceIndex "pan"), attribute "aria-label" ("Deck " ++ letter ++ " " ++ name ++ " pan") ] []
+                , input [ type_ "range", A.min "-1", A.max "1", step "0.01", value (String.fromFloat voice.pan), onInput (VoiceValue deckNumber voiceIndex "pan"), attribute "aria-label" ("Deck " ++ letter ++ " " ++ name ++ " pan"), rangeVar ((voice.pan + 1) / 2) ] []
                 ]
             , button
                 [ classList [ ( "voice-solo", True ), ( "active", deck.solo == voiceIndex ) ]
@@ -3253,7 +3453,7 @@ lessons =
 learningView : Model -> Html Msg
 learningView model =
     div [ class "learning-page" ]
-        [ div [ class "page-heading" ] [ div [] [ div [ class "eyebrow" ] [ text "FROM FIRST BEAT TO FIRST MIX" ], h1 [] [ text "Good ears are built." ], p [] [ text "Eight small lessons. One skill that stays with you. Score 85 or more to complete each step." ] ], span [ class "large-progress" ] [ text (String.fromInt (List.length model.progress)), small [] [ text " / 8 complete" ] ] ]
+        [ div [ class "page-heading" ] [ div [] [ div [ class "eyebrow" ] [ text "FROM FIRST BEAT TO FIRST MIX" ], h1 [] [ text "Good ears are built." ], p [] [ text "Eight small lessons. One skill that stays with you. Score 85 or more to complete each step." ] ], span [ class "large-progress" ] (skinNumber model.skinKit (String.fromInt (List.length model.progress)) ++ [ small [] [ text " / 8 complete" ] ]) ]
         , div [ class "lesson-grid" ]
             (List.map
                 (\lesson ->
@@ -3312,11 +3512,11 @@ trainingView : Model -> Html Msg
 trainingView model =
     div [ class "training-page" ]
         [ div [ class "page-heading" ] [ div [] [ div [ class "eyebrow" ] [ text "REPETITION MAKES INSTINCT" ], h1 [] [ text "A sharper set of ears." ], p [] [ text "Focused drills for the skills behind a seamless mix. Pick one and make it click." ] ] ]
-        , div [ class "training-stats" ] [ stat "PRACTICE CHECKS" (String.fromInt (List.length model.history)), stat "AVERAGE SCORE" (String.fromInt (average model.history)), stat "PERSONAL BEST" (String.fromInt (List.maximum model.history |> Maybe.withDefault 0)), stat "LESSONS COMPLETE" (String.fromInt (List.length model.progress) ++ "/8") ]
+        , div [ class "training-stats" ] [ stat model.skinKit "PRACTICE CHECKS" (String.fromInt (List.length model.history)), stat model.skinKit "AVERAGE SCORE" (String.fromInt (average model.history)), stat model.skinKit "PERSONAL BEST" (String.fromInt (List.maximum model.history |> Maybe.withDefault 0)), stat model.skinKit "LESSONS COMPLETE" (String.fromInt (List.length model.progress) ++ "/8") ]
         , div [ class "drill-grid" ]
             (List.map
                 (\( drill, ( icon, name, description ) ) ->
-                    article [ class "drill-card" ] [ span [ class "drill-icon" ] [ text icon ], div [ class "eyebrow" ] [ text (String.toUpper drill ++ " TRAINING") ], h2 [] [ text name ], p [] [ text description ], button [ class "primary-button", onClick (StartDrill drill) ] [ text "Start drill", span [] [ text "↗" ] ] ]
+                    article [ class "drill-card" ] [ span [ class ("drill-icon drill-icon-" ++ drill), attribute "aria-hidden" "true" ] [ text icon ], div [ class "eyebrow" ] [ text (String.toUpper drill ++ " TRAINING") ], h2 [] [ text name ], p [] [ text description ], button [ class "primary-button", onClick (StartDrill drill) ] [ text "Start drill", span [] [ text "↗" ] ] ]
                 )
                 [ ( "tempo", ( "↕", "Catch the tempo", "Focus on speed. Hear which loop is faster and close the BPM gap with precise pitch adjustments." ) )
                 , ( "phase", ( "◎", "Lock the phase", "The tempos start matched. Use tiny nudges to bring the kicks into the very same moment." ) )
@@ -3350,14 +3550,30 @@ drillInstruction drill =
             "Blind drill: keep BPM hidden. Listen carefully to the direction of drift, then correct it by ear."
 
 
-stat : String -> String -> Html Msg
-stat name val =
-    div [ class "stat-card" ] [ span [] [ text name ], strong [] [ text val ] ]
+stat : Bool -> String -> String -> Html Msg
+stat kit name val =
+    div [ class "stat-card" ] [ span [] [ text name ], strong [] (skinNumber kit val) ]
+
+
+{-| A number in the skin's own NUMBERS digits (Winamp skins), with any "/total" set small beside it.
+-}
+skinNumber : Bool -> String -> List (Html Msg)
+skinNumber kit val =
+    if kit then
+        case String.split "/" val of
+            [ count, total ] ->
+                [ span [ class "lcd-number", attribute "role" "img", attribute "aria-label" val ] (lcdDigits count), small [ class "lcd-of", attribute "aria-hidden" "true" ] [ text ("/" ++ total) ] ]
+
+            _ ->
+                [ span [ class "lcd-number", attribute "role" "img", attribute "aria-label" val ] (lcdDigits val) ]
+
+    else
+        [ text val ]
 
 
 nowWearing : Model -> Html Msg
 nowWearing model =
-    section [ classList [ ( "now-wearing", True ), ( "is-winamp", model.skin == "custom" ) ], attribute "aria-labelledby" "now-wearing-title" ]
+    section [ classList [ ( "now-wearing", True ), ( "is-winamp", model.skinKit ) ], attribute "aria-labelledby" "now-wearing-title" ]
         [ div [ class "now-wearing-frame" ]
             [ if String.isEmpty model.skinPreview then
                 div [ class "now-wearing-empty" ] [ text "No picture for this skin" ]
@@ -3374,9 +3590,14 @@ nowWearing model =
                         "This is the skin as it looks in Winamp. Its buttons, sliders, digits, window frames and colors now dress your decks."
 
                      else
-                        "The original bit.cheer skin: brushed chrome, cobalt LCDs and a lime glow."
+                        "The original bit.cheer skin, drawn pixel by pixel as a real Winamp 2 skin: brushed chrome, cobalt LCDs and a lime glow."
                     )
                 ]
+            , if model.skin == "millennium" then
+                a [ class "now-wearing-link", href (model.basePath ++ "skins/millennium.wsz"), attribute "download" "Millennium_Chrome.wsz" ] [ text "Download it for Winamp or Webamp ↓" ]
+
+              else
+                text ""
             , if String.isEmpty model.skinSource then
                 text ""
 
@@ -3387,7 +3608,33 @@ nowWearing model =
 
               else
                 text ""
+            , if model.skinKit then
+                skinDna
+
+              else
+                text ""
             ]
+        ]
+
+
+{-| What the decks take from a Winamp skin: its colors, lettering, digits and analyser colors.
+-}
+skinDna : Html Msg
+skinDna =
+    let
+        swatch key =
+            span [ class "dna-swatch", attribute "style" ("background: var(--k-" ++ key ++ ")") ] []
+
+        row label content =
+            div [ class "dna-row" ] [ span [ class "dna-label" ] [ text label ], content ]
+    in
+    div [ class "skin-dna", attribute "aria-hidden" "true" ]
+        [ row "COLORS" (div [ class "dna-swatches" ] (List.map swatch [ "desk", "frame", "face", "list-bg", "list-fg", "list-hi", "list-sel", "lcd-bg", "lcd-fg", "num", "accent", "title" ]))
+        , row "LETTERS" (div [ class "dna-letters" ] [ text "ABCDEFGHIJKLM", br [] [], text "NOPQRSTUVWXYZ" ])
+        , row "DIGITS" (div [ class "dna-digits lcd-number" ] (lcdDigits "0123456789"))
+        , row "BUTTONS" (div [ class "dna-buttons" ] [])
+        , row "SLIDERS" (div [ class "dna-thumbs" ] (List.map (\part -> span [ class ("dna-thumb dna-" ++ part) ] []) [ "pos", "vol", "bal", "eq" ]))
+        , row "ANALYSER" (div [ class "dna-vis" ] (List.map (\i -> span [ attribute "style" ("background: var(--k-vis-" ++ String.fromInt i ++ ")") ] []) (List.range 2 17)))
         ]
 
 
@@ -3591,6 +3838,12 @@ signed decimals val =
         ""
     )
         ++ fixed decimals val
+
+
+{-| Exposes a range's position (0–1) to CSS, so skins can pick the matching sprite frame. -}
+rangeVar : Float -> Html.Attribute msg
+rangeVar v =
+    attribute "style" ("--v:" ++ String.fromFloat (clamp 0 1 v))
 
 
 pad2 : Int -> String

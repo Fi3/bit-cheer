@@ -115,7 +115,7 @@ test.afterEach(async ({ page }) => {
 
 test('desktop renders real waveform canvases and accessible two-deck controls', async ({ page }, testInfo) => {
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'millennium');
-  await expect(page.locator('html')).toHaveAttribute('data-layout', 'classified5');
+  await expect(page.locator('html')).toHaveAttribute('data-layout', 'kit');
   await expect(page.getByRole('slider', { name: 'Deck A pitch', exact: true })).toBeVisible();
   await expect(page.getByRole('slider', { name: 'Deck B pitch', exact: true })).toBeVisible();
   await expect(page.locator('.player-module[data-scope="deck-a"]')).toHaveCount(3);
@@ -227,14 +227,14 @@ test('skin studio applies Millennium Chrome and imports persistent TOML and orig
   await page.screenshot({ path: testInfo.outputPath('skin-studio.png'), fullPage: true });
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
   await importFile(page, page.getByRole('button', { name: /Import a skin/ }), asset('skins/electric-blue.toml'));
-  await expect(page.locator('.active-skin')).toContainText('Electric Blue 2001');
+  await expect(page.locator('#now-wearing-title')).toContainText('Electric Blue 2001');
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'custom');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'custom');
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
-  await expect(page.locator('.active-skin')).toContainText('Electric Blue 2001');
+  await expect(page.locator('#now-wearing-title')).toContainText('Electric Blue 2001');
   await importFile(page, page.getByRole('button', { name: /Import a skin/ }), asset('skins/classified3.wsz'));
-  await expect(page.locator('.active-skin')).toContainText('classified3');
+  await expect(page.locator('#now-wearing-title')).toContainText('classified3');
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--skin-titlebar'))).toContain('data:image/png');
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: /Download template/ }).click();
@@ -258,7 +258,7 @@ test('a custom TOML and graphic ZIP applies colors and image assets and survives
   await importFile(page, page.getByRole('button', { name: /Import a skin/ }), {
     name: 'pixel-harbor.zip', mimeType: 'application/zip', buffer: Buffer.from(bytes),
   });
-  await expect(page.locator('.active-skin')).toContainText('Pixel Harbor Test');
+  await expect(page.locator('#now-wearing-title')).toContainText('Pixel Harbor Test');
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'custom');
   await expect(page.locator('html')).toHaveAttribute('data-layout', 'bento');
   const applied = await page.evaluate(() => {
@@ -282,7 +282,7 @@ test('a custom TOML and graphic ZIP applies colors and image assets and survives
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--skin-panel'))).toBe(applied.panel);
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim())).toBe('#25c4ee');
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
-  await expect(page.locator('.active-skin')).toContainText('Pixel Harbor Test');
+  await expect(page.locator('#now-wearing-title')).toContainText('Pixel Harbor Test');
 
   // Every structural base must honor every documented graphic slot. Checking
   // computed styles catches a theme-specific override hiding an imported asset.

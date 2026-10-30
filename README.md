@@ -96,9 +96,17 @@ Where supported, choose an output device in the panel or use the browser's devic
 
 ## Skins
 
-The default skin is **Millennium Chrome**, an original bit.cheer skin. It uses the rounded chrome/cobalt housing, with its own title strip, transport buttons and LCD digits drawn by `scripts/make-millennium-skin.mjs` (no third-party skin art). For now it is the only skin offered in Skin studio. A previously chosen custom skin is restored on reload; older built-in choices switch to Millennium Chrome.
+The default skin is **Millennium Chrome**, an original bit.cheer skin: brushed chrome, cobalt LCDs and a lime glow. It is a complete classic Winamp 2 skin (`public/skins/millennium.wsz`: main window, title bars, transport, digits, lettering, sliders, equalizer, playlist frame, generic buttons, colors and window shape), drawn pixel by pixel by `scripts/make-millennium-skin.mjs` with no third-party art. Skin studio offers it for download; it also loads in Winamp and Webamp. For now it is the only built-in skin. A previously chosen custom skin is restored on reload; older built-in choices switch to Millennium Chrome.
 
 **Any skin from the [Winamp Skin Museum](https://skins.webamp.org/)** can be loaded from Skin studio: copy the skin's address, for example `https://skins.webamp.org/skin/5ea2d974dad5507b83a6ddff7003a8ee/Yufo06.wsz`, paste it and press **Load skin**. The app reads the skin id from the link and downloads the `.wsz` from the museum's file server (`r2.webampskins.org`, which allows cross-origin requests), so bit.cheer never hosts those skins.
+
+Winamp skins (Millennium Chrome and imports alike) dress every control through a *kit* built at import time (`src/skin-kit.js`):
+
+- Each deck is a pair of docked Winamp windows: the skin's live main window, and a playlist-style console holding the deck's modules. Modules wear the playlist's "shaded" bar as a header; its two little buttons fold and remove the module. The console ends in the skin's own playlist bottom bar: ADD opens the module menu, the displays show the deck's time and the mini transport plays, pauses, stops, nudges and changes track (the Mixer window's plays both decks).
+- Controls use the skin's own sprites at whole-pixel scale: transport (CBUTTONS), the pitch fader and EQ bands (equalizer sliders), volume (VOLUME), crossfader (seek bar), toggles (equalizer ON button, REPEAT for loop), digits (NUMBERS), window frames (PLEDIT) and generic buttons (the playlist's own menu buttons when they are real rectangular buttons, else GENEX, else a bevel in the skin's colors). When a skin's ON button is a picture rather than a light, toggles become a small switch in the skin's colors.
+- The skin's TEXT.BMP becomes a real web font (`src/pixel-font.js`), so labels are set in its own pixel lettering. Colors come from `pledit.txt`, `viscolor.txt` and the bitmaps, with contrast checks.
+- The main window is live: time, scrolling title, BPM and pitch, a real spectrum analyser or oscilloscope from the deck's audio (click it to switch), and `region.txt` window shapes. Its buttons work: play/pause/stop, previous/next nudge, eject changes track (imports a file in Pro), shuffle randomizes tempo, repeat toggles loop, EQ opens the equalizer module, PL shows or hides the console, and clicking the time shows remaining time.
+- Like Winamp, the importer accepts real-world variations (odd sheet sizes, nested folders, RLE bitmaps, upper/lower case names). As in Winamp, a skin without a balance slider uses its volume slider; anything else a skin leaves out comes from Millennium Chrome.
 
 The earlier museum-based themes (base-2.91, Classified 3/5, Bento, Headspace) are still in the code and `public/skins/`, but are not selectable.
 
@@ -134,7 +142,7 @@ border = "#555a62"
 # pitch = "graphics/pitch-panel.png"
 ```
 
-Import a standalone `.toml`, a ZIP containing `skin.toml` plus PNG/JPEG/WebP/BMP assets, or a classic Winamp 2 `.wsz`. The optional `base` selects the housing and control shapes; omitted colors inherit that base. WSZ import preserves original MAIN, CBUTTONS, NUMBERS and TITLEBAR graphics and derives a matching palette. Modern `.wal`/`.wac` files are not supported as arbitrary imports; the included Headspace theme is integrated explicitly. Imports validate colors, paths, image dimensions and number atlases, reject remote image URLs, and limit archive expansion. No custom script or CSS executes. The last selected/custom skin persists in local storage subject to the browser's quota.
+Import a standalone `.toml`, a ZIP containing `skin.toml` plus PNG/JPEG/WebP/BMP assets, or a classic Winamp 2 `.wsz`. The optional `base` selects the housing and control shapes; omitted colors inherit that base. A `.wsz` builds a full kit as described above. Modern `.wal`/`.wac` files are not supported as arbitrary imports; the included Headspace theme is integrated explicitly. Imports validate colors, paths, image dimensions and number atlases, reject remote image URLs, and limit archive expansion. No custom script or CSS executes. The last selected/custom skin persists in local storage subject to the browser's quota.
 
 ## Reference materials and licenses
 

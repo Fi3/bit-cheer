@@ -3,13 +3,16 @@ import assert from 'node:assert/strict';
 import { zipSync, strToU8 } from 'fflate';
 import { parse } from 'smol-toml';
 import { validateSkin, importSkin, applySkin, readArchive, skinTemplate, themes, SKIN_ASSETS, museumSkinUrl } from '../src/skins.js';
+import { KIT_VERSION, parseRegion, parsePledit, parseViscolor } from '../src/skin-kit.js';
 
 const originalDocument = globalThis.document, originalBitmap = globalThis.createImageBitmap;
 const properties = new Map(), draws = [];
 const root = { dataset: {}, style: { setProperty(key, value) { properties.set(key, value); } } };
 globalThis.document = { documentElement: root, createElement(tag) {
   assert.equal(tag, 'canvas');
-  return { width: 0, height: 0, getContext() { return { drawImage(...args) { draws.push(args); }, getImageData() { return { data: new Uint8ClampedArray([80, 90, 100, 255]) }; } }; }, toDataURL() { return 'data:image/png;base64,AA=='; } };
+  const ctx = { drawImage(...args) { draws.push(args); }, getImageData() { return { data: new Uint8ClampedArray([80, 90, 100, 255]) }; }, fillRect() {}, fillText() {}, measureText: text => ({ width: text.length * 5 }), translate() {}, scale() {},
+    createImageData: (width, height) => ({ width, height, data: new Uint8ClampedArray(width * height * 4) }), putImageData() {} };
+  return { width: 0, height: 0, getContext() { return ctx; }, toDataURL() { return 'data:image/png;base64,AA=='; } };
 } };
 globalThis.createImageBitmap = async blob => {
   const bytes = new Uint8Array(await blob.arrayBuffer()), view = new DataView(bytes.buffer);
@@ -37,6 +40,9 @@ test('full artwork contract accepts only packaged raster paths and rejects unkno
   for (const path of ['../outside.png', '/absolute.png', 'https://outside/image.png', 'data:image/png;base64,AA==', 'graphics\\main.bmp', 'script.svg', 'bad.png)url(evil)']) assert.throws(() => validateSkin({ version: 1, name: 'Bad', assets: { frame: path } }), /relative image/);
   assert.throws(() => validateSkin({ version: 1, name: 'Bad', assets: { script: 'file.png' } }), /Unknown skin asset/);
   assert.throws(() => readArchive(zipSync({ '../main.bmp': bmp(275, 116) })), /unsafe/);
+  // A damaged or half-downloaded file gets a readable message, not the unzip library's.
+  const zip = zipSync({ 'main.bmp': bmp(275, 116) });
+  assert.throws(() => readArchive(zip.subarray(0, Math.floor(zip.length / 2))), /damaged or only partly downloaded/);
 });
 
 test('built-in skins bind their real frame, transport and number atlases with separate layout identity', () => {
@@ -78,17 +84,33 @@ test('custom ZIP imports all artwork and detects extended number sprite width', 
   applySkin('custom', result); assert.equal(properties.get('--numbers-width'), '324px'); assert.equal(properties.get('--transport-sheet'), `url("${result.images.buttons}")`);
 });
 
-test('WSZ preserves original MAIN/CBUTTONS/NUMBERS/TITLEBAR and crops the real active title strip', async () => {
+test('a WSZ becomes a kit: sheets kept as PNG, pieces cut from the classic sprite map, odd sizes accepted', async () => {
   draws.length = 0;
-  const main = bmp(275, 116, 1), buttons = bmp(136, 36, 2), numbers = bmp(99, 13, 3), titlebar = bmp(344, 87, 4);
-  const result = await importSkin(file({ 'MAIN.BMP': main, 'CBUTTONS.BMP': buttons, 'NUMBERS.BMP': numbers, 'TITLEBAR.BMP': titlebar, 'POSBAR.BMP': bmp(307, 10) }, 'Original classic.wsz'));
-  assert.equal(result.base, 'classic'); assert.equal(result.theme.name, 'Original classic');
-  assert.equal(result.images.frame, `data:image/bmp;base64,${Buffer.from(main).toString('base64')}`);
-  assert.equal(result.images.buttons, `data:image/bmp;base64,${Buffer.from(buttons).toString('base64')}`);
-  assert.equal(result.images.numbers, `data:image/bmp;base64,${Buffer.from(numbers).toString('base64')}`);
-  assert.equal(result.originals.titlebar, `data:image/bmp;base64,${Buffer.from(titlebar).toString('base64')}`);
-  assert.equal(result.images.titlebar, 'data:image/png;base64,AA=='); assert.match(result.preview, /^data:image\/png;base64,/); // rendered Winamp window
-  const crop = draws.at(-1); assert.deepEqual(crop.slice(1), [27, 0, 275, 14, 0, 0, 275, 14]);
+  // NUMBERS at 99 x 14 and a short POSBAR are real-world variations Winamp accepts.
+  const files = { 'Skin/MAIN.BMP': bmp(275, 116, 1), 'Skin/CBUTTONS.BMP': bmp(136, 36, 2), 'Skin/NUMBERS.BMP': bmp(99, 14, 3), 'Skin/TITLEBAR.BMP': bmp(344, 87, 4), 'Skin/POSBAR.BMP': bmp(307, 5), 'Skin/PLEDIT.BMP': bmp(280, 186), 'Skin/pledit.txt': strToU8('[Text]\r\nNormal=#00FF00\r\nCurrent=#FFFFFF\r\nNormalBG=#000000\r\nSelectedBG=#0000C6\r\nFont=Arial\r\n') };
+  const result = await importSkin(file(files, 'Original_classic.wsz'));
+  assert.equal(result.theme.name, 'Original classic');
+  assert.equal(result.kit.version, KIT_VERSION);
+  for (const sheet of ['main', 'cbuttons', 'numbers', 'titlebar', 'posbar']) assert.match(result.kit.sheets[sheet], /^data:image\/png;base64,/);
+  assert.equal(result.kit.bodyFont, 'Arial');
+  assert.match(result.preview, /^data:image\/png;base64,/); // main window, equalizer and playlist
+  // The active title strip comes from TITLEBAR at x27, y0 (Webamp's sprite map).
+  assert.ok(draws.some(args => args.slice(1).join() === [27, 0, 275, 14, 0, 0, 275, 14].join()));
+  await assert.rejects(importSkin(file({ 'CBUTTONS.BMP': bmp(136, 36) }, 'broken.wsz')), /main\.bmp/);
+});
+
+test('skin text files parse leniently and reject unsafe values', () => {
+  assert.deepEqual(parsePledit('[Text]\nNormal=00FF00\nCurrent=#fff\nNormalBG=#123456\nFont=Comic Sans MS\n'), { normal: '#00ff00', current: undefined, normalBg: '#123456', selectedBg: undefined, font: 'Comic Sans MS' });
+  assert.equal(parsePledit('Font=url(evil)').font, undefined);
+  assert.deepEqual(parseViscolor('0,0,0 // bg\n255, 128,0,\nnot a color\n'), ['#000000', '#ff8000']);
+  assert.deepEqual(parseRegion('[Normal]\r\nNumPoints=4\r\nPointList=0,0 275,0 275,116 0,116\r\n[WindowShade]\r\nNumPoints=4\r\nPointList=0,0 1,1 2,2 3,3'), [[0, 0, 275, 0, 275, 116, 0, 116]]);
+  assert.equal(parseRegion('[Normal]\nNumPoints=4\nPointList=0,0 x,1'), null);
+  assert.equal(parseRegion('nothing here'), null);
+  // Skins come from strangers: whitespace-heavy files must not freeze the page.
+  const hostile = ' \n'.repeat(30000) + 'Normal=#00ff00\n[Normal]\nNumPoints=3\nPointList=' + '0,'.repeat(20000);
+  const started = performance.now();
+  parsePledit(hostile); parseRegion(hostile); parseViscolor(hostile);
+  assert.ok(performance.now() - started < 500, 'text parsing stays fast on hostile input');
 });
 
 test('skin import rejects missing assets, oversized raster dimensions, and incompatible number sheets', async () => {
@@ -112,13 +134,23 @@ test('museum links resolve to the museum file server', () => {
   }
 });
 
-test('imported Winamp sprites reach the page only as safe data images', () => {
+test('imported Winamp kits reach the page only as safe generated images', () => {
   const png = 'data:image/png;base64,AA==';
-  applySkin('custom', { ...validateSkin({ version: 1, name: 'Sprites' }), images: {}, originals: { main: png }, sprites: { stop: png, volThumb: png, prev: 'https://remote/x.png', bogus: png } });
-  assert.equal(root.dataset.wsz, 'stop volThumb main');
-  assert.equal(properties.get('--wsz-stop'), `url("${png}")`);
-  assert.equal(properties.get('--wsz-prev'), 'none');
-  assert.equal(properties.get('--wsz-main'), `url("${png}")`);
+  const kit = { version: KIT_VERSION, sheets: { main: png, cbuttons: 'https://remote/x.png' }, parts: { plTl: png, shR: 'javascript:alert(1)', bogus: png }, colors: { listBg: '#000000', listFg: 'red' }, vis: ['#000000', 'url(x)'], font: 'data:font/ttf;base64,AA==', bottomEdge: 99 };
+  applySkin('custom', { ...validateSkin({ version: 1, name: 'Kit' }), images: {}, kit });
+  assert.equal(root.dataset.layout, 'kit');
+  assert.equal(properties.get('--k-pl-tl'), `url("${png}")`);
+  assert.equal(properties.get('--k-sh-r'), 'none');
+  assert.equal(properties.get('--k-sheet-main'), `url("${png}")`);
+  assert.equal(properties.get('--k-sheet-cbuttons'), 'none');
+  assert.equal(properties.get('--k-list-bg'), '#000000');
+  assert.equal(properties.get('--k-list-fg'), '#808080');
+  assert.equal(properties.get('--k-vis-1'), '#00ff00');
+  assert.equal(properties.get('--k-bottom-edge'), '6');
+  assert.ok(root.dataset.kit.split(' ').includes('plTl') && !root.dataset.kit.includes('bogus'));
+  // An outdated kit falls back to the classic layout instead of half-applying.
+  applySkin('custom', { ...validateSkin({ version: 1, name: 'Old' }), images: {}, kit: { ...kit, version: 1 } });
+  assert.equal(root.dataset.layout, 'classic'); assert.equal(root.dataset.kit, '');
   applySkin('millennium');
-  assert.equal(root.dataset.wsz, ''); assert.equal(properties.get('--wsz-stop'), 'none'); assert.equal(properties.get('--wsz-main'), 'none');
+  assert.equal(root.dataset.kit, ''); assert.equal(root.dataset.layout, 'classified5');
 });

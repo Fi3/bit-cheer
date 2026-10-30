@@ -1,0 +1,1199 @@
+/* =====================================================================================
+   Imported Winamp skins (data-layout="kit").
+   Every piece comes from the skin itself (skin-kit.js cuts it out at import) and is drawn
+   at whole-pixel scale (--kp = one skin pixel), so the art stays as crisp as in Winamp.
+   Each deck is a docked pair of Winamp windows: the live main window, and a playlist-style
+   console holding the deck's modules. Modules wear the playlist's "shade" bar as a header.
+   ===================================================================================== */
+
+:root[data-layout=kit] {
+  --kp: 2px;
+  --k-pixel: 'Kit Pixel', 'IBM Plex Mono', monospace;
+  --k-text: 12px;               /* the skin font at 2x */
+  --k-text-big: 24px;           /* … and at 4x */
+  --k-edge-dark: color-mix(in srgb, var(--k-frame-dark) 80%, #000);
+  --k-bevel: inset var(--kp) var(--kp) 0 var(--k-face-light), inset calc(-1 * var(--kp)) calc(-1 * var(--kp)) 0 var(--k-face-dark);
+  --k-bevel-in: inset var(--kp) var(--kp) 0 var(--k-face-dark), inset calc(-1 * var(--kp)) calc(-1 * var(--kp)) 0 var(--k-face-light);
+  --k-sunken: inset var(--kp) var(--kp) 0 var(--k-edge-dark), inset calc(-1 * var(--kp)) calc(-1 * var(--kp)) 0 color-mix(in srgb, var(--k-frame-light) 60%, transparent);
+  color-scheme: dark;
+  background: var(--k-desk);
+  accent-color: var(--k-accent);
+}
+:root[data-layout=kit] body {
+  background-color: var(--k-desk);
+  background-image:
+    radial-gradient(90% 70vh at 50% 0, color-mix(in srgb, var(--k-desk) 35%, transparent) 0, color-mix(in srgb, var(--k-desk) 80%, transparent) 55%, var(--k-desk) 100%),
+    var(--k-desk-glow);
+  background-size: 100% 100%, 100% 80vh;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  font-family: var(--k-body-font);
+  color: var(--k-list-fg);
+}
+:root[data-layout=kit] .app-shell {
+  max-width: 1280px; margin: 0 auto; padding: 14px 20px 26px;
+  border: 0; background: none; box-shadow: none; image-rendering: pixelated;
+  font-family: var(--k-body-font); color: var(--k-list-fg);
+}
+/* Older Millennium-only rules must not leak into the kit version of Millennium. */
+html:root[data-layout=kit] .app-shell:not(.session-focus-view) { background: none; }
+html:root[data-layout=kit] .app-shell .rack-title { display: none; }
+:root[data-layout=kit] .app-shell :is(h1, h2, h3, p, small, span, strong, label) { text-shadow: none; }
+:root[data-layout=kit] .app-shell :is(button, a, input, select, [tabindex]):focus-visible { outline: var(--kp) solid var(--k-accent); outline-offset: var(--kp); }
+:root[data-layout=kit] ::selection { background: var(--k-list-sel); color: var(--k-list-sel-fg); }
+:root[data-layout=kit] .app-shell a { color: var(--k-accent); }
+
+/* ---------- reusable pieces ---------- */
+/* Skin font, used for labels the way Winamp uses TEXT.BMP. */
+:root[data-layout=kit] .app-shell :is(.eyebrow, .mode-number, .mode-pill, .session-badge, .rack-title, .rack-footer, .deck-heading, .module-titlebar > strong,
+  .control-label, .pitch-ticks, .pitch-value, .loop-badge, .lcd small, .time-display small, .track-title strong, .lcd-time, .waveform-label, .beat-row, .zoom-controls span,
+  .crossfader-labels, .master-volume .control-label, .deck-volume-row > label, .deck-volume-row > strong, .eq-control span, .eq-control small, .vu-section > span,
+  .voice-gain span, .voice-pan span, .pattern-mode, .mini-badge, .jog-description strong, .jog-label small, .tap-readout span, .score-circle small, .stat-card span, .lesson-number,
+  .nudge-controls span, .footer, .practice-tip > span, .engine-status, .skin-step-number, .active-skin, .large-progress small, .history-item small, .brand-tag) {
+  font-family: var(--k-pixel); font-size: var(--k-text); line-height: var(--k-text); font-weight: 400; letter-spacing: 0; text-transform: uppercase;
+}
+
+/* Skin buttons: the skin's own button colors with a one-pixel bevel.
+   The lists use single classes only, so specific rules below can override them. */
+:root[data-layout=kit] .app-shell :is(.primary-button, .secondary-button, .small-button, .text-button, .deck-action, .session-focus-button, .builder-invitation,
+  .add-element-button, .lesson-button, .deck-add-element, .generate-pattern, .voice-solo, .chaos-button, .help-button, .shortcut-link,
+  .set-cue, .exit-focus-button, .focus-play-button, .focus-pause-button, .load-track-button, .tap-button),
+:root[data-layout=kit] .app-shell .pitch-fine > button, :root[data-layout=kit] .app-shell .nudge-controls > button, :root[data-layout=kit] .app-shell .notice > button,
+:root[data-layout=kit] .help-modal :is(.primary-button, .help-button) {
+  font-family: var(--k-pixel); font-size: var(--k-text); line-height: var(--k-text); font-weight: 400; letter-spacing: 0; text-transform: uppercase;
+  color: var(--k-face-text); background: var(--k-face); border: 0; border-radius: 0; border-image: none;
+  box-shadow: var(--k-bevel), 0 0 0 var(--kp) var(--k-edge-dark);
+  padding: calc(3 * var(--kp)) calc(5 * var(--kp)); min-height: calc(12 * var(--kp)); text-shadow: none; filter: none; transform: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: calc(3 * var(--kp)); cursor: pointer; white-space: nowrap;
+}
+:root[data-layout=kit] .app-shell :is(.primary-button, .secondary-button, .small-button, .text-button, .deck-action, .session-focus-button, .builder-invitation,
+  .add-element-button, .lesson-button, .deck-add-element, .generate-pattern, .voice-solo, .chaos-button, .help-button, .shortcut-link,
+  .set-cue, .exit-focus-button, .load-track-button, .tap-button):hover:not(:disabled),
+:root[data-layout=kit] .app-shell .pitch-fine > button:hover:not(:disabled), :root[data-layout=kit] .app-shell .notice > button:hover {
+  filter: none; background-color: color-mix(in srgb, var(--k-face) 88%, var(--k-face-light));
+}
+:root[data-layout=kit] .app-shell :is(.primary-button, .secondary-button, .small-button, .text-button, .deck-action, .session-focus-button, .builder-invitation,
+  .add-element-button, .lesson-button, .deck-add-element, .generate-pattern, .voice-solo, .chaos-button, .help-button, .shortcut-link,
+  .set-cue, .exit-focus-button, .load-track-button, .tap-button):active:not(:disabled),
+:root[data-layout=kit] .app-shell .pitch-fine > button:active:not(:disabled), :root[data-layout=kit] .app-shell .notice > button:active,
+:root[data-layout=kit] .app-shell :is(.voice-solo.active, .text-button.active) {
+  box-shadow: var(--k-bevel-in), 0 0 0 var(--kp) var(--k-edge-dark);
+  padding: calc(4 * var(--kp)) calc(4 * var(--kp)) calc(2 * var(--kp)) calc(6 * var(--kp)); transform: none; filter: none;
+  background-color: color-mix(in srgb, var(--k-face) 82%, var(--k-face-dark));
+}
+:root[data-layout=kit] .app-shell button:disabled { opacity: .45; filter: grayscale(.4); }
+/* Skins that ship GENEX.BMP have real generic buttons: use them. */
+:root[data-layout=kit][data-kit~=genBtn] .app-shell :is(.primary-button, .secondary-button, .small-button, .text-button, .deck-action, .session-focus-button, .builder-invitation,
+  .add-element-button, .lesson-button, .deck-add-element, .generate-pattern, .voice-solo, .help-button, .shortcut-link,
+  .set-cue, .exit-focus-button, .load-track-button, .tap-button),
+:root[data-layout=kit][data-kit~=genBtn] .app-shell .pitch-fine > button, :root[data-layout=kit][data-kit~=genBtn] .app-shell .notice > button {
+  border: calc(var(--k-gen-slice, 3) * var(--kp)) solid transparent; border-image: var(--k-gen-btn) var(--k-gen-slice, 3) fill / calc(var(--k-gen-slice, 3) * var(--kp)) stretch; box-shadow: none; background: none;
+  padding: 0 calc(max(0, 5 - var(--k-gen-slice, 3)) * var(--kp)); min-height: calc(15 * var(--kp));
+}
+:root[data-layout=kit][data-kit~=genBtnDown] .app-shell :is(.primary-button, .secondary-button, .small-button, .text-button, .deck-action, .session-focus-button, .builder-invitation,
+  .add-element-button, .lesson-button, .deck-add-element, .generate-pattern, .voice-solo, .help-button, .shortcut-link,
+  .set-cue, .exit-focus-button, .load-track-button, .tap-button):active:not(:disabled),
+:root[data-layout=kit][data-kit~=genBtnDown] .app-shell .pitch-fine > button:active:not(:disabled),
+:root[data-layout=kit][data-kit~=genBtnDown] .app-shell :is(.voice-solo.active, .text-button.active) {
+  border-image-source: var(--k-gen-btn-down); box-shadow: none; background: none; padding: var(--kp) calc(max(0, 5 - var(--k-gen-slice, 3)) * var(--kp) - var(--kp)) 0 calc(max(0, 5 - var(--k-gen-slice, 3)) * var(--kp) + var(--kp));
+}
+
+/* Fields look like the skin's display: its text color on its display background. */
+:root[data-layout=kit] .app-shell :is(select, input[type=number], input[type=url], input[type=text]),
+:root[data-layout=kit] .app-shell .add-module-menu select {
+  font-family: var(--k-pixel); font-size: var(--k-text); line-height: var(--k-text); letter-spacing: 0; text-transform: uppercase;
+  color: var(--k-lcd-fg); background-color: var(--k-lcd-bg); border: 0; border-radius: 0;
+  box-shadow: var(--k-sunken); padding: calc(3 * var(--kp)) calc(4 * var(--kp)); min-height: calc(12 * var(--kp)); height: auto; text-shadow: none;
+}
+:root[data-layout=kit] .app-shell select {
+  appearance: none; -webkit-appearance: none; padding-right: calc(12 * var(--kp)); cursor: pointer;
+  background-image: linear-gradient(var(--k-lcd-fg), var(--k-lcd-fg)), linear-gradient(var(--k-lcd-fg), var(--k-lcd-fg)), linear-gradient(var(--k-lcd-fg), var(--k-lcd-fg)), linear-gradient(var(--k-lcd-fg), var(--k-lcd-fg));
+  background-repeat: no-repeat;
+  background-size: calc(7 * var(--kp)) var(--kp), calc(5 * var(--kp)) var(--kp), calc(3 * var(--kp)) var(--kp), var(--kp) var(--kp);
+  background-position: right calc(3 * var(--kp)) top calc(50% - 2 * var(--kp)), right calc(4 * var(--kp)) top calc(50% - var(--kp)), right calc(5 * var(--kp)) top 50%, right calc(6 * var(--kp)) top calc(50% + var(--kp));
+}
+:root[data-layout=kit] .app-shell select option { font-family: var(--k-body-font); text-transform: none; background: var(--k-list-bg); color: var(--k-list-fg); }
+:root[data-layout=kit] .app-shell input[type=url]::placeholder { color: var(--k-lcd-dim); }
+
+/* Toggles light the skin's equalizer ON button. */
+:root[data-layout=kit] .app-shell .toggle-label { display: inline-flex; flex-direction: row-reverse; align-items: center; gap: calc(4 * var(--kp)); font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; color: inherit; cursor: pointer; }
+:root[data-layout=kit] .app-shell .toggle-label input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+:root[data-layout=kit] .app-shell .toggle-track {
+  flex: 0 0 auto; width: calc(26 * var(--kp)); height: calc(12 * var(--kp)); border: 0; border-radius: 0; box-shadow: none;
+  background: var(--k-eq-on) 0 0 / 100% 100% no-repeat;
+}
+:root[data-layout=kit] .app-shell .toggle-track::before, :root[data-layout=kit] .app-shell .toggle-track::after { display: none; }
+:root[data-layout=kit] .app-shell .toggle-label input:checked + .toggle-track { background-image: var(--k-eq-on-lit); }
+:root[data-layout=kit] .app-shell .toggle-label:active input:not(:disabled) + .toggle-track { background-image: var(--k-eq-on-down); }
+:root[data-layout=kit] .app-shell .toggle-label:active input:checked:not(:disabled) + .toggle-track { background-image: var(--k-eq-on-lit-down); }
+:root[data-layout=kit] .app-shell .toggle-label input:focus-visible + .toggle-track { outline: var(--kp) solid var(--k-accent); outline-offset: var(--kp); }
+
+/* Generic sliders: the playlist's groove with the volume knob. */
+:root[data-layout=kit] .app-shell input[type=range] { appearance: none; -webkit-appearance: none; background: transparent; height: calc(13 * var(--kp)); margin: 0; border: 0; box-shadow: none; cursor: pointer; }
+:root[data-layout=kit] .app-shell input[type=range]::-webkit-slider-runnable-track {
+  height: calc(13 * var(--kp)); border: 0; border-radius: 0; box-shadow: none;
+  /* A crisp groove in the skin's colors: sprites are never stretched out of shape. */
+  background: linear-gradient(var(--k-edge-dark), var(--k-edge-dark)) center calc(50% - var(--kp)) / 100% var(--kp) no-repeat,
+    linear-gradient(var(--k-lcd-bg), var(--k-lcd-bg)) center 50% / 100% calc(2 * var(--kp)) no-repeat,
+    linear-gradient(color-mix(in srgb, var(--k-frame-light) 70%, transparent), color-mix(in srgb, var(--k-frame-light) 70%, transparent)) center calc(50% + 1.5 * var(--kp)) / 100% var(--kp) no-repeat;
+}
+:root[data-layout=kit] .app-shell input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: calc(14 * var(--kp)); height: calc(11 * var(--kp)); margin-top: var(--kp); border: 0; border-radius: 0; box-shadow: none; background: var(--k-vol-thumb) 0 0 / 100% 100% no-repeat; }
+:root[data-layout=kit] .app-shell input[type=range]:active::-webkit-slider-thumb { background-image: var(--k-vol-thumb-down); }
+:root[data-layout=kit] .app-shell input[type=range]:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Firefox draws range inputs through its own pseudo-elements. */
+:root[data-layout=kit] .app-shell input[type=range]::-moz-range-track { height: calc(2 * var(--kp)); background: var(--k-lcd-bg); border: 0; border-radius: 0; box-shadow: 0 calc(-1 * var(--kp)) 0 var(--k-edge-dark), 0 var(--kp) 0 var(--k-frame-light); }
+:root[data-layout=kit] .app-shell input[type=range]::-moz-range-progress { background: transparent; }
+:root[data-layout=kit] .app-shell input[type=range]::-moz-range-thumb { width: calc(14 * var(--kp)); height: calc(11 * var(--kp)); border: 0; border-radius: 0; box-shadow: none; background: var(--k-vol-thumb) 0 0 / 100% 100% no-repeat; }
+:root[data-layout=kit] .app-shell .crossfader input[type=range]::-moz-range-thumb { width: calc(29 * var(--kp)); height: calc(10 * var(--kp)); background-image: var(--k-pos-thumb); }
+:root[data-layout=kit] .app-shell .eq-control input[type=range]::-moz-range-thumb { width: calc(11 * var(--kp)); height: calc(11 * var(--kp)); background-image: var(--k-eq-thumb); }
+
+/* ---------- top bar: a Winamp title bar across the app ---------- */
+:root[data-layout=kit] .skip-link:not(:focus) { clip-path: inset(50%); opacity: 0; }
+:root[data-layout=kit] .app-shell .topbar {
+  position: relative; height: calc(20 * var(--kp)); min-height: 0; padding: 0 calc(26 * var(--kp)) 0 calc(26 * var(--kp)); gap: calc(6 * var(--kp));
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center;
+  border: 0; border-radius: 0; box-shadow: 0 calc(2 * var(--kp)) 0 #0006; color: var(--k-face-text);
+  background: var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat, var(--k-pl-tr) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-t) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x, var(--k-frame);
+}
+:root[data-layout=kit] .app-shell .brand { justify-self: start; gap: calc(3 * var(--kp)); padding: 0 calc(3 * var(--kp)); height: calc(10 * var(--kp)); background: var(--k-title-bg); box-shadow: 0 0 0 var(--kp) var(--k-title-bg); color: var(--k-title); }
+:root[data-layout=kit] .app-shell .brand .brand-mark { display: none; }
+:root[data-layout=kit] .app-shell .brand-mark { width: auto; height: auto; padding: 0 var(--kp); background: var(--k-accent); color: var(--k-accent-text); font: var(--k-text)/1 var(--k-pixel); border-radius: 0; transform: none; box-shadow: none; }
+:root[data-layout=kit] .app-shell .brand-word { font: var(--k-text)/1 var(--k-pixel); letter-spacing: 0; color: var(--k-title); text-transform: uppercase; }
+:root[data-layout=kit] .app-shell .brand-word > span { color: var(--k-accent); }
+:root[data-layout=kit] .app-shell .brand-tag { display: none; }
+:root[data-layout=kit] .app-shell .main-nav { height: auto; gap: calc(2 * var(--kp)); margin: 0 auto; padding: var(--kp); background: var(--k-title-bg); box-shadow: 0 0 0 var(--kp) var(--k-title-bg); }
+:root[data-layout=kit] .app-shell .nav-item {
+  height: calc(12 * var(--kp)); padding: 0 calc(5 * var(--kp)); border: 0; border-radius: 0; font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase;
+  color: var(--k-lcd-dim); background: transparent; box-shadow: none; text-shadow: none;
+}
+:root[data-layout=kit] .app-shell .nav-item:hover { color: var(--k-lcd-fg); filter: none; }
+:root[data-layout=kit] .app-shell :is(.nav-item, .engine-status, .brand) { white-space: nowrap; }
+:root[data-layout=kit] .app-shell .nav-item.active { color: var(--k-list-sel-fg); background: var(--k-list-sel); }
+:root[data-layout=kit] .app-shell .nav-item.active::after { display: none; }
+:root[data-layout=kit] .app-shell .topbar-right { justify-self: end; gap: calc(4 * var(--kp)); }
+:root[data-layout=kit] .app-shell .engine-status { padding: 0 calc(3 * var(--kp)); height: calc(10 * var(--kp)); display: inline-flex; align-items: center; gap: calc(3 * var(--kp)); background: var(--k-title-bg); box-shadow: 0 0 0 var(--kp) var(--k-title-bg); color: var(--k-lcd-dim); }
+:root[data-layout=kit] .app-shell .engine-status.online { color: var(--k-lcd-fg); }
+:root[data-layout=kit] .app-shell .status-dot { width: calc(3 * var(--kp)); height: calc(3 * var(--kp)); border-radius: 0; background: currentColor; box-shadow: none; animation: none; }
+:root[data-layout=kit] .app-shell .topbar .help-button, :root[data-layout=kit][data-kit~=genBtn] .app-shell .topbar .help-button {
+  width: calc(10 * var(--kp)); height: calc(10 * var(--kp)); min-width: 0; min-height: 0; padding: 0; border: 0; border-image: none;
+  background: var(--k-face); color: var(--k-face-text); box-shadow: var(--k-bevel), 0 0 0 var(--kp) var(--k-edge-dark); line-height: 1;
+}
+
+/* ---------- practice modes: entries of a playlist ---------- */
+:root[data-layout=kit] .app-shell .workspace { display: block; min-height: 0; }
+:root[data-layout=kit] .app-shell .sidebar { display: block; padding: 0; margin: calc(6 * var(--kp)) 0 0; border: 0; background: none; box-shadow: none; }
+:root[data-layout=kit] .app-shell .sidebar :is(.sidebar-heading, .sidebar-progress, .sidebar-bottom) { display: none; }
+:root[data-layout=kit] .app-shell .mode-list {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; padding: calc(3 * var(--kp)) calc(4 * var(--kp));
+  background: var(--k-list-bg); box-shadow: var(--k-sunken), 0 0 0 var(--kp) var(--k-edge-dark);
+}
+:root[data-layout=kit] .app-shell .mode-card {
+  display: flex; align-items: center; gap: calc(4 * var(--kp)); min-height: 0; padding: calc(3 * var(--kp)) calc(4 * var(--kp)); border: 0; border-radius: 0;
+  background: transparent; box-shadow: none; color: var(--k-list-fg); text-align: left; font-family: var(--k-body-font); filter: none;
+}
+:root[data-layout=kit] .app-shell .mode-card:hover { background: color-mix(in srgb, var(--k-list-sel) 45%, transparent); filter: none; }
+:root[data-layout=kit] .app-shell .mode-card.selected { background: var(--k-list-sel); color: var(--k-list-sel-fg); border: 0; box-shadow: none; }
+:root[data-layout=kit] .app-shell .mode-number { color: inherit; opacity: .9; }
+:root[data-layout=kit] .app-shell .mode-copy { display: flex; flex-direction: column; gap: var(--kp); min-width: 0; }
+:root[data-layout=kit] .app-shell .mode-copy strong { font: 600 14px/1.15 var(--k-body-font); color: inherit; letter-spacing: 0; }
+:root[data-layout=kit] .app-shell .mode-card.selected .mode-copy strong { color: var(--k-list-sel-fg); }
+:root[data-layout=kit] .app-shell .mode-copy small { font: 12px/1.2 var(--k-body-font); color: inherit; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:root[data-layout=kit] .app-shell .mode-arrow { display: none; }
+:root[data-layout=kit] .app-shell .mode-card.selected :is(.mode-number, .mode-arrow) { color: var(--k-list-sel-fg); opacity: 1; }
+
+/* ---------- page heading ---------- */
+:root[data-layout=kit] .app-shell .main-content { padding: calc(8 * var(--kp)) 0 0; max-width: none; }
+:root[data-layout=kit] .app-shell .notice {
+  border: 0; border-radius: 0; margin: 0 0 calc(6 * var(--kp)); padding: calc(3 * var(--kp)) calc(5 * var(--kp)); gap: calc(6 * var(--kp));
+  background: var(--k-lcd-bg); color: var(--k-lcd-fg); box-shadow: var(--k-sunken), 0 0 0 var(--kp) var(--k-edge-dark); font: 13px/1.4 var(--k-body-font); text-transform: none;
+}
+:root[data-layout=kit] .app-shell .notice.error { color: var(--k-list-hi); }
+:root[data-layout=kit] .app-shell .notice button, :root[data-layout=kit][data-kit~=genBtn] .app-shell .notice > button { width: calc(10 * var(--kp)); height: calc(10 * var(--kp)); min-height: 0; padding: 0; flex: 0 0 auto; border: 0; border-image: none; background: var(--k-face); box-shadow: var(--k-bevel), 0 0 0 var(--kp) var(--k-edge-dark); }
+:root[data-layout=kit] .app-shell .page-heading { margin-bottom: calc(6 * var(--kp)); align-items: flex-start; gap: calc(10 * var(--kp)); }
+:root[data-layout=kit] .app-shell .eyebrow { color: var(--k-accent-dim); margin-bottom: calc(4 * var(--kp)); display: flex; gap: calc(3 * var(--kp)); }
+:root[data-layout=kit] .app-shell .eyebrow-divider { opacity: .6; }
+:root[data-layout=kit] .app-shell .page-heading h1 {
+  font: var(--k-text-big)/var(--k-text-big) var(--k-pixel); letter-spacing: 0; text-transform: uppercase; color: var(--k-accent);
+  text-shadow: var(--kp) var(--kp) 0 color-mix(in srgb, var(--k-desk) 50%, #000); margin: 0 0 calc(4 * var(--kp));
+}
+:root[data-layout=kit] .app-shell .page-heading p { font: 14px/1.55 var(--k-body-font); color: var(--k-desk-dim); max-width: 640px; }
+:root[data-layout=kit] .app-shell .session-badge {
+  display: inline-flex; align-items: center; gap: calc(4 * var(--kp)); padding: calc(3 * var(--kp)) calc(5 * var(--kp)); border: 0; border-radius: 0;
+  background: var(--k-lcd-bg); color: var(--k-lcd-dim); box-shadow: var(--k-sunken), 0 0 0 var(--kp) var(--k-edge-dark);
+}
+:root[data-layout=kit] .app-shell .session-badge strong { font: var(--k-text-big)/1 var(--k-pixel); color: var(--k-lcd-fg); }
+:root[data-layout=kit] .app-shell .practice-toolbar { margin: 0 0 calc(6 * var(--kp)); padding: 0; border: 0; background: none; box-shadow: none; gap: calc(6 * var(--kp)); }
+:root[data-layout=kit] .app-shell .toolbar-left { gap: calc(5 * var(--kp)); }
+:root[data-layout=kit] .app-shell .mode-pill { padding: calc(2 * var(--kp)) calc(4 * var(--kp)); border: 0; border-radius: 0; background: var(--k-list-sel); color: var(--k-list-sel-fg); box-shadow: none; }
+:root[data-layout=kit] .app-shell .toolbar-description { font: 13px var(--k-body-font); color: var(--k-desk-dim); }
+:root[data-layout=kit] .app-shell .toolbar-actions { gap: calc(6 * var(--kp)); color: var(--k-list-fg); }
+:root[data-layout=kit] .app-shell .foundation-guide {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 0 0 calc(8 * var(--kp)); padding: calc(3 * var(--kp)) calc(4 * var(--kp));
+  border: 0; border-radius: 0; background: var(--k-list-bg); box-shadow: var(--k-sunken), 0 0 0 var(--kp) var(--k-edge-dark);
+}
+:root[data-layout=kit] .app-shell .foundation-step { display: flex; gap: calc(4 * var(--kp)); align-items: center; padding: calc(2 * var(--kp)) calc(4 * var(--kp)); border: 0; background: none; }
+:root[data-layout=kit] .app-shell .foundation-step > span { font: var(--k-text-big)/1 var(--k-pixel); color: var(--k-list-hi); }
+:root[data-layout=kit] .app-shell .foundation-step strong { font: var(--k-text)/var(--k-text) var(--k-pixel); text-transform: uppercase; color: var(--k-list-hi); display: block; margin-bottom: calc(2 * var(--kp)); }
+:root[data-layout=kit] .app-shell .foundation-step small { font: 12px/1.35 var(--k-body-font); color: var(--k-list-fg); }
+
+/* ---------- the rack: two docked Winamps and a session window ---------- */
+:root[data-layout=kit] .app-shell .deck-rack { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+:root[data-layout=kit] .app-shell .deck-rack::before, :root[data-layout=kit] .app-shell .deck-rack::after { display: none; }
+:root[data-layout=kit] .app-shell .rack-title { display: none; }
+:root[data-layout=kit] .app-shell .decks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(10 * var(--kp)); align-items: start; margin: 0; }
+:root[data-layout=kit] .app-shell .decks .deck {
+  display: flex; flex-direction: column; align-items: flex-start; padding: 0; margin: 0; border: 0; border-radius: 0; background: none; box-shadow: none;
+  border-image: none; min-width: 0;
+}
+:root[data-layout=kit] .app-shell .deck::before, :root[data-layout=kit] .app-shell .deck::after { display: none; }
+:root[data-layout=kit] .app-shell .winamp-live {
+  display: block; position: relative; width: calc(275 * var(--kp)); height: calc(116 * var(--kp)); margin: 0; padding: 0; border: 0; background: none;
+}
+:root[data-layout=kit] .app-shell .winamp-live canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; cursor: default; animation: none; touch-action: none; }
+
+/* The console: a playlist window under the main window. */
+:root[data-layout=kit] .app-shell .deck-console {
+  position: relative; align-self: stretch; margin-top: 0;
+  padding: calc(20 * var(--kp)) calc(20 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) calc(12 * var(--kp));
+  background:
+    var(--k-pl-scroll) right calc(7 * var(--kp)) top calc(20 * var(--kp)) / calc(8 * var(--kp)) calc(18 * var(--kp)) no-repeat,
+    var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-tr) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-t) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x,
+    var(--k-pl-l) left 0 top calc(20 * var(--kp)) / calc(12 * var(--kp)) calc(29 * var(--kp)) repeat-y,
+    var(--k-pl-r) right 0 top calc(20 * var(--kp)) / calc(20 * var(--kp)) calc(29 * var(--kp)) repeat-y,
+    var(--k-list-bg);
+  box-shadow: 0 calc(3 * var(--kp)) 0 #0007;
+}
+:root[data-layout=kit] .app-shell .deck-console::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--k-bottom-edge, 6) * var(--kp)); pointer-events: none;
+  background:
+    var(--k-pl-bl-edge, var(--k-pl-bl)) left bottom / calc(12 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) no-repeat,
+    var(--k-pl-br-edge, var(--k-pl-br)) right bottom / calc(20 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) no-repeat,
+    var(--k-pl-b-edge, var(--k-pl-b)) left bottom / calc(25 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) repeat-x;
+}
+:root[data-layout=kit][data-console-hidden~=a] .app-shell .deck-a .deck-console > :is(.deck-module-grid, .add-module-menu, .empty-deck),
+:root[data-layout=kit][data-console-hidden~=b] .app-shell .deck-b .deck-console > :is(.deck-module-grid, .add-module-menu, .empty-deck) { display: none; }
+/* The console's own shade button sits on the one the skin draws in its title bar. */
+.app-shell .console-shade { display: none; }
+:root[data-layout=kit] .app-shell .console-shade {
+  display: block; position: absolute; z-index: 2; top: calc(3 * var(--kp)); right: calc(12 * var(--kp)); width: calc(9 * var(--kp)); height: calc(9 * var(--kp));
+  min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; cursor: pointer;
+}
+:root[data-layout=kit] .app-shell .console-shade::after { content: ''; position: absolute; inset: calc(-2 * var(--kp)); }
+:root[data-layout=kit] .app-shell .console-shade:active { background: var(--k-pl-shade-down) 0 0 / 100% 100% no-repeat; }
+:root[data-layout=kit] .app-shell .deck-console:hover, :root[data-layout=kit] .app-shell .deck-console:focus-within {
+  background-image: var(--k-pl-scroll-down, var(--k-pl-scroll)), var(--k-pl-tl), var(--k-pl-tr), var(--k-pl-t), var(--k-pl-l), var(--k-pl-r);
+}
+:root[data-layout=kit] .app-shell .deck-console:not(:hover):not(:focus-within) {
+  background-image: var(--k-pl-scroll), var(--k-pl-tl-i, var(--k-pl-tl)), var(--k-pl-tr-i, var(--k-pl-tr)), var(--k-pl-t-i, var(--k-pl-t)), var(--k-pl-l), var(--k-pl-r);
+}
+/* Deck name sits in the title bar like the playlist's title. */
+:root[data-layout=kit] .app-shell .deck-heading {
+  position: absolute; top: 0; left: calc(25 * var(--kp)); right: calc(25 * var(--kp)); height: calc(20 * var(--kp)); margin: 0; padding: 0;
+  display: flex; align-items: center; justify-content: center; gap: calc(4 * var(--kp)); border: 0; background: none; box-shadow: none; color: var(--k-title);
+}
+:root[data-layout=kit] .app-shell .deck-label { display: inline-flex; align-items: center; gap: calc(3 * var(--kp)); height: calc(11 * var(--kp)); box-sizing: border-box; padding: 0 calc(3 * var(--kp)); background: var(--k-title-bg); box-shadow: 0 0 0 var(--kp) var(--k-title-bg); }
+:root[data-layout=kit] .app-shell .deck-label .deck-letter { display: none; }
+:root[data-layout=kit] .app-shell .deck-letter { width: auto; height: auto; padding: 0 var(--kp); border: 0; border-radius: 0; background: var(--k-accent); color: var(--k-accent-text); font: var(--k-text)/1 var(--k-pixel); box-shadow: none; }
+:root[data-layout=kit] .app-shell .deck-label strong { font: var(--k-text)/1 var(--k-pixel); color: var(--k-title); letter-spacing: 0; }
+:root[data-layout=kit] .app-shell .deck-role { font: var(--k-text)/1 var(--k-pixel); color: var(--k-title-dim); letter-spacing: 0; }
+:root[data-layout=kit] .app-shell .deck-state { display: inline-flex; align-items: center; gap: calc(3 * var(--kp)); height: calc(11 * var(--kp)); box-sizing: border-box; padding: 0 calc(3 * var(--kp)); margin-left: calc(2 * var(--kp)); background: var(--k-title-bg); box-shadow: 0 0 0 var(--kp) var(--k-title-bg); color: var(--k-title-dim); font: var(--k-text)/1 var(--k-pixel); }
+:root[data-layout=kit] .app-shell .deck-state .status-dot { width: calc(9 * var(--kp)); height: calc(9 * var(--kp)); background: var(--k-sheet-playpaus) calc(-18 * var(--kp)) 0 / calc(42 * var(--kp)) calc(9 * var(--kp)) no-repeat; }
+:root[data-layout=kit] .app-shell .deck-state.playing { color: var(--k-title); }
+:root[data-layout=kit] .app-shell .deck-state.playing .status-dot { background-position: 0 0; }
+
+/* Modules: shaded playlist bars with the deck's controls underneath. */
+:root[data-layout=kit] .app-shell .deck-module-grid { margin: 0; gap: calc(2 * var(--kp)); padding: calc(2 * var(--kp)) 0; grid-template-columns: minmax(0, 1fr); }
+:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch { grid-template-columns: minmax(0, 1fr) calc(90 * var(--kp)); }
+:root[data-layout=kit] .app-shell .player-module {
+  position: relative; margin: 0; padding: 0; border: 0; border-radius: 0; background: var(--k-list-bg); box-shadow: none; color: var(--k-list-fg); overflow: visible; border-image: none;
+}
+:root[data-layout=kit] .app-shell .player-module::before, :root[data-layout=kit] .app-shell .player-module::after { display: none; }
+:root[data-layout=kit] .app-shell .module-titlebar {
+  position: relative; display: block; height: calc(14 * var(--kp)); min-height: 0; padding: 0; margin: 0; border: 0; border-radius: 0; box-shadow: none; gap: 0;
+  background: var(--k-sh-l) left top / calc(25 * var(--kp)) calc(14 * var(--kp)) no-repeat, var(--k-sh-r) right top / calc(50 * var(--kp)) calc(14 * var(--kp)) no-repeat,
+    var(--k-sh-t) left top / calc(25 * var(--kp)) calc(14 * var(--kp)) repeat-x, var(--k-frame);
+}
+:root[data-layout=kit] .app-shell .player-module:is(:hover, :focus-within) > .module-titlebar {
+  background-image: var(--k-sh-l), var(--k-sh-ra, var(--k-sh-r)), var(--k-sh-t);
+}
+:root[data-layout=kit] .app-shell .module-titlebar::after, :root[data-layout=kit] .app-shell .module-titlebar::before { display: none; }
+:root[data-layout=kit] .app-shell .module-titlebar > strong {
+  position: absolute; left: calc(5 * var(--kp)); top: calc(3 * var(--kp)); max-width: calc(100% - 28 * var(--kp)); padding: var(--kp) calc(3 * var(--kp)); z-index: 1; box-sizing: border-box;
+  overflow: hidden; white-space: nowrap; text-overflow: clip; color: var(--k-title); background: var(--k-title-bg); letter-spacing: 0; line-height: var(--k-text);
+}
+:root[data-layout=kit] .app-shell .module-window-actions { position: absolute; top: 0; right: 0; width: calc(50 * var(--kp)); height: calc(14 * var(--kp)); display: block; }
+:root[data-layout=kit] .app-shell .module-titlebar button {
+  position: absolute; top: calc(3 * var(--kp)); width: calc(9 * var(--kp)); height: calc(9 * var(--kp)); min-width: 0; min-height: 0; padding: 0; margin: 0;
+  border: 0; border-radius: 0; background: transparent; box-shadow: none; font-size: 0; color: transparent; text-shadow: none; overflow: hidden; cursor: pointer;
+}
+:root[data-layout=kit] .app-shell .module-titlebar button::after { content: ''; position: absolute; inset: calc(-2 * var(--kp)); }
+:root[data-layout=kit] .app-shell .module-titlebar .module-collapse { left: calc(29 * var(--kp)); }
+:root[data-layout=kit] .app-shell .module-titlebar .module-remove { left: calc(39 * var(--kp)); }
+:root[data-layout=kit] .app-shell .module-titlebar .module-collapse:active { background: var(--k-pl-shade-down) 0 0 / 100% 100% no-repeat; }
+:root[data-layout=kit] .app-shell .is-collapsed .module-titlebar .module-collapse:active { background-image: var(--k-pl-expand-down); }
+:root[data-layout=kit] .app-shell .module-titlebar .module-remove:active { background: var(--k-pl-close-down) 0 0 / 100% 100% no-repeat; }
+:root[data-layout=kit] .app-shell .module-titlebar button:hover { filter: none; background-color: transparent; }
+:root[data-layout=kit] .app-shell .module-body { padding: calc(4 * var(--kp)) calc(5 * var(--kp)); background: var(--k-list-bg); color: var(--k-list-fg); min-width: 0; }
+:root[data-layout=kit] .app-shell .player-module.is-collapsed { background: none; }
+:root[data-layout=kit] .app-shell .module-body :is(p, small) { color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .module-body :is(h2, h3) { color: var(--k-list-hi); }
+:root[data-layout=kit] .app-shell .add-module-menu {
+  display: flex; align-items: center; gap: calc(4 * var(--kp)); margin: 0; padding: calc(3 * var(--kp)) 0 calc(2 * var(--kp));
+  border: 0; border-top: var(--kp) solid color-mix(in srgb, var(--k-list-fg) 18%, transparent); background: none; box-shadow: none;
+}
+:root[data-layout=kit] .app-shell .add-module-menu select { min-width: calc(92 * var(--kp)); }
+:root[data-layout=kit] .app-shell .composer-actions .instrument-selector, :root[data-layout=kit] .app-shell .external-discovery select { min-width: calc(92 * var(--kp)); }
+:root[data-layout=kit] .app-shell .add-module-menu small { font: 11px/1.3 var(--k-body-font); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .empty-deck { padding: calc(6 * var(--kp)); color: var(--k-list-fg); font: 13px var(--k-body-font); }
+
+/* The console's foot is the skin's own playlist bottom bar: ADD opens the module menu, the displays
+   show time and the mini transport plays, like Winamp's. Positions follow Winamp's 125 + 150 pixel corners. */
+:root[data-layout=kit] .app-shell :is(.deck-console, .session-modules, .focus-channel):has(> .console-bar),
+:root[data-layout=kit] .app-shell .pro-track-pickers .player-module:has(.console-bar) { padding-bottom: calc(40 * var(--kp)); }
+:root[data-layout=kit] .app-shell :is(.deck-console, .session-modules, .focus-channel):has(> .console-bar)::after,
+:root[data-layout=kit] .app-shell .pro-track-pickers .player-module:has(.console-bar)::after { display: none; }
+:root[data-layout=kit] .app-shell .picker-stack { display: contents; }
+/* Folded, a console is Winamp's smallest playlist: title bar on bottom bar. */
+:root[data-layout=kit][data-console-hidden~=a] .app-shell .deck-a .deck-console:has(> .console-bar),
+:root[data-layout=kit][data-console-hidden~=b] .app-shell .deck-b .deck-console:has(> .console-bar) { padding-bottom: calc(38 * var(--kp)); }
+:root[data-layout=kit] .app-shell .console-bar {
+  position: absolute; left: 0; right: 0; bottom: 0; height: calc(38 * var(--kp)); pointer-events: none;
+  background:
+    var(--k-pl-bl) left bottom / calc(125 * var(--kp)) calc(38 * var(--kp)) no-repeat,
+    var(--k-pl-br) right bottom / calc(150 * var(--kp)) calc(38 * var(--kp)) no-repeat,
+    var(--k-pl-b) left bottom / calc(25 * var(--kp)) calc(38 * var(--kp)) repeat-x;
+}
+:root[data-layout=kit] .app-shell .console-bar > :is(.bar-time, .bar-mini) {
+  position: absolute; height: calc(6 * var(--kp)); overflow: hidden; white-space: nowrap;
+  font-family: var(--k-pixel); font-size: calc(6 * var(--kp)); line-height: calc(6 * var(--kp)); letter-spacing: 0; text-transform: uppercase;
+  color: var(--k-lcd-fg); background: var(--k-lcd-bg);
+}
+:root[data-layout=kit] .app-shell .console-bar > .bar-time { left: calc(100% - 143 * var(--kp)); bottom: calc(22 * var(--kp)); max-width: calc(89 * var(--kp)); }
+:root[data-layout=kit] .app-shell .console-bar > .bar-mini { left: calc(100% - 79 * var(--kp)); bottom: calc(9 * var(--kp)); } /* "mm:ss" in five TEXT cells from x 71: the colon lands on x 81 */
+:root[data-layout=kit] .app-shell .console-bar > .bar-mini:empty { display: none; }
+:root[data-layout=kit] .app-shell .console-bar > .bar-transport { position: absolute; left: calc(100% - 147 * var(--kp)); bottom: calc(6 * var(--kp)); height: calc(10 * var(--kp)); display: flex; pointer-events: auto; }
+:root[data-layout=kit] .app-shell .bar-transport > button {
+  width: calc(10 * var(--kp)); height: 100%; min-width: 0; min-height: 0; padding: 0; margin: 0; border: 0; border-radius: 0; border-image: none;
+  background: transparent; box-shadow: none; filter: none; font-size: 0; color: transparent; cursor: pointer;
+}
+:root[data-layout=kit] .app-shell .bar-transport > :is(.bar-stop, .bar-next) { width: calc(9 * var(--kp)); }
+:root[data-layout=kit] .app-shell .bar-transport > button:active { background: color-mix(in srgb, var(--k-lcd-fg) 30%, transparent); }
+:root[data-layout=kit] .app-shell :is(.deck-console, .session-modules) > .add-module-menu {
+  position: absolute; z-index: 2; left: calc(12 * var(--kp)); bottom: calc(11 * var(--kp)); width: calc(23 * var(--kp)); height: calc(19 * var(--kp));
+  display: block; margin: 0; padding: 0; border: 0;
+}
+:root[data-layout=kit] .app-shell :is(.deck-console, .session-modules) > .add-module-menu select {
+  position: absolute; inset: 0; width: 100%; height: 100%; min-width: 0; padding: 0; opacity: 0; cursor: pointer;
+}
+:root[data-layout=kit] .app-shell :is(.deck-console, .session-modules) > .add-module-menu select:disabled { cursor: default; }
+:root[data-layout=kit] .app-shell :is(.deck-console, .session-modules) > .add-module-menu small { display: none; }
+:root[data-layout=kit] .app-shell :is(.deck-console, .session-modules) > .add-module-menu:focus-within { outline: var(--kp) solid var(--k-accent); outline-offset: var(--kp); }
+
+/* Screen: the skin's display, with its NUMBERS digits at 4x. */
+:root[data-layout=kit] .app-shell .module-screen .module-body { padding: calc(3 * var(--kp)); }
+:root[data-layout=kit] .app-shell .deck-screen {
+  --k-lcd-bg: var(--k-num-bg); --k-lcd-fg: var(--k-num-fg); --k-lcd-dim: var(--k-num-dim);
+  position: relative; margin: 0; padding: calc(4 * var(--kp)) calc(5 * var(--kp)); border: 0; border-radius: 0; min-height: 0; height: auto; width: auto;
+  background: var(--k-lcd-bg); color: var(--k-lcd-fg); box-shadow: var(--k-sunken); overflow: hidden;
+}
+:root[data-layout=kit] .app-shell .deck-screen::before, :root[data-layout=kit] .app-shell .deck-screen::after,
+:root[data-layout=kit] .app-shell :is(.tap-readout, .time-display)::after, :root[data-layout=kit] .app-shell :is(.tap-readout, .time-display)::before { display: none; }
+:root[data-layout=kit] .app-shell .headspace-transport { display: none; }
+:root[data-layout=kit] .app-shell .track-title { display: flex; align-items: center; gap: calc(3 * var(--kp)); margin: 0; color: var(--k-lcd-fg); position: static; }
+:root[data-layout=kit] .app-shell .track-title > span:first-child { display: none; }
+:root[data-layout=kit] .app-shell .track-title strong { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--k-lcd-fg); }
+:root[data-layout=kit] .app-shell .loop-badge { flex: 0 0 auto; padding: var(--kp) calc(2 * var(--kp)); border: 0; border-radius: 0; background: none; color: var(--k-lcd-fg); box-shadow: inset 0 0 0 var(--kp) var(--k-lcd-dim); opacity: 1; }
+:root[data-layout=kit] .app-shell .module-screen .lcd-row, :root[data-layout=kit] .app-shell .lcd-row {
+  display: grid; grid-template-columns: auto auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: calc(3 * var(--kp)); row-gap: calc(3 * var(--kp));
+  align-items: end; margin: calc(5 * var(--kp)) 0 0; position: static;
+}
+:root[data-layout=kit] .app-shell .lcd-row > :is(.bpm-display, .time-display) { display: contents; }
+:root[data-layout=kit] .app-shell .lcd-row .lcd-number { grid-column: 1; grid-row: 1; }
+:root[data-layout=kit] .app-shell .lcd-row .bpm-display small { grid-column: 2; grid-row: 1; align-self: end; }
+:root[data-layout=kit] .app-shell .module-screen .lcd-row .lcd-time, :root[data-layout=kit] .app-shell .lcd-row .lcd-time { grid-column: 3; grid-row: 1; justify-self: end; align-self: end; font-size: 18px; line-height: 18px; }
+/* The time uses the same NUMBERS digits, at one skin pixel per sprite pixel, with Winamp's colon. */
+:root[data-layout=kit] .app-shell .lcd-time.lcd-number { gap: 0; font-size: 0; line-height: 0; }
+:root[data-layout=kit] .app-shell .lcd-time.lcd-number .lcd-digit {
+  width: calc(9 * var(--kp)); height: calc(13 * var(--kp));
+  background-position: calc(var(--digit) * -9 * var(--kp)) 0; background-size: calc(var(--k-numbers-w) * var(--kp)) calc(13 * var(--kp));
+}
+:root[data-layout=kit] .app-shell .lcd-colon { position: relative; flex: 0 0 auto; width: calc(4 * var(--kp)); height: calc(13 * var(--kp)); }
+:root[data-layout=kit] .app-shell .lcd-colon::before, :root[data-layout=kit] .app-shell .lcd-colon::after {
+  content: ''; position: absolute; left: calc(1.5 * var(--kp)); width: var(--kp); height: calc(2 * var(--kp)); background: var(--k-num);
+}
+:root[data-layout=kit] .app-shell .lcd-colon::before { top: calc(3 * var(--kp)); }
+:root[data-layout=kit] .app-shell .lcd-colon::after { top: calc(8 * var(--kp)); }
+:root[data-layout=kit] .app-shell .lcd-row .time-display small { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
+:root[data-layout=kit] .app-shell .lcd { display: flex; align-items: flex-end; gap: calc(3 * var(--kp)); padding: 0; border: 0; background: none; box-shadow: none; min-width: 0; }
+:root[data-layout=kit] .app-shell .lcd small { color: var(--k-lcd-dim); padding-bottom: 0; }
+:root[data-layout=kit] .app-shell .lcd-number { display: inline-flex; align-items: flex-end; gap: 0; font-size: 0; line-height: 1; color: var(--k-num); filter: none; text-shadow: none; }
+:root[data-layout=kit] .app-shell .lcd-digit {
+  width: calc(9 * 2 * var(--kp)); height: calc(13 * 2 * var(--kp)); flex: 0 0 auto; image-rendering: pixelated;
+  background: var(--k-number-sheet) calc(var(--digit) * -9 * 2 * var(--kp)) 0 / calc(var(--k-numbers-w) * 2 * var(--kp)) calc(13 * 2 * var(--kp)) no-repeat;
+}
+:root[data-layout=kit] .app-shell .lcd-dot { width: calc(3 * 2 * var(--kp)); height: calc(13 * 2 * var(--kp)); flex: 0 0 auto; position: relative; }
+:root[data-layout=kit] .app-shell .lcd-dot::after { content: ''; position: absolute; left: calc(1 * 2 * var(--kp)); bottom: calc(1 * 2 * var(--kp)); width: calc(1 * 2 * var(--kp)); height: calc(1 * 2 * var(--kp)); background: var(--k-num); border-radius: 0; box-shadow: none; }
+:root[data-layout=kit] .app-shell .lcd-dash { width: calc(9 * 2 * var(--kp)); height: calc(13 * 2 * var(--kp)); position: relative; }
+:root[data-layout=kit] .app-shell .lcd-dash::after { content: ''; position: absolute; left: calc(2 * 2 * var(--kp)); right: calc(2 * 2 * var(--kp)); top: calc(6 * 2 * var(--kp)); height: calc(1 * 2 * var(--kp)); background: var(--k-num); }
+:root[data-layout=kit] .app-shell .bpm-display .lcd-number { --zoom: 2; }
+:root[data-layout=kit] .app-shell .module-screen .bpm-display .lcd-digit + .lcd-digit { margin-left: var(--kp); }
+:root[data-layout=kit] .app-shell .module-screen .bpm-display .lcd-digit {
+  width: calc(9 * 4 * var(--kp) / 2); height: calc(13 * 4 * var(--kp) / 2);
+  background-position: calc(var(--digit) * -9 * 4 * var(--kp) / 2) 0; background-size: calc(var(--k-numbers-w) * 4 * var(--kp) / 2) calc(13 * 4 * var(--kp) / 2);
+}
+:root[data-layout=kit] .app-shell .time-display { display: flex; flex-direction: column; align-items: flex-end; gap: calc(2 * var(--kp)); margin: 0; padding: 0; border: 0; background: none; box-shadow: none; position: static; min-width: 0; }
+:root[data-layout=kit] .app-shell .lcd-time { font-size: var(--k-text-big); line-height: var(--k-text-big); color: var(--k-num); letter-spacing: 0; text-shadow: none; }
+:root[data-layout=kit] .app-shell .time-display small { color: var(--k-lcd-dim); white-space: nowrap; }
+
+/* Transport: the skin's own CBUTTONS. */
+:root[data-layout=kit] .app-shell .deck-module-grid > .deck-transport { grid-column: 1; grid-row: auto; display: grid; gap: calc(3 * var(--kp)); padding: calc(3 * var(--kp)) calc(2 * var(--kp)); margin: 0; background: none; border: 0; box-shadow: none; }
+:root[data-layout=kit] .app-shell .deck-transport .transport { display: flex; align-items: center; gap: calc(2 * var(--kp)); padding: 0; margin: 0; background: none; border: 0; box-shadow: none; flex-wrap: nowrap; }
+:root[data-layout=kit] .app-shell :is(.transport-play, .transport-cue) {
+  width: calc(23 * var(--kp)); height: calc(18 * var(--kp)); min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; filter: none; transform: none;
+  font-size: 0; color: transparent; text-shadow: none; flex: 0 0 auto;
+  background: var(--k-cb-clean) calc(-23 * var(--kp)) 0 / calc(136 * var(--kp)) calc(36 * var(--kp)) no-repeat;
+}
+:root[data-layout=kit] .app-shell .transport-play.engaged { background-position: calc(-46 * var(--kp)) 0; }
+:root[data-layout=kit] .app-shell .transport-play:active { background-position: calc(-23 * var(--kp)) calc(-18 * var(--kp)); }
+:root[data-layout=kit] .app-shell .transport-play.engaged:active { background-position: calc(-46 * var(--kp)) calc(-18 * var(--kp)); }
+:root[data-layout=kit] .app-shell .transport-cue { background-position: calc(-69 * var(--kp)) 0; }
+:root[data-layout=kit] .app-shell .transport-cue:active { background-position: calc(-69 * var(--kp)) calc(-18 * var(--kp)); }
+:root[data-layout=kit] .app-shell :is(.transport-play, .transport-cue):hover { filter: brightness(1.12); }
+:root[data-layout=kit] .app-shell .set-cue { min-height: calc(18 * var(--kp)); padding-top: 0; padding-bottom: 0; margin-left: calc(3 * var(--kp)); }
+:root[data-layout=kit] .app-shell .deck-transport .transport { gap: 0; }
+:root[data-layout=kit] .app-shell .nudge-controls { gap: calc(2 * var(--kp)); }
+:root[data-layout=kit] .app-shell .set-cue:active:not(:disabled) { padding-top: var(--kp); padding-bottom: 0; }
+:root[data-layout=kit] .app-shell .nudge-controls { display: flex; align-items: center; gap: calc(2 * var(--kp)); margin-left: auto; padding: 0; background: none; border: 0; box-shadow: none; }
+:root[data-layout=kit] .app-shell .nudge-controls span { color: var(--k-list-dim); padding: 0 var(--kp); }
+:root[data-layout=kit] .app-shell .nudge-controls button {
+  width: calc(23 * var(--kp)); height: calc(18 * var(--kp)); min-height: 0; padding: 0; font-size: 0; color: transparent; box-shadow: none; border: 0;
+  background: var(--k-cb-clean) 0 0 / calc(136 * var(--kp)) calc(36 * var(--kp)) no-repeat;
+}
+:root[data-layout=kit] .app-shell .nudge-controls button:last-child { width: calc(22 * var(--kp)); background-position: calc(-92 * var(--kp)) 0; }
+:root[data-layout=kit] .app-shell .nudge-controls button:active:not(:disabled) { background-position: 0 calc(-18 * var(--kp)); box-shadow: none; padding: 0; }
+:root[data-layout=kit] .app-shell .nudge-controls button:last-child:active:not(:disabled) { background-position: calc(-92 * var(--kp)) calc(-18 * var(--kp)); }
+:root[data-layout=kit] .app-shell .nudge-controls button:hover:not(:disabled) { background-color: transparent; filter: brightness(1.12); }
+:root[data-layout=kit] .app-shell .deck-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: calc(3 * var(--kp)); padding: 0; margin: 0; background: none; border: 0; box-shadow: none; }
+:root[data-layout=kit] .app-shell .deck-action { width: 100%; min-width: 0; overflow: hidden; }
+:root[data-layout=kit] .app-shell .deck-action-hint { font: 11px/1.3 var(--k-body-font); color: var(--k-list-dim); margin: 0; }
+
+/* Pitch: a zoomed equalizer slider. Its bar follows the pitch like an EQ band. */
+:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch > .module-pitch:not(.is-collapsed) { grid-column: 2; grid-row: 1 / span 9; align-self: stretch; }
+:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch:has(> :nth-child(5)) > .module-pitch:not(.is-collapsed) { grid-row: 1 / span 3; }
+:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch:has(> :nth-child(5)) > :nth-child(n+5):not(.module-pitch) { grid-column: 1 / -1; }
+:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch:has(> :nth-child(5)) .pitch-wheel-hint { display: none; }
+:root[data-layout=kit] .app-shell .module-pitch .module-body { padding: calc(4 * var(--kp)) calc(3 * var(--kp)); height: calc(100% - 14 * var(--kp)); }
+:root[data-layout=kit] .app-shell:not(.session-focus-view) .pitch-section,
+:root[data-layout=kit] .app-shell .pitch-section {
+  display: flex; flex-direction: column; align-items: center; gap: calc(3 * var(--kp)); width: auto; padding: 0; margin: 0; border: 0; background: none; box-shadow: none; color: var(--k-list-fg);
+}
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-section > .control-label, :root[data-layout=kit] .app-shell .deck-module-grid .pitch-sensitivity > span { display: none; }
+:root[data-layout=kit] .app-shell .pitch-section > .control-label { color: var(--k-list-dim); margin: 0; }
+:root[data-layout=kit] .app-shell:not(.session-focus-view) .pitch-track,
+:root[data-layout=kit] .app-shell .pitch-track {
+  position: relative; display: block; flex: 0 0 auto; width: calc((14 * var(--pz, 2) + 28) * var(--kp)); height: calc(63 * var(--pz, 2) * var(--kp)); min-height: 0; max-width: none; padding: 0; margin: 0 auto;
+  border: 0; background: none; box-shadow: none;
+}
+:root[data-layout=kit] .app-shell .pitch-rail {
+  position: absolute; top: 0; bottom: 0; left: auto; right: 0; width: calc(14 * var(--pz, 2) * var(--kp)); transform: none; border: 0; border-radius: 0; box-shadow: none;
+  background: var(--k-eq-bars) calc(-196 * var(--pz, 2) * var(--kp)) 0 / calc(392 * var(--pz, 2) * var(--kp)) calc(63 * var(--pz, 2) * var(--kp)) no-repeat;
+  background-position-x: calc(round(var(--pv, .5) * 27) * -14 * var(--pz, 2) * var(--kp));
+}
+:root[data-layout=kit] .app-shell .pitch-rail::after { display: none; }
+:root[data-layout=kit] .app-shell .pitch-ticks {
+  position: absolute; top: calc(4 * var(--pz, 2) * var(--kp)); bottom: calc(4 * var(--pz, 2) * var(--kp)); left: 0; right: auto; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; pointer-events: none;
+  color: var(--k-list-dim); background: none; padding: 0;
+}
+:root[data-layout=kit] .app-shell .pitch-ticks span { display: block; }
+:root[data-layout=kit] .app-shell .pitch-marker-layer { position: absolute; top: calc(5.5 * var(--pz, 2) * var(--kp)); bottom: calc(5.5 * var(--pz, 2) * var(--kp)); left: auto; right: 0; width: calc(14 * var(--pz, 2) * var(--kp)); pointer-events: none; }
+:root[data-layout=kit] .app-shell:not(.session-focus-view) .pitch-handle,
+:root[data-layout=kit] .app-shell .pitch-handle {
+  position: absolute; top: var(--pitch-position, 50%); left: 50%; transform: translate(-50%, -50%); width: calc(11 * var(--pz, 2) * var(--kp)); height: calc(11 * var(--pz, 2) * var(--kp));
+  border: 0; border-radius: 0; box-shadow: none; background: var(--k-eq-thumb) 0 0 / 100% 100% no-repeat;
+}
+:root[data-layout=kit] .app-shell .pitch-handle::before, :root[data-layout=kit] .app-shell .pitch-handle::after, :root[data-layout=kit] .app-shell .pitch-handle-line { display: none; }
+:root[data-layout=kit] .app-shell .pitch-track:active .pitch-handle { background-image: var(--k-eq-thumb-down); }
+:root[data-layout=kit] .app-shell .pitch-track:focus-within .pitch-handle { box-shadow: none; outline: var(--kp) solid var(--k-accent); outline-offset: var(--kp); }
+:root[data-layout=kit] .app-shell .vertical-fader { inset: 0 !important; width: 100% !important; height: 100% !important; opacity: 0; cursor: ns-resize; }
+:root[data-layout=kit] .app-shell .vertical-fader::-webkit-slider-thumb { width: calc(14 * var(--pz, 2) * var(--kp)) !important; height: calc(11 * var(--pz, 2) * var(--kp)) !important; margin-left: 0 !important; }
+:root[data-layout=kit] .app-shell:not(.session-focus-view) .pitch-value,
+:root[data-layout=kit] .app-shell .pitch-value {
+  width: 100%; padding: calc(2 * var(--kp)) 0; margin: 0; text-align: center; border: 0; border-radius: 0; background: var(--k-lcd-bg); color: var(--k-num); box-shadow: var(--k-sunken); font-size: var(--k-text);
+}
+:root[data-layout=kit] .app-shell:not(.session-focus-view) .pitch-fine, :root[data-layout=kit] .app-shell .pitch-fine { display: flex; gap: calc(2 * var(--kp)); margin: 0; justify-content: center; width: 100%; }
+:root[data-layout=kit] .app-shell:not(.session-focus-view) .pitch-fine button { width: auto; flex: 1; min-width: 0; height: auto; padding: calc(2 * var(--kp)) 0; font-size: var(--k-text); }
+:root[data-layout=kit] .app-shell:not(.session-focus-view) :is(.pitch-range, .pitch-sensitivity) { width: 100%; padding: 0; font-size: var(--k-text); }
+:root[data-layout=kit] .app-shell .pitch-section select { width: 100%; }
+/* In the deck console the two pitch selects share a row, so the fader column stays compact. */
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-section { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); justify-items: stretch; }
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-section > * { grid-row: auto; }
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-section > :is(.control-label, .pitch-track, .pitch-value, .pitch-fine, .pitch-wheel-hint) { grid-column: 1 / -1; }
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-section > .pitch-range { grid-column: 1; }
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-section > .pitch-sensitivity { grid-column: 2; }
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-section > .pitch-track { justify-self: center; }
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-section select { padding-left: calc(3 * var(--kp)); padding-right: calc(10 * var(--kp)); background-position: right calc(2 * var(--kp)) top calc(50% - 2 * var(--kp)), right calc(3 * var(--kp)) top calc(50% - var(--kp)), right calc(4 * var(--kp)) top 50%, right calc(5 * var(--kp)) top calc(50% + var(--kp)); }
+:root[data-layout=kit] .app-shell .pitch-sensitivity { display: flex; flex-direction: column; gap: calc(2 * var(--kp)); font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .pitch-sensitivity span { white-space: nowrap; }
+:root[data-layout=kit] .app-shell:not(.session-focus-view) .pitch-wheel-hint { display: none; }
+
+/* Volume: VOLUME.BMP at 2x, frame follows the level. */
+:root[data-layout=kit] .app-shell .module-volume .module-body { padding: calc(4 * var(--kp)) calc(5 * var(--kp)); }
+:root[data-layout=kit] .app-shell .deck-volume-row, :root[data-layout=kit] .app-shell .module-volume .deck-volume-row { display: flex; align-items: center; gap: calc(5 * var(--kp)); margin: 0; padding: 0; border: 0; background: none; box-shadow: none; }
+:root[data-layout=kit] .app-shell .deck-volume-row > label, :root[data-layout=kit] .app-shell .module-volume .deck-volume-row > label { display: flex; align-items: center; gap: calc(5 * var(--kp)); flex: 1; color: var(--k-list-dim); min-width: 0; white-space: nowrap; }
+:root[data-layout=kit] .app-shell .deck-volume-row > strong { color: var(--k-list-hi); min-width: calc(20 * var(--kp)); text-align: right; }
+:root[data-layout=kit] .app-shell :is(.deck-volume-row, .master-volume) input[type=range] {
+  flex: 0 0 auto; width: calc(68 * var(--kp)); height: calc(13 * var(--kp)); margin-left: auto;
+}
+:root[data-layout=kit] .app-shell :is(.deck-volume-row, .master-volume) input[type=range]::-webkit-slider-runnable-track {
+  height: calc(13 * var(--kp)); background: var(--k-vol-strip) 0 calc(-330 * var(--kp)) / calc(68 * var(--kp)) calc(420 * var(--kp)) no-repeat;
+  background-position-y: calc(round(var(--v, .8) * 27) * -15 * var(--kp));
+}
+:root[data-layout=kit] .app-shell :is(.deck-volume-row, .master-volume) input[type=range]::-webkit-slider-thumb { margin-top: var(--kp); }
+
+/* The deck's level under its volume: segments in the analyser colors, unlit ones faint. */
+:root[data-layout=kit] .app-shell .volume-stack { display: grid; gap: calc(5 * var(--kp)); }
+:root[data-layout=kit] .app-shell .deck-level {
+  height: calc(7 * var(--kp)); padding: var(--kp); box-sizing: border-box; box-shadow: var(--k-sunken);
+  background-color: var(--k-vis-0); background-clip: content-box; background-origin: content-box;
+  background-image:
+    repeating-linear-gradient(to right, transparent 0 calc(3 * var(--kp)), var(--k-vis-0) calc(3 * var(--kp)) calc(4 * var(--kp))),
+    linear-gradient(color-mix(in srgb, var(--k-vis-0) 78%, transparent), color-mix(in srgb, var(--k-vis-0) 78%, transparent)),
+    linear-gradient(to right, var(--k-vis-17), var(--k-vis-12) 55%, var(--k-vis-6) 82%, var(--k-vis-2));
+  background-size: auto, calc((1 - var(--level, 0)) * 100%) 100%, auto;
+  background-position: 0 0, right top, 0 0;
+  background-repeat: repeat, no-repeat, no-repeat;
+}
+
+/* Crossfader: the seek bar, wide. */
+:root[data-layout=kit] .app-shell .crossfader, :root[data-layout=kit] .app-shell .global-module-grid .crossfader { padding: calc(2 * var(--kp)) 0 0; margin: 0; background: none; border: 0; box-shadow: none; display: flex; flex-direction: column; align-items: center; gap: calc(3 * var(--kp)); }
+:root[data-layout=kit] .app-shell .crossfader-labels { display: flex; justify-content: space-between; align-items: center; width: min(100%, calc(248 * var(--kp))); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .crossfader-labels strong { color: var(--k-list-hi); font: var(--k-text-big)/1 var(--k-pixel); }
+:root[data-layout=kit] .app-shell .crossfader input[type=range], :root[data-layout=kit] .app-shell .global-module-grid .crossfader input {
+  width: min(100%, calc(250 * var(--kp))); height: calc(12 * var(--kp)); padding: var(--kp); box-sizing: border-box;
+  background: var(--k-lcd-bg); box-shadow: var(--k-sunken);
+}
+:root[data-layout=kit] .app-shell .crossfader input[type=range]::-webkit-slider-runnable-track { height: calc(10 * var(--kp)); background: var(--k-pos-bg) 0 0 / 100% 100% no-repeat; }
+:root[data-layout=kit] .app-shell .crossfader input[type=range]::-webkit-slider-thumb,
+:root[data-layout=kit] .app-shell .global-module-grid .crossfader input::-webkit-slider-thumb { width: calc(29 * var(--kp)); height: calc(10 * var(--kp)); margin-top: 0; background-image: var(--k-pos-thumb); }
+:root[data-layout=kit] .app-shell .crossfader input[type=range]:active::-webkit-slider-thumb { background-image: var(--k-pos-thumb-down); }
+:root[data-layout=kit] .app-shell .fader-scale { display: none; }
+
+/* Master volume. */
+:root[data-layout=kit] .app-shell .master-volume, :root[data-layout=kit] .app-shell .global-module-grid .master-volume { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: calc(6 * var(--kp)); padding: calc(2 * var(--kp)) 0; margin: 0; width: auto; background: none; border: 0; box-shadow: none; }
+:root[data-layout=kit] .app-shell .master-volume .control-label { display: flex; align-items: center; gap: calc(4 * var(--kp)); color: var(--k-list-dim); margin: 0; }
+:root[data-layout=kit] .app-shell .master-volume .control-label strong { color: var(--k-list-hi); }
+/* Master mirrors the crossfader: a label row over the same wide groove. */
+:root[data-layout=kit] .app-shell .master-volume, :root[data-layout=kit] .app-shell .global-module-grid .master-volume { flex-direction: column; align-items: center; gap: calc(3 * var(--kp)); padding-top: calc(2 * var(--kp)); }
+:root[data-layout=kit] .app-shell .master-volume .control-label { flex: none; width: min(100%, calc(248 * var(--kp))); justify-content: space-between; }
+:root[data-layout=kit] .app-shell .master-volume .control-label strong { font: var(--k-text-big)/1 var(--k-pixel); margin-left: 0; }
+:root[data-layout=kit] .app-shell .master-volume input[type=range] {
+  width: min(100%, calc(250 * var(--kp))); height: calc(12 * var(--kp)); margin: 0; padding: var(--kp); box-sizing: border-box; background: var(--k-lcd-bg); box-shadow: var(--k-sunken);
+}
+:root[data-layout=kit] .app-shell .master-volume input[type=range]::-webkit-slider-runnable-track { height: calc(10 * var(--kp)); background: var(--k-pos-bg) 0 0 / 100% 100% no-repeat; }
+:root[data-layout=kit] .app-shell .master-volume input[type=range]::-webkit-slider-thumb { width: calc(29 * var(--kp)); height: calc(10 * var(--kp)); margin-top: 0; background-image: var(--k-pos-thumb); }
+:root[data-layout=kit] .app-shell .master-volume input[type=range]:active::-webkit-slider-thumb { background-image: var(--k-pos-thumb-down); }
+:root[data-layout=kit] .app-shell .master-volume input[type=range]::-moz-range-track { height: calc(10 * var(--kp)); background: var(--k-pos-bg) 0 0 / 100% 100% no-repeat; }
+:root[data-layout=kit] .app-shell .master-volume input[type=range]::-moz-range-thumb { width: calc(29 * var(--kp)); height: calc(10 * var(--kp)); background-image: var(--k-pos-thumb); }
+
+/* Equalizer: three real EQ bands, vertical, like the skin's equalizer window. */
+:root[data-layout=kit] .app-shell .eq-controls { display: flex; justify-content: center; gap: calc(14 * var(--kp)); padding: calc(2 * var(--kp)) 0; }
+:root[data-layout=kit] .app-shell .eq-control { display: flex; flex-direction: column; align-items: center; gap: calc(3 * var(--kp)); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .eq-control input[type=range] {
+  writing-mode: vertical-lr; direction: rtl; width: calc(14 * var(--kp)); height: calc(63 * var(--kp)); flex: 0 0 auto;
+}
+:root[data-layout=kit] .app-shell .eq-control input[type=range]::-webkit-slider-runnable-track {
+  width: calc(14 * var(--kp)); height: auto; background: var(--k-eq-bars) calc(-196 * var(--kp)) 0 / calc(392 * var(--kp)) calc(63 * var(--kp)) no-repeat;
+  background-position-x: calc(round(var(--v, .5) * 27) * -14 * var(--kp));
+}
+:root[data-layout=kit] .app-shell .eq-control input[type=range]::-webkit-slider-thumb { width: calc(11 * var(--kp)); height: calc(11 * var(--kp)); margin: 0 0 0 calc(var(--kp) * 1.5); background-image: var(--k-eq-thumb); }
+:root[data-layout=kit] .app-shell .eq-control input[type=range]:active::-webkit-slider-thumb { background-image: var(--k-eq-thumb-down); }
+:root[data-layout=kit] .app-shell .eq-control small { color: var(--k-list-hi); }
+
+/* VU meter in the skin's visualizer colors. */
+:root[data-layout=kit] .app-shell .vu-section { display: flex; align-items: center; gap: calc(5 * var(--kp)); padding: 0; background: none; border: 0; }
+:root[data-layout=kit] .app-shell .vu-section > span { color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .vu-meter { display: flex; gap: var(--kp); flex: 1; padding: calc(2 * var(--kp)); background: var(--k-vis-0); box-shadow: var(--k-sunken); border: 0; border-radius: 0; height: auto; }
+:root[data-layout=kit] .app-shell .vu-segment { --c: var(--k-vis-17); flex: 1; height: calc(8 * var(--kp)); border: 0; border-radius: 0; background: color-mix(in srgb, var(--c) 22%, var(--k-vis-0)); box-shadow: none; opacity: 1; }
+:root[data-layout=kit] .app-shell .vu-segment:nth-child(2) { --c: var(--k-vis-16); } :root[data-layout=kit] .app-shell .vu-segment:nth-child(3) { --c: var(--k-vis-15); }
+:root[data-layout=kit] .app-shell .vu-segment:nth-child(4) { --c: var(--k-vis-14); } :root[data-layout=kit] .app-shell .vu-segment:nth-child(5) { --c: var(--k-vis-13); }
+:root[data-layout=kit] .app-shell .vu-segment:nth-child(6) { --c: var(--k-vis-12); } :root[data-layout=kit] .app-shell .vu-segment:nth-child(7) { --c: var(--k-vis-11); }
+:root[data-layout=kit] .app-shell .vu-segment:nth-child(8) { --c: var(--k-vis-10); } :root[data-layout=kit] .app-shell .vu-segment:nth-child(9) { --c: var(--k-vis-8); }
+:root[data-layout=kit] .app-shell .vu-segment:nth-child(10) { --c: var(--k-vis-7); } :root[data-layout=kit] .app-shell .vu-segment:nth-child(11) { --c: var(--k-vis-6); }
+:root[data-layout=kit] .app-shell .vu-segment:nth-child(12) { --c: var(--k-vis-5); } :root[data-layout=kit] .app-shell .vu-segment:nth-child(13) { --c: var(--k-vis-4); }
+:root[data-layout=kit] .app-shell .vu-segment:nth-child(14) { --c: var(--k-vis-2); }
+:root[data-layout=kit] .app-shell .vu-segment.lit { background: var(--c); box-shadow: none; }
+:root[data-layout=kit] .app-shell .vu-segment.lit:not(:first-child):not(:has(+ .lit)) { background: var(--k-vis-23, var(--c)); }
+:root[data-layout=kit] .app-shell .deck-module-grid:has(> .module-vu:not(.is-collapsed)) .deck-level { display: none; }
+
+/* Loop: the skin's REPEAT button. */
+:root[data-layout=kit] .app-shell .loop-module { display: flex; align-items: center; gap: calc(6 * var(--kp)); padding: 0; background: none; border: 0; }
+:root[data-layout=kit] .app-shell .loop-module .toggle-track { width: calc(28 * var(--kp)); height: calc(15 * var(--kp)); background: var(--k-sheet-shufrep) 0 0 / calc(92 * var(--kp)) calc(85 * var(--kp)) no-repeat; }
+:root[data-layout=kit] .app-shell .loop-module .toggle-label input:checked + .toggle-track { background-image: var(--k-sheet-shufrep); background-position: 0 calc(-30 * var(--kp)); }
+:root[data-layout=kit] .app-shell .loop-module .toggle-label:active input + .toggle-track { background-image: var(--k-sheet-shufrep); background-position: 0 calc(-15 * var(--kp)); }
+:root[data-layout=kit] .app-shell .loop-module .toggle-label:active input:checked + .toggle-track { background-image: var(--k-sheet-shufrep); background-position: 0 calc(-45 * var(--kp)); }
+:root[data-layout=kit] .app-shell .loop-module small { font: 12px/1.3 var(--k-body-font); }
+
+/* Waveform. */
+:root[data-layout=kit] .app-shell .waveform-module { display: grid; gap: calc(3 * var(--kp)); }
+:root[data-layout=kit] .app-shell .waveform-wrap { position: relative; height: calc(32 * var(--kp)); padding: 0; border: 0; border-radius: 0; background: var(--k-vis-0); box-shadow: var(--k-sunken); overflow: hidden; }
+:root[data-layout=kit] .app-shell .waveform-wrap canvas { position: absolute; inset: calc(var(--kp)); width: calc(100% - 2 * var(--kp)); height: calc(100% - 2 * var(--kp)); image-rendering: pixelated; }
+:root[data-layout=kit] .app-shell .waveform-label { position: absolute; left: calc(3 * var(--kp)); top: calc(2 * var(--kp)); bottom: auto; color: var(--k-vis-18); background: var(--k-vis-0); padding: 0 var(--kp); opacity: .9; }
+:root[data-layout=kit] .app-shell .beat-row { display: flex; align-items: center; gap: calc(5 * var(--kp)); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .beat-indicators { display: flex; gap: calc(2 * var(--kp)); }
+:root[data-layout=kit] .app-shell .beat-dot { width: calc(9 * var(--kp)); height: calc(9 * var(--kp)); display: grid; place-items: center; border: 0; border-radius: 0; padding: 0; font: var(--k-text)/1 var(--k-pixel); color: var(--k-lcd-dim); background: var(--k-lcd-bg); box-shadow: var(--k-sunken); }
+:root[data-layout=kit] .app-shell .beat-dot.on { background: var(--k-list-hi); color: var(--k-list-bg); box-shadow: none; }
+:root[data-layout=kit] .app-shell .zoom-controls { display: flex; align-items: center; gap: calc(2 * var(--kp)); margin-left: auto; }
+:root[data-layout=kit] .app-shell .zoom-controls .small-button { width: calc(10 * var(--kp)); min-height: calc(9 * var(--kp)); height: calc(9 * var(--kp)); padding: 0; }
+
+/* Jog wheel: a platter cut from the skin's main window. */
+:root[data-layout=kit] .app-shell .jog-row { display: flex; align-items: center; gap: calc(8 * var(--kp)); min-height: 0; padding: calc(2 * var(--kp)) 0; }
+:root[data-layout=kit] .app-shell .jog-wheel {
+  position: relative; width: calc(56 * var(--kp)); height: calc(56 * var(--kp)); min-width: 0; flex: 0 0 auto; border-radius: 50%; border: 0;
+  background: var(--k-jog-platter) 0 0 / 100% 100% no-repeat; box-shadow: none; filter: drop-shadow(0 calc(2 * var(--kp)) 0 #0008);
+  cursor: grab; transition: none;
+}
+:root[data-layout=kit] .app-shell .jog-wheel.jogging { cursor: grabbing; filter: brightness(1.15); }
+:root[data-layout=kit] .app-shell .jog-grooves { display: none; }
+:root[data-layout=kit] .app-shell .jog-label { position: absolute; inset: 32%; display: grid; place-items: center; align-content: center; border-radius: 50%; background: none; box-shadow: none; }
+:root[data-layout=kit] .app-shell .jog-label strong { font: var(--k-text-big)/1 var(--k-pixel); color: var(--k-list-sel-fg); }
+:root[data-layout=kit] .app-shell .jog-label small { display: none; }
+:root[data-layout=kit] .app-shell .jog-marker { position: absolute; inset: auto; top: calc(3 * var(--kp)); left: 50%; width: calc(2 * var(--kp)); height: calc(8 * var(--kp)); margin-left: calc(-1 * var(--kp)); border-radius: 0; background: var(--k-list-hi); box-shadow: 0 0 0 var(--kp) var(--k-edge-dark); transform-origin: 50% calc(25 * var(--kp)); transform: rotate(var(--jog-angle, 0deg)); }
+/* Pixel art stays upright: the platter holds still and only its marker turns (main.js sets the angle). */
+:root[data-layout=kit] .app-shell .jog-wheel::before, :root[data-layout=kit] .app-shell .jog-wheel::after { display: none; }
+:root[data-layout=kit] .app-shell .jog-wheel { animation: none; }
+:root[data-layout=kit] .app-shell .jog-description { display: grid; gap: calc(2 * var(--kp)); }
+:root[data-layout=kit] .app-shell .jog-description strong { color: var(--k-list-hi); }
+:root[data-layout=kit] .app-shell .jog-description small { font: 12px/1.3 var(--k-body-font); }
+
+/* Composer. */
+:root[data-layout=kit] .app-shell .element-panel { display: grid; gap: calc(4 * var(--kp)); padding: 0; background: none; border: 0; }
+:root[data-layout=kit] .app-shell .element-panel > .control-label { display: flex; justify-content: flex-end; color: var(--k-list-dim); margin: 0; }
+:root[data-layout=kit] .app-shell .element-panel > .control-label > span { display: none; }
+:root[data-layout=kit] .app-shell .element-panel > .control-label small { font: inherit; color: var(--k-list-hi); }
+:root[data-layout=kit] .app-shell .composer-actions { display: flex; gap: calc(3 * var(--kp)); flex-wrap: wrap; }
+:root[data-layout=kit] .app-shell .composer-actions .confirmed-select select, :root[data-layout=kit] .app-shell .instrument-selector { flex: 1 1 calc(60 * var(--kp)); min-width: 0; }
+:root[data-layout=kit] .app-shell .chaos-button { background: var(--k-list-hi); color: var(--k-list-bg); box-shadow: inset var(--kp) var(--kp) 0 color-mix(in srgb, var(--k-list-hi) 60%, #fff), inset calc(-1 * var(--kp)) calc(-1 * var(--kp)) 0 color-mix(in srgb, var(--k-list-hi) 55%, #000), 0 0 0 var(--kp) var(--k-edge-dark); animation: none; }
+:root[data-layout=kit] .app-shell .composer-rack, :root[data-layout=kit] .app-shell .composer-rack.elements {
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-flow: row; gap: calc(3 * var(--kp)); padding: 0 calc(1 * var(--kp)) 0 0; margin: 0; max-height: calc(190 * var(--kp)); background: none; border: 0; box-shadow: none; overflow: auto; scrollbar-width: auto;
+}
+:root[data-layout=kit] .app-shell .voice-row { display: grid; gap: calc(2 * var(--kp)); padding: calc(3 * var(--kp)); border: 0; border-radius: 0; background: color-mix(in srgb, var(--k-list-sel) 35%, var(--k-list-bg)); box-shadow: none; }
+:root[data-layout=kit] .app-shell .voice-row.soloed { background: color-mix(in srgb, var(--k-list-sel) 75%, var(--k-list-bg)); }
+:root[data-layout=kit] .app-shell .voice-row.muted-by-solo { opacity: .55; }
+:root[data-layout=kit] .app-shell .voice-strip, :root[data-layout=kit] .app-shell .module-composer .voice-strip {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; grid-template-areas: "name name solo" "gain pan pan"; gap: calc(2 * var(--kp)) calc(4 * var(--kp)); align-items: center; padding: 0; background: none; border: 0;
+}
+:root[data-layout=kit] .app-shell .voice-strip > .voice-name { grid-area: name; }
+:root[data-layout=kit] .app-shell .voice-strip > .voice-gain { grid-area: gain; }
+:root[data-layout=kit] .app-shell .voice-strip > .voice-pan { grid-area: pan; }
+:root[data-layout=kit] .app-shell .voice-strip > .voice-solo { grid-area: solo; }
+:root[data-layout=kit] .app-shell .voice-name.element, :root[data-layout=kit] .app-shell .voice-name {
+  display: flex; align-items: center; gap: calc(2 * var(--kp)); min-width: 0; padding: calc(2 * var(--kp)) calc(3 * var(--kp)); border: 0; border-radius: 0; text-align: left;
+  font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; color: var(--k-lcd-fg); background: var(--k-lcd-bg); box-shadow: var(--k-sunken); overflow: hidden; white-space: nowrap;
+}
+:root[data-layout=kit] .app-shell .element-light { width: calc(3 * var(--kp)); height: calc(3 * var(--kp)); flex: 0 0 auto; border-radius: 0; background: var(--k-lcd-fg); box-shadow: none; }
+:root[data-layout=kit] .app-shell .voice-remove { margin-left: auto; color: var(--k-lcd-dim); }
+:root[data-layout=kit] .app-shell :is(.voice-gain, .voice-pan) { display: flex; flex-direction: column; align-items: stretch; gap: var(--kp); min-width: 0; }
+:root[data-layout=kit] .app-shell :is(.voice-gain, .voice-pan) span { color: var(--k-list-dim); white-space: nowrap; overflow: hidden; }
+:root[data-layout=kit] .app-shell :is(.voice-gain, .voice-pan) input[type=range] { width: 100%; height: calc(11 * var(--kp)); }
+:root[data-layout=kit] .app-shell :is(.voice-gain, .voice-pan) input[type=range]::-webkit-slider-runnable-track { height: calc(11 * var(--kp)); }
+:root[data-layout=kit] .app-shell :is(.voice-gain, .voice-pan) input[type=range]::-webkit-slider-thumb { margin-top: 0; }
+:root[data-layout=kit] .app-shell .voice-solo { padding-left: calc(3 * var(--kp)); padding-right: calc(3 * var(--kp)); }
+:root[data-layout=kit] .app-shell .voice-solo.active { color: var(--k-list-hi); }
+:root[data-layout=kit] .app-shell .voice-pattern { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "mode gen" "steps steps"; align-items: center; gap: calc(2 * var(--kp)) calc(3 * var(--kp)); padding: 0; background: none; border: 0; }
+:root[data-layout=kit] .app-shell .voice-pattern > .pattern-mode { grid-area: mode; }
+:root[data-layout=kit] .app-shell .voice-pattern > .step-grid { grid-area: steps; }
+:root[data-layout=kit] .app-shell .voice-pattern > .generate-pattern { grid-area: gen; justify-self: end; min-height: calc(9 * var(--kp)); padding-top: 0; padding-bottom: 0; }
+:root[data-layout=kit] .app-shell .pattern-mode { color: var(--k-list-dim); flex: 0 0 auto; min-width: calc(20 * var(--kp)); }
+:root[data-layout=kit] .app-shell .step-grid { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: var(--kp); flex: 1; min-width: 0; }
+:root[data-layout=kit] .app-shell .step-button {
+  height: calc(9 * var(--kp)); min-width: 0; padding: 0; border: 0; border-radius: 0; font-size: 0; color: transparent;
+  background: color-mix(in srgb, var(--k-lcd-bg) 75%, var(--k-list-bg)); box-shadow: inset 0 0 0 var(--kp) color-mix(in srgb, var(--k-lcd-fg) 22%, transparent);
+}
+:root[data-layout=kit] .app-shell .step-button.beat-start { box-shadow: inset 0 0 0 var(--kp) color-mix(in srgb, var(--k-lcd-fg) 65%, transparent); }
+:root[data-layout=kit] .app-shell .step-grid { column-gap: var(--kp); }
+:root[data-layout=kit] .app-shell .step-button:nth-child(4n+1):not(:first-child) { margin-left: var(--kp); }
+:root[data-layout=kit] .app-shell .step-button.on { background: var(--k-lcd-fg); box-shadow: inset calc(-1 * var(--kp)) calc(-1 * var(--kp)) 0 color-mix(in srgb, var(--k-lcd-fg) 55%, #000); }
+:root[data-layout=kit] .app-shell .step-button.current { outline: var(--kp) solid var(--k-list-hi); outline-offset: 0; z-index: 1; }
+:root[data-layout=kit] .app-shell .step-button:hover { filter: brightness(1.25); }
+:root[data-layout=kit] .app-shell .generate-pattern { padding-left: calc(3 * var(--kp)); padding-right: calc(3 * var(--kp)); }
+:root[data-layout=kit] .app-shell :is(.composer-help, .composer-empty) { font: 11px/1.3 var(--k-body-font); color: var(--k-list-dim); margin: 0; }
+
+/* ---------- the session window ---------- */
+:root[data-layout=kit] .app-shell .session-modules {
+  position: relative; margin-top: calc(10 * var(--kp));
+  padding: calc(20 * var(--kp)) calc(20 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) calc(12 * var(--kp));
+  background:
+    var(--k-pl-tl-i, var(--k-pl-tl)) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-tr-i, var(--k-pl-tr)) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-t-i, var(--k-pl-t)) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x,
+    var(--k-pl-l) left 0 top calc(20 * var(--kp)) / calc(12 * var(--kp)) calc(29 * var(--kp)) repeat-y,
+    var(--k-pl-r) right 0 top calc(20 * var(--kp)) / calc(20 * var(--kp)) calc(29 * var(--kp)) repeat-y,
+    var(--k-list-bg);
+  box-shadow: 0 calc(3 * var(--kp)) 0 #0007;
+}
+:root[data-layout=kit] .app-shell .session-modules:is(:hover, :focus-within) { background-image: var(--k-pl-tl), var(--k-pl-tr), var(--k-pl-t), var(--k-pl-l), var(--k-pl-r); }
+:root[data-layout=kit] .app-shell .session-modules::before {
+  content: 'MIXER' / ''; position: absolute; top: calc(5 * var(--kp)); left: 50%; transform: translateX(-50%); padding: var(--kp) calc(3 * var(--kp));
+  font: var(--k-text)/1 var(--k-pixel); color: var(--k-title); background: var(--k-title-bg); box-shadow: 0 0 0 var(--kp) var(--k-title-bg);
+}
+:root[data-layout=kit] .app-shell .session-modules::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--k-bottom-edge, 6) * var(--kp)); pointer-events: none;
+  background:
+    var(--k-pl-bl-edge, var(--k-pl-bl)) left bottom / calc(12 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) no-repeat,
+    var(--k-pl-br-edge, var(--k-pl-br)) right bottom / calc(20 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) no-repeat,
+    var(--k-pl-b-edge, var(--k-pl-b)) left bottom / calc(25 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) repeat-x;
+}
+:root[data-layout=kit] .app-shell .global-module-grid { gap: calc(2 * var(--kp)); margin: 0; padding: calc(2 * var(--kp)) 0; grid-auto-flow: row dense; }
+:root[data-layout=kit] .app-shell .global-module-grid > .module-coach { grid-column: 1 / -1; }
+:root[data-layout=kit] .app-shell .global-module-grid :is(.coach-panel, .tap-panel) { padding: 0; margin: 0; background: none; border: 0; box-shadow: none; }
+:root[data-layout=kit] .app-shell .panel-heading, :root[data-layout=kit] .app-shell .global-module-grid .panel-heading { display: flex; align-items: center; gap: calc(4 * var(--kp)); margin: 0 0 calc(4 * var(--kp)); padding: 0; border: 0; background: none; }
+:root[data-layout=kit] .app-shell .panel-icon { display: none; }
+:root[data-layout=kit] .app-shell .panel-heading h2 { font: var(--k-text-big)/1 var(--k-pixel); text-transform: uppercase; color: var(--k-list-hi); letter-spacing: 0; }
+:root[data-layout=kit] .app-shell .mini-badge { margin-left: auto; padding: var(--kp) calc(3 * var(--kp)); border: 0; border-radius: 0; background: var(--k-list-sel); color: var(--k-list-sel-fg); }
+:root[data-layout=kit] .app-shell .lesson-instruction { margin: 0 0 calc(4 * var(--kp)); padding: calc(3 * var(--kp)) calc(5 * var(--kp)); border: 0; border-radius: 0; background: var(--k-lcd-bg); color: var(--k-lcd-fg); box-shadow: var(--k-sunken); }
+:root[data-layout=kit] .app-shell .lesson-instruction strong { font: var(--k-text)/1.4 var(--k-pixel); text-transform: uppercase; color: var(--k-lcd-fg); }
+:root[data-layout=kit] .app-shell .lesson-instruction p { color: var(--k-lcd-dim); font: 13px/1.45 var(--k-body-font); }
+:root[data-layout=kit] .app-shell .player-module .panel-heading .mini-badge { display: none; }
+:root[data-layout=kit] .app-shell .coach-copy h3 { font: var(--k-text)/1.5 var(--k-pixel); text-transform: uppercase; color: var(--k-list-hi); margin: 0 0 calc(2 * var(--kp)); }
+:root[data-layout=kit] .app-shell .coach-copy p { font: 13px/1.5 var(--k-body-font); }
+:root[data-layout=kit] .app-shell .coach-bottom { display: flex; align-items: center; justify-content: space-between; gap: calc(6 * var(--kp)); margin-top: calc(5 * var(--kp)); padding: 0; border: 0; }
+:root[data-layout=kit] .app-shell .coach-bottom > span { font: 12px var(--k-body-font); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .match-result { display: flex; align-items: center; gap: calc(8 * var(--kp)); padding: calc(3 * var(--kp)); background: var(--k-lcd-bg); box-shadow: var(--k-sunken); border: 0; border-radius: 0; }
+:root[data-layout=kit] .app-shell .score-circle { display: grid; place-items: center; width: auto; height: auto; padding: calc(3 * var(--kp)) calc(5 * var(--kp)); border: 0; border-radius: 0; background: none; box-shadow: none; }
+:root[data-layout=kit] .app-shell .score-circle strong { font: 48px/1 var(--k-pixel); color: var(--k-num); }
+:root[data-layout=kit] .app-shell .score-circle small { color: var(--k-lcd-dim); }
+:root[data-layout=kit] .app-shell .match-result strong { color: var(--k-lcd-fg); }
+:root[data-layout=kit] .app-shell .match-result p, :root[data-layout=kit] .app-shell .match-result small { color: var(--k-lcd-fg); opacity: .85; }
+:root[data-layout=kit] .app-shell .match-result p { font: 13px/1.45 var(--k-body-font); }
+:root[data-layout=kit] .app-shell .match-result small { font: 12px/1.4 var(--k-body-font); }
+:root[data-layout=kit] .app-shell .match-result strong { font: 600 15px/1.3 var(--k-body-font); }
+:root[data-layout=kit] .app-shell .mixer-monitor, :root[data-layout=kit] .app-shell .global-module-grid .mixer-monitor { display: flex; justify-content: flex-start; align-items: center; gap: calc(6 * var(--kp)); padding: calc(2 * var(--kp)) 0; background: none; border: 0; }
+:root[data-layout=kit] .app-shell .mixer-monitor small { font: 12px var(--k-body-font); }
+:root[data-layout=kit] .app-shell .tap-content { display: flex; gap: calc(6 * var(--kp)); align-items: stretch; }
+:root[data-layout=kit] .app-shell .tap-button { flex-direction: column; flex: 0 0 auto; min-width: calc(64 * var(--kp)); min-height: calc(30 * var(--kp)); padding-left: calc(6 * var(--kp)); padding-right: calc(6 * var(--kp)); }
+:root[data-layout=kit] .app-shell .tap-button strong { font: var(--k-text-big)/1 var(--k-pixel); color: inherit; }
+:root[data-layout=kit] .app-shell .tap-button small { font: var(--k-text)/1 var(--k-pixel); color: inherit; opacity: .75; }
+:root[data-layout=kit] .app-shell .tap-readout { flex: 1; display: grid; align-content: center; gap: var(--kp); padding: calc(3 * var(--kp)) calc(5 * var(--kp)); border: 0; border-radius: 0; background: var(--k-lcd-bg); box-shadow: var(--k-sunken); color: var(--k-lcd-fg); }
+:root[data-layout=kit] .app-shell .tap-readout strong { font: 36px/1 var(--k-pixel); color: var(--k-num); }
+:root[data-layout=kit] .app-shell .tap-readout span { color: var(--k-lcd-dim); }
+:root[data-layout=kit] .app-shell .tap-readout small { font: 11px var(--k-body-font); color: var(--k-lcd-fg); opacity: .8; }
+:root[data-layout=kit] .app-shell .mic-row { display: flex; align-items: center; gap: calc(5 * var(--kp)); margin-top: calc(4 * var(--kp)); }
+:root[data-layout=kit] .app-shell .mic-row small { font: 11px var(--k-body-font); }
+:root[data-layout=kit] .app-shell .output-routing { padding: 0; border: 0; background: none; box-shadow: none; }
+:root[data-layout=kit] .app-shell .output-routing :is(p, small) { font: 12px/1.45 var(--k-body-font); max-width: 72ch; }
+:root[data-layout=kit] .app-shell .routing-control > span, :root[data-layout=kit] .app-shell .routing-heading small { font: var(--k-text)/1.2 var(--k-pixel); text-transform: uppercase; color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .routing-status strong { font: 13px var(--k-body-font); color: var(--k-list-hi); }
+:root[data-layout=kit] .app-shell .external-discovery p { font: 12px/1.45 var(--k-body-font); }
+:root[data-layout=kit] .app-shell .reference-crate { padding: 0; margin: calc(4 * var(--kp)) 0 0; border: 0; background: none; }
+:root[data-layout=kit] .app-shell .reference-tracks { display: grid; gap: 0; background: var(--k-list-bg); }
+:root[data-layout=kit] .app-shell .reference-track { display: flex; gap: calc(4 * var(--kp)); align-items: baseline; padding: var(--kp) calc(3 * var(--kp)); border: 0; border-radius: 0; background: none; color: var(--k-list-fg); text-decoration: none; }
+:root[data-layout=kit] .app-shell .reference-track:hover { background: var(--k-list-sel); color: var(--k-list-sel-fg); }
+:root[data-layout=kit] .app-shell .reference-track strong { font: 13px var(--k-body-font); color: inherit; flex: 1; }
+:root[data-layout=kit] .app-shell .reference-track :is(small, span) { font: 11px var(--k-body-font); color: inherit; opacity: .75; }
+:root[data-layout=kit] .app-shell .crate-pagination { display: flex; align-items: center; justify-content: space-between; gap: calc(4 * var(--kp)); margin-top: calc(3 * var(--kp)); font: var(--k-text)/1 var(--k-pixel); }
+
+/* Pro track pickers: each one a playlist window. */
+:root[data-layout=kit] .app-shell .pro-track-pickers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(10 * var(--kp)); margin: calc(10 * var(--kp)) 0 0; padding: 0; background: none; border: 0; }
+:root[data-layout=kit] .app-shell .pro-track-pickers .player-module {
+  padding: calc(20 * var(--kp)) calc(20 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) calc(12 * var(--kp));
+  background:
+    var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-tr) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-t) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x,
+    var(--k-pl-l) left 0 top calc(20 * var(--kp)) / calc(12 * var(--kp)) calc(29 * var(--kp)) repeat-y,
+    var(--k-pl-r) right 0 top calc(20 * var(--kp)) / calc(20 * var(--kp)) calc(29 * var(--kp)) repeat-y,
+    var(--k-list-bg);
+  box-shadow: 0 calc(3 * var(--kp)) 0 #0007;
+}
+:root[data-layout=kit] .app-shell .pro-track-pickers .player-module::after {
+  content: ''; display: block; position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--k-bottom-edge, 6) * var(--kp)); pointer-events: none;
+  background:
+    var(--k-pl-bl-edge, var(--k-pl-bl)) left bottom / calc(12 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) no-repeat,
+    var(--k-pl-br-edge, var(--k-pl-br)) right bottom / calc(20 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) no-repeat,
+    var(--k-pl-b-edge, var(--k-pl-b)) left bottom / calc(25 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) repeat-x;
+}
+:root[data-layout=kit] .app-shell .pro-track-pickers .module-titlebar { position: absolute; top: 0; left: calc(25 * var(--kp)); right: calc(25 * var(--kp)); height: calc(20 * var(--kp)); background: none; }
+:root[data-layout=kit] .app-shell .pro-track-pickers .module-titlebar > strong { left: 50%; top: calc(4 * var(--kp)); transform: translateX(-50%); max-width: 100%; padding: var(--kp) calc(3 * var(--kp)); box-shadow: 0 0 0 var(--kp) var(--k-title-bg); }
+:root[data-layout=kit] .app-shell .pro-track-pickers .module-window-actions { right: calc(-25 * var(--kp)); width: calc(25 * var(--kp)); height: calc(20 * var(--kp)); }
+:root[data-layout=kit] .app-shell .pro-track-pickers .module-titlebar .module-collapse { left: calc(4 * var(--kp)); }
+:root[data-layout=kit] .app-shell .pro-track-pickers .module-titlebar .module-remove { left: calc(14 * var(--kp)); }
+:root[data-layout=kit] .app-shell .track-picker { display: grid; gap: calc(4 * var(--kp)); padding: 0; background: none; border: 0; }
+:root[data-layout=kit] .app-shell .track-picker label { display: grid; gap: calc(2 * var(--kp)); font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .track-picker select { width: 100%; }
+:root[data-layout=kit] .app-shell .library-count { font: 11px var(--k-body-font); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .track-picker-actions { display: flex; flex-wrap: wrap; gap: calc(3 * var(--kp)); }
+:root[data-layout=kit] .app-shell .track-picker button { min-height: calc(12 * var(--kp)); font-size: var(--k-text); padding-top: 0; padding-bottom: 0; }
+:root[data-layout=kit] .app-shell .track-picker .picker-current, :root[data-layout=kit] .app-shell .picker-current {
+  display: flex; gap: calc(4 * var(--kp)); align-items: baseline; padding: calc(2 * var(--kp)) calc(4 * var(--kp)); border: 0; border-radius: 0;
+  background: var(--k-list-sel); color: var(--k-list-sel-fg); font: 13px var(--k-body-font);
+}
+:root[data-layout=kit] .app-shell .picker-current strong { font: var(--k-text)/1 var(--k-pixel); color: var(--k-list-hi); }
+:root[data-layout=kit] .app-shell .source-settings { display: flex; align-items: end; gap: calc(4 * var(--kp)); flex-wrap: wrap; }
+:root[data-layout=kit] .app-shell .track-picker > small { font: 11px var(--k-body-font); color: var(--k-list-dim); }
+
+/* Rack footer, play-both and tips. */
+:root[data-layout=kit] .app-shell .rack-footer { display: flex; justify-content: space-between; gap: calc(6 * var(--kp)); margin: calc(5 * var(--kp)) 0 0; padding: 0 calc(2 * var(--kp)); border: 0; background: none; color: var(--k-desk-dim); }
+:root[data-layout=kit] .app-shell .under-decks { display: flex; align-items: center; justify-content: space-between; gap: calc(6 * var(--kp)); margin: calc(8 * var(--kp)) 0 calc(4 * var(--kp)); }
+:root[data-layout=kit] .app-shell .play-both-button {
+  display: inline-flex; align-items: center; gap: calc(5 * var(--kp)); min-height: calc(18 * var(--kp)); padding: 0 calc(8 * var(--kp)); border: 0; border-radius: 0;
+  font: var(--k-text-big)/1 var(--k-pixel); text-transform: uppercase; color: var(--k-accent-text); background: color-mix(in srgb, var(--k-accent) 80%, var(--k-desk));
+  box-shadow: inset var(--kp) var(--kp) 0 color-mix(in srgb, var(--k-accent) 65%, #fff), inset calc(-1 * var(--kp)) calc(-1 * var(--kp)) 0 color-mix(in srgb, var(--k-accent) 45%, #000), 0 0 0 var(--kp) var(--k-edge-dark), 0 calc(3 * var(--kp)) 0 #0007;
+  text-shadow: none; filter: none;
+}
+:root[data-layout=kit] .app-shell .play-both-button:active { box-shadow: inset var(--kp) var(--kp) 0 color-mix(in srgb, var(--k-accent) 50%, #000), 0 0 0 var(--kp) var(--k-edge-dark); transform: translateY(var(--kp)); }
+:root[data-layout=kit] .app-shell .play-both-button small { font: var(--k-text)/var(--k-text) var(--k-pixel); height: calc(8 * var(--kp)); display: inline-flex; align-items: center; padding: 0 calc(2 * var(--kp)); background: color-mix(in srgb, var(--k-accent-text) 22%, transparent); color: inherit; border: 0; border-radius: 0; }
+:root[data-layout=kit] .app-shell .under-decks .muted { font: 12px var(--k-body-font); color: var(--k-desk-dim); }
+:root[data-layout=kit] .app-shell .practice-tip { display: flex; align-items: center; gap: calc(5 * var(--kp)); margin: calc(4 * var(--kp)) 0 0; padding: 0; border: 0; background: none; font: 13px var(--k-body-font); color: var(--k-desk-dim); }
+:root[data-layout=kit] .app-shell .practice-tip > span { color: var(--k-accent); }
+:root[data-layout=kit] .app-shell .footer { margin-top: calc(10 * var(--kp)); padding: calc(4 * var(--kp)) 0 0; border: 0; border-top: var(--kp) solid color-mix(in srgb, var(--k-list-fg) 14%, transparent); background: none; color: var(--k-desk-dim); }
+:root[data-layout=kit] .app-shell .footer a { color: var(--k-accent); font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; }
+:root[data-layout=kit] .app-shell .footer-separator { opacity: .5; padding: 0 calc(3 * var(--kp)); }
+:root[data-layout=kit] .app-shell .keep-together { white-space: nowrap; }
+:root[data-layout=kit] .app-shell .footer > span { display: inline-flex; align-items: center; gap: calc(3 * var(--kp)); font: var(--k-text)/1 var(--k-pixel); letter-spacing: 0; text-transform: uppercase; color: var(--k-desk-dim); }
+
+/* ---------- cards and panels on the other pages: playlist "shade" bars without buttons ---------- */
+:root[data-layout=kit] .app-shell :is(.lesson-card, .drill-card, .history-panel, .skin-import-panel, .skin-card, .path-note, .track-library) {
+  position: relative; padding: calc(19 * var(--kp)) calc(6 * var(--kp)) calc(6 * var(--kp)); margin: 0; border: 0; border-radius: 0; overflow: visible;
+  background: var(--k-list-bg); color: var(--k-list-fg); box-shadow: 0 0 0 var(--kp) var(--k-edge-dark), 0 calc(3 * var(--kp)) 0 #0007; text-align: left;
+}
+:root[data-layout=kit] .app-shell :is(.lesson-card, .drill-card, .history-panel, .skin-import-panel, .skin-card, .path-note, .track-library)::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: calc(14 * var(--kp)); display: block; border: 0; opacity: 1; pointer-events: none;
+  background: var(--k-sh-l) left top / calc(25 * var(--kp)) calc(14 * var(--kp)) no-repeat, var(--k-sh-lm) right top / calc(25 * var(--kp)) calc(14 * var(--kp)) no-repeat,
+    var(--k-sh-t) left top / calc(25 * var(--kp)) calc(14 * var(--kp)) repeat-x, var(--k-frame);
+}
+:root[data-layout=kit] .app-shell :is(.lesson-card, .drill-card, .history-panel, .skin-import-panel, .skin-card, .path-note, .track-library)::after { display: none; }
+:root[data-layout=kit] .app-shell :is(.lesson-card, .drill-card, .skin-import-panel, .path-note) :is(h2, h3) { font: var(--k-text)/1.5 var(--k-pixel); color: var(--k-list-hi); letter-spacing: 0; text-transform: uppercase; margin: 0 0 calc(2 * var(--kp)); }
+:root[data-layout=kit] .app-shell :is(.lesson-card, .drill-card, .history-panel, .skin-import-panel, .skin-card, .path-note) p { font: 13px/1.5 var(--k-body-font); color: var(--k-list-dim); }
+/* Bar titles: the skin font on its own plate, like a shaded Winamp window. */
+:root[data-layout=kit] .app-shell :is(.lesson-top, .drill-card > .eyebrow, .history-panel > .section-heading, .skin-import-panel .eyebrow, .path-note > strong) {
+  position: absolute; top: calc(3 * var(--kp)); left: calc(5 * var(--kp)); right: calc(25 * var(--kp)); margin: 0; z-index: 1;
+}
+:root[data-layout=kit] .app-shell .lesson-top { display: flex; justify-content: space-between; align-items: center; height: calc(8 * var(--kp)); }
+:root[data-layout=kit] .app-shell :is(.lesson-number, .drill-card > .eyebrow, .skin-import-panel .eyebrow, .path-note > strong) {
+  display: inline-block; width: auto; max-width: 100%; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: var(--kp) calc(3 * var(--kp)); color: var(--k-title); background: var(--k-title-bg); font: var(--k-text)/var(--k-text) var(--k-pixel); text-transform: uppercase; letter-spacing: 0;
+}
+:root[data-layout=kit] .app-shell :is(.drill-card > .eyebrow, .skin-import-panel .eyebrow, .path-note > strong) { right: auto; }
+:root[data-layout=kit] .app-shell .lesson-top .mini-badge { margin: 0; padding: var(--kp) calc(3 * var(--kp)); line-height: var(--k-text); background: var(--k-title-bg); color: var(--k-title-dim); }
+:root[data-layout=kit] .app-shell .lesson-card.complete .lesson-top .mini-badge { color: var(--k-list-hi); }
+:root[data-layout=kit] .app-shell .lesson-grid, :root[data-layout=kit] .app-shell .drill-grid { gap: calc(8 * var(--kp)); }
+:root[data-layout=kit] .app-shell .lesson-card { display: flex; flex-direction: column; gap: calc(2 * var(--kp)); min-height: 0; }
+:root[data-layout=kit] .app-shell .lesson-card.locked { opacity: 1; }
+:root[data-layout=kit] .app-shell .lesson-card.locked :is(h2, p) { opacity: 1; color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .lesson-card.complete { box-shadow: 0 0 0 var(--kp) var(--k-list-hi), 0 calc(3 * var(--kp)) 0 #0007; }
+:root[data-layout=kit] .app-shell .lesson-card .lesson-button { margin-top: auto; align-self: flex-start; width: auto; }
+:root[data-layout=kit] .app-shell .lesson-card > p { margin-bottom: calc(4 * var(--kp)); }
+:root[data-layout=kit] .app-shell :is(.lesson-card, .drill-card) > p { margin-top: 0; }
+:root[data-layout=kit] .app-shell .lesson-button span { color: inherit; }
+:root[data-layout=kit] .app-shell .large-progress { display: inline-flex; align-items: baseline; gap: calc(3 * var(--kp)); font: 48px/1 var(--k-pixel); color: var(--k-accent); }
+:root[data-layout=kit] .app-shell .large-progress small { color: var(--k-desk-dim); }
+:root[data-layout=kit] .app-shell .path-note { margin-top: calc(8 * var(--kp)); border-style: none; }
+:root[data-layout=kit] .app-shell .path-note .text-button { margin-top: calc(4 * var(--kp)); }
+:root[data-layout=kit] .app-shell .drill-card { display: flex; flex-direction: column; gap: calc(2 * var(--kp)); }
+/* Pixel icons (9×9, two skin pixels each) in the skin's highlight color: a gauge for tempo, offset beats
+   for phase, a closed eye for blind, an accented bar for phrase, a pen for the skin builder. */
+:root[data-layout=kit] .app-shell .drill-icon { display: block; width: calc(18 * var(--kp)); height: calc(18 * var(--kp)); font-size: 0; color: transparent; background: var(--k-list-hi); margin: 0 0 calc(3 * var(--kp)); -webkit-mask: var(--icon) 0 0 / 100% 100% no-repeat; mask: var(--icon) 0 0 / 100% 100% no-repeat; }
+:root[data-layout=kit] .app-shell .drill-icon-tempo { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 9' shape-rendering='crispEdges'%3E%3Cpath d='M2 1h1v1h-1zM3 1h1v1h-1zM4 1h1v1h-1zM5 1h1v1h-1zM6 1h1v1h-1zM1 2h1v1h-1zM7 2h1v1h-1zM0 3h1v1h-1zM6 3h1v1h-1zM8 3h1v1h-1zM0 4h1v1h-1zM5 4h1v1h-1zM8 4h1v1h-1zM0 5h1v1h-1zM4 5h1v1h-1zM8 5h1v1h-1zM0 6h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1z'/%3E%3C/svg%3E"); }
+:root[data-layout=kit] .app-shell .drill-icon-phase { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 9' shape-rendering='crispEdges'%3E%3Cpath d='M0 1h1v1h-1zM2 1h1v1h-1zM4 1h1v1h-1zM6 1h1v1h-1zM0 2h1v1h-1zM2 2h1v1h-1zM4 2h1v1h-1zM6 2h1v1h-1zM2 5h1v1h-1zM4 5h1v1h-1zM6 5h1v1h-1zM8 5h1v1h-1zM2 6h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1z'/%3E%3C/svg%3E"); }
+:root[data-layout=kit] .app-shell .drill-icon-blind { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 9' shape-rendering='crispEdges'%3E%3Cpath d='M0 2h1v1h-1zM8 2h1v1h-1zM1 3h1v1h-1zM2 3h1v1h-1zM6 3h1v1h-1zM7 3h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM1 5h1v1h-1zM4 5h1v1h-1zM7 5h1v1h-1zM0 6h1v1h-1zM4 6h1v1h-1zM8 6h1v1h-1z'/%3E%3C/svg%3E"); }
+:root[data-layout=kit] .app-shell .drill-icon-phrase { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 9' shape-rendering='crispEdges'%3E%3Cpath d='M1 0h1v1h-1zM1 1h1v1h-1zM1 2h1v1h-1zM3 2h1v1h-1zM5 2h1v1h-1zM7 2h1v1h-1zM1 3h1v1h-1zM3 3h1v1h-1zM5 3h1v1h-1zM7 3h1v1h-1zM1 4h1v1h-1zM3 4h1v1h-1zM5 4h1v1h-1zM7 4h1v1h-1zM1 5h1v1h-1zM3 5h1v1h-1zM5 5h1v1h-1zM7 5h1v1h-1z'/%3E%3C/svg%3E"); }
+:root[data-layout=kit] .app-shell .skin-import-icon { font-size: 0; color: transparent; display: grid; place-items: center; width: calc(26 * var(--kp)); height: calc(26 * var(--kp)); padding: 0; box-sizing: border-box; }
+:root[data-layout=kit] .app-shell .skin-import-icon::before { content: ''; width: calc(18 * var(--kp)); height: calc(18 * var(--kp)); background: var(--k-list-hi); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 9' shape-rendering='crispEdges'%3E%3Cpath d='M7 0h1v1h-1zM8 0h1v1h-1zM6 1h1v1h-1zM7 1h1v1h-1zM8 1h1v1h-1zM5 2h1v1h-1zM6 2h1v1h-1zM7 2h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM4 5h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM0 7h1v1h-1zM1 7h1v1h-1zM0 8h1v1h-1z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 9' shape-rendering='crispEdges'%3E%3Cpath d='M7 0h1v1h-1zM8 0h1v1h-1zM6 1h1v1h-1zM7 1h1v1h-1zM8 1h1v1h-1zM5 2h1v1h-1zM6 2h1v1h-1zM7 2h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM4 5h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM0 7h1v1h-1zM1 7h1v1h-1zM0 8h1v1h-1z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat; }
+:root[data-layout=kit] .app-shell .drill-card .primary-button { align-self: flex-start; margin-top: calc(4 * var(--kp)); }
+:root[data-layout=kit] .app-shell .training-stats { gap: calc(8 * var(--kp)); }
+:root[data-layout=kit] .app-shell .stat-card {
+  display: grid; gap: calc(3 * var(--kp)); padding: calc(4 * var(--kp)) calc(6 * var(--kp)); border: 0; border-radius: 0;
+  background: var(--k-lcd-bg); box-shadow: var(--k-sunken), 0 0 0 var(--kp) var(--k-edge-dark), 0 calc(3 * var(--kp)) 0 #0007;
+}
+:root[data-layout=kit] .app-shell .stat-card span { color: var(--k-lcd-dim); }
+:root[data-layout=kit] .app-shell .stat-card strong { font: 48px/1 var(--k-pixel); color: var(--k-num); display: flex; align-items: flex-end; gap: calc(3 * var(--kp)); }
+/* Stats and progress use the skin's NUMBERS digits, on the digits' own cell color. */
+:root[data-layout=kit] .app-shell .stat-card { --k-lcd-bg: var(--k-num-bg); --k-lcd-fg: var(--k-num-fg); --k-lcd-dim: var(--k-num-dim); }
+:root[data-layout=kit] .app-shell :is(.stat-card strong, .large-progress) > .lcd-number .lcd-digit + .lcd-digit { margin-left: var(--kp); }
+:root[data-layout=kit] .app-shell :is(.stat-card strong, .large-progress) > .lcd-number .lcd-digit {
+  width: calc(9 * 2 * var(--kp)); height: calc(13 * 2 * var(--kp));
+  background-position: calc(var(--digit) * -9 * 2 * var(--kp)) 0; background-size: calc(var(--k-numbers-w) * 2 * var(--kp)) calc(13 * 2 * var(--kp));
+}
+:root[data-layout=kit] .app-shell .stat-card strong > .lcd-of { font: var(--k-text)/1 var(--k-pixel); color: var(--k-lcd-dim); }
+:root[data-layout=kit] .app-shell :is(.stat-card strong, .large-progress) .lcd-number > * { font-size: 0; color: transparent; }
+:root[data-layout=kit] .app-shell .large-progress > .lcd-number { padding: calc(2 * var(--kp)) calc(3 * var(--kp)); background: var(--k-num-bg); box-shadow: var(--k-sunken); align-self: center; }
+:root[data-layout=kit] .app-shell .history-panel { margin-top: calc(8 * var(--kp)); }
+:root[data-layout=kit] .app-shell .history-panel > .section-heading { display: flex; justify-content: space-between; align-items: center; height: calc(8 * var(--kp)); }
+:root[data-layout=kit] .app-shell .history-panel > .section-heading h2 { font: var(--k-text)/var(--k-text) var(--k-pixel); color: var(--k-title); background: var(--k-title-bg); padding: var(--kp) calc(3 * var(--kp)); text-transform: uppercase; }
+:root[data-layout=kit] .app-shell .history-panel > .section-heading .mini-badge { padding: var(--kp) calc(3 * var(--kp)); line-height: var(--k-text); background: var(--k-title-bg); color: var(--k-title-dim); }
+:root[data-layout=kit] .app-shell .empty-state { font: 13px var(--k-body-font); color: var(--k-list-fg); }
+:root[data-layout=kit] .app-shell .history-bars { display: flex; align-items: flex-end; gap: calc(4 * var(--kp)); padding: calc(4 * var(--kp)); background: var(--k-vis-0); box-shadow: var(--k-sunken); }
+:root[data-layout=kit] .app-shell .history-item { display: grid; justify-items: center; gap: calc(2 * var(--kp)); }
+:root[data-layout=kit] .app-shell .history-item strong { font: var(--k-text)/1 var(--k-pixel); color: var(--k-vis-18); }
+:root[data-layout=kit] .app-shell .history-item small { color: var(--k-vis-20); }
+:root[data-layout=kit] .app-shell .history-bar { width: calc(10 * var(--kp)); height: calc(50 * var(--kp)); background: var(--k-vis-1); border: 0; border-radius: 0; display: flex; align-items: flex-end; }
+:root[data-layout=kit] .app-shell .history-bar > div { width: 100%; background: linear-gradient(var(--k-vis-2), var(--k-vis-9) 50%, var(--k-vis-17)); border-radius: 0; }
+
+/* Skin studio. */
+:root[data-layout=kit] .app-shell .now-wearing {
+  position: relative; display: flex; align-items: flex-start; gap: calc(10 * var(--kp)); margin: 0 0 calc(8 * var(--kp)); width: fit-content; max-width: 100%;
+  padding: calc(24 * var(--kp)) calc(24 * var(--kp)) calc(calc(var(--k-bottom-edge, 6) + 4) * var(--kp)) calc(16 * var(--kp)); border: 0; border-radius: 0;
+  background:
+    var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-tr) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-t) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x,
+    var(--k-pl-l) left 0 top calc(20 * var(--kp)) / calc(12 * var(--kp)) calc(29 * var(--kp)) repeat-y,
+    var(--k-pl-r) right 0 top calc(20 * var(--kp)) / calc(20 * var(--kp)) calc(29 * var(--kp)) repeat-y,
+    var(--k-list-bg);
+  box-shadow: 0 calc(3 * var(--kp)) 0 #0007;
+}
+:root[data-layout=kit] .app-shell .now-wearing::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--k-bottom-edge, 6) * var(--kp)); pointer-events: none;
+  background:
+    var(--k-pl-bl-edge) left bottom / calc(12 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) no-repeat,
+    var(--k-pl-br-edge) right bottom / calc(20 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) no-repeat,
+    var(--k-pl-b-edge) left bottom / calc(25 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) repeat-x;
+}
+:root[data-layout=kit] .app-shell .now-wearing-frame { flex: 0 0 auto; width: calc(275 * var(--kp)); padding: 0; margin: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+:root[data-layout=kit] .app-shell .now-wearing-image { display: block; width: calc(275 * var(--kp)); height: auto; image-rendering: pixelated; border: 0; border-radius: 0; box-shadow: 0 calc(3 * var(--kp)) 0 #0007; }
+:root[data-layout=kit] .app-shell .now-wearing-copy { display: grid; gap: calc(4 * var(--kp)); align-content: start; padding: 0; min-width: 0; }
+:root[data-layout=kit] .app-shell .active-skin { position: absolute; top: calc(5 * var(--kp)); left: 50%; transform: translateX(-50%); display: inline-flex; gap: calc(3 * var(--kp)); align-items: center; padding: var(--kp) calc(3 * var(--kp)); color: var(--k-title); background: var(--k-title-bg); box-shadow: 0 0 0 var(--kp) var(--k-title-bg); }
+:root[data-layout=kit] .app-shell .now-wearing h2 { font: var(--k-text-big)/1.2 var(--k-pixel); text-transform: uppercase; color: var(--k-list-hi); letter-spacing: 0; overflow-wrap: anywhere; }
+:root[data-layout=kit] .app-shell .now-wearing p { font: 14px/1.55 var(--k-body-font); color: var(--k-list-fg); max-width: 520px; }
+:root[data-layout=kit] .app-shell .now-wearing-link { font: var(--k-text)/1.4 var(--k-pixel); text-transform: uppercase; color: var(--k-list-hi); }
+:root[data-layout=kit] .app-shell .now-wearing .secondary-button { justify-self: start; }
+/* The skin's DNA: what the decks take from it. */
+:root[data-layout=kit] .app-shell .now-wearing { width: auto; }
+:root[data-layout=kit] .app-shell .now-wearing-copy { flex: 1 1 calc(160 * var(--kp)); }
+:root[data-layout=kit] .app-shell .skin-dna { display: grid; gap: calc(4 * var(--kp)); margin-top: calc(6 * var(--kp)); padding-top: calc(6 * var(--kp)); border-top: var(--kp) solid color-mix(in srgb, var(--k-list-fg) 18%, transparent); }
+:root[data-layout=kit] .app-shell .dna-row { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: center; gap: calc(6 * var(--kp)); }
+:root[data-layout=kit] .app-shell .dna-label { font: var(--k-text)/1 var(--k-pixel); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .dna-swatches { display: flex; flex-wrap: wrap; gap: calc(2 * var(--kp)); }
+:root[data-layout=kit] .app-shell .dna-swatch { width: calc(10 * var(--kp)); height: calc(10 * var(--kp)); box-shadow: 0 0 0 var(--kp) var(--k-edge-dark); }
+:root[data-layout=kit] .app-shell .dna-letters { font: var(--k-text-big)/var(--k-text-big) var(--k-pixel); color: var(--k-lcd-fg); background: var(--k-lcd-bg); box-shadow: var(--k-sunken); padding: calc(3 * var(--kp)) calc(4 * var(--kp)); white-space: nowrap; overflow: hidden; justify-self: start; max-width: 100%; }
+:root[data-layout=kit] .app-shell .dna-buttons { width: calc(136 * var(--kp)); height: calc(18 * var(--kp)); background: var(--k-cb-clean) 0 0 / calc(136 * var(--kp)) calc(36 * var(--kp)) no-repeat; }
+:root[data-layout=kit] .app-shell .dna-thumbs { display: flex; align-items: center; gap: calc(6 * var(--kp)); }
+:root[data-layout=kit] .app-shell .dna-thumb { background: 0 0 / 100% 100% no-repeat; }
+:root[data-layout=kit] .app-shell .dna-pos { width: calc(29 * var(--kp)); height: calc(10 * var(--kp)); background-image: var(--k-pos-thumb); }
+:root[data-layout=kit] .app-shell .dna-vol { width: calc(14 * var(--kp)); height: calc(11 * var(--kp)); background-image: var(--k-vol-thumb); }
+:root[data-layout=kit] .app-shell .dna-bal { width: calc(14 * var(--kp)); height: calc(11 * var(--kp)); background-image: var(--k-bal-thumb); }
+:root[data-layout=kit] .app-shell .dna-eq { width: calc(11 * var(--kp)); height: calc(11 * var(--kp)); background-image: var(--k-eq-thumb); }
+:root[data-layout=kit] .app-shell .dna-digits { justify-self: start; padding: calc(2 * var(--kp)) calc(3 * var(--kp)); background: var(--k-num-bg); box-shadow: var(--k-sunken); gap: var(--kp); }
+:root[data-layout=kit] .app-shell .dna-digits .lcd-digit {
+  width: calc(9 * 2 * var(--kp)); height: calc(13 * 2 * var(--kp));
+  background-position: calc(var(--digit) * -9 * 2 * var(--kp)) 0; background-size: calc(var(--k-numbers-w) * 2 * var(--kp)) calc(13 * 2 * var(--kp));
+}
+:root[data-layout=kit] .app-shell .dna-vis { display: flex; justify-self: start; width: min(100%, calc(128 * var(--kp))); height: calc(8 * var(--kp)); padding: var(--kp); background: var(--k-vis-0); box-shadow: var(--k-sunken); }
+:root[data-layout=kit] .app-shell .dna-vis > span { flex: 1; }
+:root[data-layout=kit] .app-shell .skin-grid { gap: calc(8 * var(--kp)); margin: 0 0 calc(8 * var(--kp)); grid-template-columns: minmax(0, 1fr); }
+/* The built-in skin's card is a thumbnail at one screen pixel per skin pixel. */
+:root[data-layout=kit] .app-shell .skin-card { grid-template-columns: 275px minmax(0, 1fr); align-items: center; column-gap: calc(8 * var(--kp)); }
+:root[data-layout=kit] .app-shell .skin-card .skin-preview { width: 275px; }
+:root[data-layout=kit] .app-shell .skin-card .skin-preview img { image-rendering: pixelated; }
+:root[data-layout=kit] .app-shell .skin-card { display: grid; gap: calc(3 * var(--kp)); cursor: pointer; filter: none; }
+:root[data-layout=kit] .app-shell .skin-card:hover { filter: none; box-shadow: 0 0 0 var(--kp) var(--k-list-hi), 0 calc(3 * var(--kp)) 0 #0007; }
+:root[data-layout=kit] .app-shell .skin-preview { height: auto; padding: 0; margin: 0; border: 0; border-radius: 0; background: var(--k-lcd-bg); box-shadow: var(--k-sunken); overflow: hidden; }
+:root[data-layout=kit] .app-shell .skin-preview img { display: block; width: 100%; height: auto; image-rendering: auto; }
+:root[data-layout=kit] .app-shell .skin-card-copy { display: grid; gap: var(--kp); padding: 0; background: none; }
+:root[data-layout=kit] .app-shell .skin-card-copy strong { position: absolute; top: calc(3 * var(--kp)); left: calc(5 * var(--kp)); font: var(--k-text)/var(--k-text) var(--k-pixel); text-transform: uppercase; color: var(--k-title); background: var(--k-title-bg); padding: var(--kp) calc(3 * var(--kp)); }
+:root[data-layout=kit] .app-shell .skin-card-copy span { font: var(--k-text)/1 var(--k-pixel); color: var(--k-list-hi); }
+:root[data-layout=kit] .app-shell .skin-card-copy p { font: 13px/1.4 var(--k-body-font); }
+:root[data-layout=kit] .app-shell .skin-import-panel { display: grid; gap: calc(4 * var(--kp)); margin: 0 0 calc(8 * var(--kp)); }
+:root[data-layout=kit] .app-shell .skin-import-panel:not(.skin-url-panel) { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
+:root[data-layout=kit] .app-shell .skin-import-icon { border: 0; background: var(--k-lcd-bg); box-shadow: var(--k-sunken); }
+:root[data-layout=kit] .app-shell .skin-import-actions { display: grid; gap: calc(3 * var(--kp)); }
+:root[data-layout=kit] .app-shell .skin-import-panel small { font: 12px/1.45 var(--k-body-font); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .skin-steps { display: grid; gap: calc(4 * var(--kp)); margin: 0; padding: 0; list-style: none; }
+:root[data-layout=kit] .app-shell .skin-step { display: flex; gap: calc(5 * var(--kp)); align-items: flex-start; font: 13px/1.5 var(--k-body-font); color: var(--k-list-fg); }
+:root[data-layout=kit] .app-shell .skin-step strong { color: var(--k-list-hi); }
+:root[data-layout=kit] .app-shell .skin-step-number { flex: 0 0 auto; display: grid; place-items: center; width: calc(10 * var(--kp)); height: calc(10 * var(--kp)); border: 0; border-radius: 0; background: var(--k-list-sel); color: var(--k-list-sel-fg); box-shadow: none; }
+:root[data-layout=kit] .app-shell .skin-url-example { display: block; margin-top: calc(2 * var(--kp)); padding: calc(2 * var(--kp)) calc(4 * var(--kp)); border: 0; border-radius: 0; background: var(--k-lcd-bg); color: var(--k-lcd-fg); box-shadow: var(--k-sunken); font: var(--k-text)/1.4 var(--k-pixel); text-transform: uppercase; overflow-wrap: anywhere; }
+:root[data-layout=kit] .app-shell .skin-url-form { display: flex; gap: calc(3 * var(--kp)); }
+:root[data-layout=kit] .app-shell .skin-url-input { flex: 1; min-width: 0; text-transform: none; }
+:root[data-layout=kit] .app-shell .skin-url-result { font: 12px/1.45 var(--k-body-font); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .skin-url-result.ok { color: var(--k-list-hi); }
+:root[data-layout=kit] .app-shell .skin-url-result.bad { color: var(--k-list-sel-fg); background: var(--k-list-sel); padding: calc(2 * var(--kp)) calc(4 * var(--kp)); box-shadow: 0 0 0 var(--kp) var(--k-edge-dark); }
+:root[data-layout=kit] .app-shell .skin-url-result:is(.ok, .bad)::before { content: '✓' / ''; font: var(--k-text)/1 var(--k-pixel); margin-right: calc(3 * var(--kp)); }
+:root[data-layout=kit] .app-shell .skin-url-result.bad::before { content: '✕' / ''; }
+:root[data-layout=kit] .app-shell .skin-url-result small { font: inherit; color: inherit; }
+:root[data-layout=kit] .app-shell .skin-attribution { font: 12px/1.5 var(--k-body-font); color: var(--k-desk-dim); }
+:root[data-layout=kit] .app-shell .source-bpm input { width: calc(40 * var(--kp)); }
+
+/* Help dialog: a playlist window. */
+:root[data-layout=kit] .modal-backdrop { background: color-mix(in srgb, var(--k-desk) 70%, transparent); backdrop-filter: none; }
+:root[data-layout=kit] .help-modal {
+  position: relative; border: 0; border-radius: 0; color: var(--k-list-fg); font-family: var(--k-body-font); image-rendering: pixelated;
+  padding: calc(26 * var(--kp)) calc(26 * var(--kp)) calc(calc(var(--k-bottom-edge, 6) + 8) * var(--kp)) calc(18 * var(--kp));
+  background:
+    var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-tr) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-t) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x,
+    var(--k-pl-l) left 0 top calc(20 * var(--kp)) / calc(12 * var(--kp)) calc(29 * var(--kp)) repeat-y,
+    var(--k-pl-r) right 0 top calc(20 * var(--kp)) / calc(20 * var(--kp)) calc(29 * var(--kp)) repeat-y,
+    var(--k-list-bg);
+  box-shadow: 0 calc(4 * var(--kp)) 0 #0009;
+}
+:root[data-layout=kit] .help-modal::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--k-bottom-edge, 6) * var(--kp)); pointer-events: none;
+  background:
+    var(--k-pl-bl-edge) left bottom / calc(12 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) no-repeat,
+    var(--k-pl-br-edge) right bottom / calc(20 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) no-repeat,
+    var(--k-pl-b-edge) left bottom / calc(25 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) repeat-x;
+}
+:root[data-layout=kit] .help-modal .section-heading { position: absolute; top: 0; left: calc(25 * var(--kp)); right: calc(25 * var(--kp)); height: calc(20 * var(--kp)); display: flex; align-items: center; justify-content: center; margin: 0; }
+:root[data-layout=kit] .help-modal h2 { font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; color: var(--k-title); background: var(--k-title-bg); padding: var(--kp) calc(3 * var(--kp)); box-shadow: 0 0 0 var(--kp) var(--k-title-bg); letter-spacing: 0; }
+:root[data-layout=kit] .help-modal #help-close { position: absolute; right: calc(-21 * var(--kp)); top: calc(3 * var(--kp)); width: calc(9 * var(--kp)); height: calc(9 * var(--kp)); min-height: 0; padding: 0; border: 0; border-image: none; background: transparent; box-shadow: none; font-size: 0; color: transparent; }
+:root[data-layout=kit] .help-modal #help-close:active { background: var(--k-pl-close-down) 0 0 / 100% 100% no-repeat; }
+:root[data-layout=kit] .help-modal p { font: 13px/1.55 var(--k-body-font); color: var(--k-list-fg); }
+:root[data-layout=kit] .help-modal .shortcut-list { display: grid; gap: 0; margin: calc(4 * var(--kp)) 0; padding: 0; list-style: none; background: var(--k-list-bg); }
+:root[data-layout=kit] .help-modal .shortcut-list li { display: flex; gap: calc(6 * var(--kp)); padding: var(--kp) calc(3 * var(--kp)); border: 0; font: 13px var(--k-body-font); color: var(--k-list-fg); }
+:root[data-layout=kit] .help-modal .shortcut-list li:nth-child(odd) { background: color-mix(in srgb, var(--k-list-sel) 30%, transparent); }
+:root[data-layout=kit] .help-modal .shortcut-list strong { min-width: calc(40 * var(--kp)); font: var(--k-text)/1.4 var(--k-pixel); color: var(--k-list-hi); }
+:root[data-layout=kit] .help-modal .primary-button {
+  font-family: var(--k-pixel); font-size: var(--k-text); text-transform: uppercase; color: var(--k-face-text); background: var(--k-face); border: 0; border-radius: 0;
+  box-shadow: var(--k-bevel), 0 0 0 var(--kp) var(--k-edge-dark); padding: calc(3 * var(--kp)) calc(6 * var(--kp));
+}
+
+/* Page scrollbars wear the playlist's scroll handle. */
+:root[data-layout=kit] { scrollbar-color: var(--k-face) var(--k-desk); }
+:root[data-layout=kit] .app-shell .composer-rack::-webkit-scrollbar { width: calc(8 * var(--kp)); }
+:root[data-layout=kit] .app-shell .composer-rack::-webkit-scrollbar-track { background: color-mix(in srgb, var(--k-list-bg) 70%, #000); }
+:root[data-layout=kit] .app-shell .composer-rack::-webkit-scrollbar-thumb { background: var(--k-pl-scroll) center / 100% calc(18 * var(--kp)) no-repeat; min-height: calc(18 * var(--kp)); }
+
+/* ---------- focus session: just the faders, big ---------- */
+:root[data-layout=kit] .app-shell.session-focus-view { max-width: 1240px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(8 * var(--kp)); padding: calc(8 * var(--kp)) 20px; }
+/* The toolbar and the two channel windows share one width, so the session reads as one block. */
+:root[data-layout=kit] .session-focus-view :is(.focus-toolbar, .focus-decks) { width: min(100%, calc(570 * var(--kp))); max-width: none; box-sizing: border-box; margin: 0; }
+:root[data-layout=kit] .session-focus-view .focus-toolbar {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: calc(6 * var(--kp)); height: calc(20 * var(--kp)); min-height: 0; margin: 0;
+  padding: 0 calc(26 * var(--kp)); border: 0; border-radius: 0; box-shadow: 0 calc(2 * var(--kp)) 0 #0006;
+  background: var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat, var(--k-pl-tr) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-t) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x, var(--k-frame);
+}
+:root[data-layout=kit] .session-focus-view .focus-toolbar h1, :root[data-layout=kit] .session-focus-view .focus-toolbar small {
+  font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; letter-spacing: 0; color: var(--k-title); background: var(--k-title-bg); padding: var(--kp) calc(3 * var(--kp)); box-shadow: 0 0 0 var(--kp) var(--k-title-bg); margin: 0;
+}
+:root[data-layout=kit] .session-focus-view .focus-toolbar small { color: var(--k-title-dim); }
+:root[data-layout=kit] .session-focus-view .focus-decks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(10 * var(--kp)); flex: none; justify-content: center; align-items: start; }
+:root[data-layout=kit] .session-focus-view .focus-channel {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: calc(6 * var(--kp)); margin: 0; border: 0; border-radius: 0;
+  padding: calc(24 * var(--kp)) calc(24 * var(--kp)) calc(calc(var(--k-bottom-edge, 6) + 6) * var(--kp)) calc(16 * var(--kp));
+  background:
+    var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-tr) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-t) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x,
+    var(--k-pl-l) left 0 top calc(20 * var(--kp)) / calc(12 * var(--kp)) calc(29 * var(--kp)) repeat-y,
+    var(--k-pl-r) right 0 top calc(20 * var(--kp)) / calc(20 * var(--kp)) calc(29 * var(--kp)) repeat-y,
+    var(--k-list-bg);
+  box-shadow: 0 calc(3 * var(--kp)) 0 #0007; color: var(--k-list-fg);
+}
+:root[data-layout=kit] .session-focus-view .focus-channel::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--k-bottom-edge, 6) * var(--kp)); pointer-events: none;
+  background:
+    var(--k-pl-bl-edge) left bottom / calc(12 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) no-repeat,
+    var(--k-pl-br-edge) right bottom / calc(20 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) no-repeat,
+    var(--k-pl-b-edge) left bottom / calc(25 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) repeat-x;
+}
+:root[data-layout=kit] .session-focus-view .focus-channel > h2 {
+  position: absolute; top: calc(5 * var(--kp)); left: 50%; transform: translateX(-50%); margin: 0; padding: var(--kp) calc(3 * var(--kp)); border: 0;
+  font: var(--k-text)/1 var(--k-pixel); letter-spacing: 0; color: var(--k-title); background: var(--k-title-bg); box-shadow: 0 0 0 var(--kp) var(--k-title-bg);
+}
+:root[data-layout=kit] .session-focus-view .focus-transport { display: flex; gap: calc(4 * var(--kp)); justify-content: center; margin: 0; }
+:root[data-layout=kit] .session-focus-view :is(.focus-play-button, .focus-pause-button) {
+  width: calc(23 * 3 * var(--kp) / 2); height: calc(18 * 3 * var(--kp) / 2); min-height: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; filter: none;
+  font-size: 0; color: transparent; background: var(--k-cb-clean) calc(-23 * 3 * var(--kp) / 2) 0 / calc(136 * 3 * var(--kp) / 2) calc(36 * 3 * var(--kp) / 2) no-repeat;
+}
+:root[data-layout=kit] .session-focus-view .focus-pause-button { background-position: calc(-46 * 3 * var(--kp) / 2) 0; }
+:root[data-layout=kit] .session-focus-view .focus-play-button:active:not(:disabled) { background-position: calc(-23 * 3 * var(--kp) / 2) calc(-18 * 3 * var(--kp) / 2); padding: 0; box-shadow: none; }
+:root[data-layout=kit] .session-focus-view .focus-pause-button:active:not(:disabled) { background-position: calc(-46 * 3 * var(--kp) / 2) calc(-18 * 3 * var(--kp) / 2); padding: 0; box-shadow: none; }
+:root[data-layout=kit] .session-focus-view :is(.focus-play-button, .focus-pause-button):hover:not(:disabled) { background-color: transparent; filter: brightness(1.12); }
+:root[data-layout=kit] .session-focus-view :is(.focus-play-button, .focus-pause-button):disabled { opacity: .35; }
+:root[data-layout=kit] .session-focus-view .focus-channel > .pitch-section {
+  --pz: 4; display: grid; grid-template-columns: auto calc(70 * var(--kp)); grid-template-rows: minmax(0, 1fr) auto auto auto auto auto minmax(0, 1fr); column-gap: calc(8 * var(--kp)); row-gap: calc(3 * var(--kp));
+  align-items: start; max-width: none; width: auto; padding: 0; background: none; border: 0; box-shadow: none; flex: none; margin-block: calc(4 * var(--kp));
+}
+/* The fader on the left; its readout and steps at the top of the column, the settings at the bottom. */
+:root[data-layout=kit] .session-focus-view .pitch-section > :is(.control-label, .pitch-sensitivity > span) { display: none; }
+:root[data-layout=kit] .session-focus-view .pitch-section > .pitch-track { grid-column: 1; grid-row: 1 / -1; flex: none; height: calc(63 * var(--pz) * var(--kp)); max-height: none; max-width: none; }
+:root[data-layout=kit] .session-focus-view .pitch-section > :is(.pitch-value, .pitch-fine, .pitch-range, .pitch-sensitivity, .pitch-wheel-hint) { grid-column: 2; width: 100%; max-width: none; }
+:root[data-layout=kit] .session-focus-view .pitch-section > .pitch-value { grid-row: 2; }
+:root[data-layout=kit] .session-focus-view .pitch-section > .pitch-fine { grid-row: 3; }
+:root[data-layout=kit] .session-focus-view .pitch-section > .pitch-range { grid-row: 4; margin-top: calc(5 * var(--kp)); }
+:root[data-layout=kit] .session-focus-view .pitch-section > .pitch-sensitivity { grid-row: 5; }
+:root[data-layout=kit] .session-focus-view .pitch-section > .pitch-wheel-hint { grid-row: 6; }
+:root[data-layout=kit] .session-focus-view .pitch-section .pitch-sensitivity > span { display: none; }
+:root[data-layout=kit] .session-focus-view .pitch-ticks { left: auto; right: calc((14 * var(--pz) + 4) * var(--kp)); align-items: flex-end; font: var(--k-text)/1 var(--k-pixel); color: var(--k-list-fg); }
+:root[data-layout=kit] .session-focus-view .pitch-value { font-size: var(--k-text-big); line-height: 1; padding: calc(3 * var(--kp)) 0; }
+:root[data-layout=kit] .session-focus-view .pitch-fine button { width: auto; flex: 1; padding: calc(2 * var(--kp)) 0; }
+:root[data-layout=kit] .session-focus-view .pitch-wheel-hint { font: 11px/1.4 var(--k-body-font); color: var(--k-list-dim); text-align: left; }
+:root[data-layout=kit] .session-focus-view .deck-volume-row { margin-top: auto; padding: calc(3 * var(--kp)) 0 0; width: 100%; max-width: none; border: 0; background: none; }
+:root[data-layout=kit] .session-focus-view .deck-volume-row > label { display: flex; flex-direction: row; align-items: center; font: var(--k-text)/1 var(--k-pixel); }
+:root[data-layout=kit] .session-focus-view .deck-volume-row input { margin: 0 0 0 auto; width: calc(68 * var(--kp)); }
+:root[data-layout=kit] .session-focus-view .exit-focus-button { padding-top: 0; padding-bottom: 0; min-height: calc(10 * var(--kp)); }
+/* Shorter screens get a shorter fader, so the session fits without scrolling. */
+@media (max-height: 780px) { :root[data-layout=kit] .session-focus-view .focus-channel > .pitch-section { --pz: 3; } }
+@media (max-width: 1040px) { :root[data-layout=kit] .session-focus-view .focus-toolbar small { display: none; } }
+/* A playlist bar needs Winamp's 275 pixels: narrower focus windows keep their plain bottom edge. */
+@media (max-width: 1179px) {
+  :root[data-layout=kit] .session-focus-view .focus-channel > .console-bar { display: none; }
+  :root[data-layout=kit] .app-shell .focus-channel:has(> .console-bar) { padding-bottom: calc(calc(var(--k-bottom-edge, 6) + 6) * var(--kp)); }
+  :root[data-layout=kit] .app-shell .focus-channel:has(> .console-bar)::after { display: block; }
+}
+
+/* Narrow windows: the decks stack. */
+@media (max-width: 1100px) {
+  :root[data-layout=kit] .app-shell .topbar .engine-status { font-size: 0; gap: 0; padding: 0 calc(3 * var(--kp)); }
+  :root[data-layout=kit] .app-shell .nav-item { padding: 0 calc(3 * var(--kp)); }
+}
+@media (max-width: 1240px) {
+  :root[data-layout=kit] .app-shell .decks { grid-template-columns: minmax(calc(275 * var(--kp)), calc(330 * var(--kp))); justify-content: center; }
+  :root[data-layout=kit] .app-shell .mode-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  :root[data-layout=kit] .app-shell { padding: 8px 8px 20px; }
+  /* The title bar keeps the brand and status on its first row; the nav gets a row of its own. */
+  :root[data-layout=kit] .app-shell .topbar { grid-template-columns: auto minmax(0, 1fr); height: auto; row-gap: calc(3 * var(--kp)); padding-bottom: calc(3 * var(--kp)); background-color: var(--k-frame); }
+  :root[data-layout=kit] .app-shell .topbar > .brand { grid-column: 1; grid-row: 1; margin-top: calc(5 * var(--kp)); }
+  :root[data-layout=kit] .app-shell .topbar-right { grid-column: 2; grid-row: 1; justify-self: end; margin: calc(5 * var(--kp)) 0 0; min-width: 0; }
+  :root[data-layout=kit] .app-shell .main-nav { grid-column: 1 / -1; grid-row: 2; min-width: 0; flex-wrap: wrap; justify-content: flex-start; justify-self: stretch; margin: 0; }
+  :root[data-layout=kit] .app-shell .session-badge, :root[data-layout=kit] .app-shell .toolbar-description { display: none; }
+  :root[data-layout=kit] .app-shell .page-heading h1 { font-size: 18px; line-height: 18px; }
+  :root[data-layout=kit] .app-shell :is(.practice-toolbar, .toolbar-actions, .under-decks) { flex-wrap: wrap; }
+  :root[data-layout=kit] .app-shell :is(.builder-invitation, .add-element-button, .play-both-button) { max-width: 100%; white-space: normal; line-height: 1.3; text-align: left; }
+  :root[data-layout=kit] .app-shell .foundation-guide, :root[data-layout=kit] .app-shell .mode-list { grid-template-columns: minmax(0, 1fr); }
+  :root[data-layout=kit] .app-shell .global-module-grid, :root[data-layout=kit] .app-shell .pro-track-pickers { grid-template-columns: minmax(0, 1fr); }
+  :root[data-layout=kit] .app-shell .global-module-grid > .player-module { grid-column: 1; }
+  :root[data-layout=kit] .app-shell .skin-import-panel:not(.skin-url-panel) { grid-template-columns: minmax(0, 1fr); }
+  :root[data-layout=kit] .app-shell :is(.skin-url-form, .now-wearing, .coach-bottom, .tap-content) { flex-wrap: wrap; }
+  :root[data-layout=kit] .app-shell .now-wearing-frame, :root[data-layout=kit] .app-shell .now-wearing-image { width: 100%; max-width: calc(275 * var(--kp)); }
+  :root[data-layout=kit] .app-shell .skin-import-actions { min-width: 0; width: 100%; }
+  :root[data-layout=kit] .app-shell .module-volume input[type=range] { min-width: 0; }
+  :root[data-layout=kit] .app-shell .skin-card { grid-template-columns: minmax(0, 1fr); }
+  :root[data-layout=kit] .app-shell .footer { display: flex; flex-direction: column; align-items: flex-start; gap: calc(4 * var(--kp)); }
+  :root[data-layout=kit] .app-shell .footer > span { flex-wrap: wrap; row-gap: calc(2 * var(--kp)); }
+  :root[data-layout=kit] .app-shell .footer-separator { display: none; }
+  :root[data-layout=kit] .app-shell :is(.deck-console, .session-modules) > .add-module-menu select { inset: calc(-6 * var(--kp)); width: auto; height: auto; }
+  :root[data-layout=kit] .app-shell .skin-url-form > input { flex: 1 1 100%; min-width: 0; }
+  :root[data-layout=kit] .app-shell .skin-import-actions :is(button) { white-space: normal; width: 100%; min-width: 0; }
+  :root[data-layout=kit] .app-shell.session-focus-view { padding: 6px; }
+  :root[data-layout=kit] .session-focus-view .focus-toolbar { flex-wrap: wrap; height: auto; }
+  :root[data-layout=kit] .session-focus-view .focus-toolbar small { display: none; }
+  :root[data-layout=kit] .session-focus-view .focus-decks { gap: calc(4 * var(--kp)); }
+  :root[data-layout=kit] .session-focus-view .focus-channel { padding: calc(22 * var(--kp)) calc(21 * var(--kp)) calc(calc(var(--k-bottom-edge, 6) + 4) * var(--kp)) calc(13 * var(--kp)); min-width: 0; }
+  :root[data-layout=kit] .session-focus-view .focus-channel > .pitch-section { --pz: 3; grid-template-columns: minmax(0, 1fr); width: 100%; min-width: 0; }
+  :root[data-layout=kit] .session-focus-view .pitch-section :is(select, button, .pitch-value) { min-width: 0; max-width: 100%; }
+  :root[data-layout=kit] .session-focus-view .pitch-section > .pitch-track { grid-column: 1; grid-row: auto; justify-self: center; }
+  :root[data-layout=kit] .session-focus-view .pitch-section > :is(.pitch-value, .pitch-fine, .pitch-range, .pitch-sensitivity, .pitch-wheel-hint) { grid-column: 1; width: 100%; }
+  :root[data-layout=kit] .session-focus-view .deck-volume-row > label { flex-wrap: wrap; }
+  :root[data-layout=kit] .session-focus-view .deck-volume-row input { margin: 0; width: 100%; max-width: calc(68 * var(--kp)); }
+}
+@media (max-width: 640px) {
+  :root[data-layout=kit] { --kp: 1px; }
+  :root[data-layout=kit] .app-shell .decks { grid-template-columns: minmax(0, 1fr); }
+  :root[data-layout=kit] .app-shell .deck-module-grid.has-pitch { grid-template-columns: minmax(0, 1fr) calc(96 * var(--kp)); }
+  /* Phone widths: buttons and pitch settings stack instead of clipping; no wheel or keys to mention. */
+  :root[data-layout=kit] .app-shell .deck-actions { grid-template-columns: minmax(0, 1fr); }
+  :root[data-layout=kit] .app-shell .deck-module-grid .pitch-section > :is(.pitch-range, .pitch-sensitivity) { grid-column: 1 / -1; }
+  :root[data-layout=kit] .app-shell .pitch-wheel-hint, :root[data-layout=kit] .app-shell .play-both-button small { display: none; }
+  :root[data-layout=kit] .app-shell .play-both-button { width: 100%; font-size: 18px; justify-content: center; }
+  :root[data-layout=kit] .app-shell .main-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); justify-items: center; }
+  :root[data-layout=kit] .app-shell .nav-item { padding: 0 calc(2 * var(--kp)); }
+}

@@ -5,11 +5,11 @@ import './session.css';
 import './module-skins.css';
 import './lcd.css';
 import './skin-studio.css';
-import './wsz.css';
+import './kit.css';
 import { AudioEngine } from './audio.js';
 import { assetUrl, BASE_PATH } from './assets.js';
 import { clamp, tapTempo, matchScore, estimateTempo, STAR, createStar, stepDrift, stepScore, starStats, starResult } from './training.js';
-import { applySkin, importSkin, importSkinFromUrl, downloadTemplate, skinPicture, SELECTABLE_SKINS, DEFAULT_SKIN } from './skins.js';
+import { applySkin, importSkin, importSkinFromUrl, downloadTemplate, skinPicture, validKit, prepareBuiltinSkins, builtinKit, SELECTABLE_SKINS, DEFAULT_SKIN } from './skins.js';
 import { SessionLibrary, DeckSelections } from './library.js';
 import { pickFolder, AUDIO_EXTENSIONS } from './folder-browser.js';
 import { adjustedPitch, wheelPitchDelta, keyPitchDelta, pitchSensitivity } from './pitch-control.js';
@@ -18,13 +18,17 @@ import { createWinampLive } from './winamp-live.js';
 
 // Apply the saved skin before Elm mounts, so the first app frame has its final theme.
 // Skins that are no longer offered fall back to the default.
+// Millennium Chrome is drawn as a Winamp skin; build it before the first frame when it's quick,
+// otherwise start on the classic CSS look and dress the app as soon as it's ready.
+const builtinReady = prepareBuiltinSkins();
+const builtinInTime = await Promise.race([builtinReady, new Promise(resolve => setTimeout(() => resolve(false), 2500))]);
 const savedSkin = restore('bit-cheer-skin');
 const startupSkin = savedSkin?.id === 'custom' || SELECTABLE_SKINS.includes(savedSkin?.id) ? savedSkin : null;
 let startupSkinName;
 try { startupSkinName = applySkin(startupSkin?.id || DEFAULT_SKIN, startupSkin?.custom); }
 catch { startupSkinName = applySkin(DEFAULT_SKIN); }
 
-const app = Elm.Main.init({ node: document.getElementById('app'), flags: { basePath: BASE_PATH } });
+const app = Elm.Main.init({ node: document.getElementById('app'), flags: { basePath: BASE_PATH, kit: document.documentElement.dataset.layout === 'kit' } });
 let telemetry = [], recent = [], lastStart = performance.now(), mode = 'foundation', catalog = {tracks:[]}, taps = [], zoom = [1,1], mic = null, drill = '', configVersion = 0, micEpoch = 0, micPending = false, focusActive = false, wasFullscreen = false, activeLesson = 1, transition = null;
 const send = event => {
   if(event.type==='telemetry') {
@@ -35,7 +39,27 @@ const send = event => {
   app.ports.incoming.send(event);
 };
 const engine = new AudioEngine(send);
-const live = createWinampLive({ engine, seek: (deck, fraction) => seekWave(deck, fraction), remote: (deck, action, value) => send({ type: 'remote', deck, action, value }) });
+const loops = [true, true];
+let skinEpoch = 0;
+// The skin's Playlist (PL) button shows or hides that deck's console, like Winamp's own.
+function toggleConsole(deck) {
+  const root = document.documentElement, hidden = new Set((root.dataset.consoleHidden || '').split(' ').filter(Boolean));
+  const key = deck ? 'b' : 'a';
+  if (hidden.has(key)) hidden.delete(key); else hidden.add(key);
+  root.dataset.consoleHidden = [...hidden].join(' ');
+  store('bit-cheer-console-hidden', root.dataset.consoleHidden);
+}
+document.addEventListener('click',event=>{const button=event.target.closest?.('.console-shade');if(button)toggleConsole(button.dataset.deck==='1'?1:0);});
+const deckState = deck => {
+  const scope = deck ? 'deck-b' : 'deck-a';
+  return {
+    loop: loops[deck],
+    eq: !!document.querySelector(`.player-module[data-module="eq"][data-scope="${scope}"]:not(.is-collapsed)`),
+    pl: !(document.documentElement.dataset.consoleHidden || '').includes(deck ? 'b' : 'a'),
+    hideBpm: !!document.querySelector(`[data-testid="bpm-${deck ? 'b' : 'a'}"][aria-label="BPM hidden"]`),
+  };
+};
+const live = createWinampLive({ engine, deckState, seek: (deck, fraction) => seekWave(deck, fraction), remote: (deck, action, value) => action === 'pl' ? toggleConsole(deck) : send({ type: 'remote', deck, action, value }) });
 const library = new SessionLibrary(), selections = new DeckSelections();
 let sensitivities = [.05,.05], pendingProCatalog = false;
 let folder=null;
@@ -52,7 +76,8 @@ async function chooseFolder(deck){
 function publishLibrary(){catalog.tracks=library.list();send({type:'catalog',tracks:catalog.tracks});}
 function beginSelection(deck){engine.loadVersions[deck]++;return selections.begin(deck);}
 const notice=message=>send({type:'notice',message});
-const skinChanged=(id,name,custom)=>{live.setSkin(id==='custom'?custom:null);send({type:'skin',id,name,preview:skinPicture(id,custom),source:custom?.source&&/^https:\/\/skins\.webamp\.org\//.test(custom.source)?custom.source:''});};
+let skinStamp=0;
+const skinChanged=(id,name,custom)=>{skinStamp++;const dressed=id==='custom'?custom:builtinKit(id);live.setSkin(dressed);send({type:'skin',id,name,kit:document.documentElement.dataset.layout==='kit',preview:skinPicture(id,custom),source:custom?.source&&/^https:\/\/skins\.webamp\.org\//.test(custom.source)?custom.source:''});};
 const fail=error=>{if(engine.context)engine.emitRouting();send({type:'error',message:error instanceof Error?error.message:String(error)});};
 function chooseFile(accept,handle) {
   const input=document.createElement('input'); input.type='file';input.accept=accept;input.style.display='none';document.body.append(input);
@@ -113,7 +138,7 @@ async function configure(command) {
   const requestedMode=command.mode||'foundation';mode=requestedMode;recent=[];lastStart=performance.now();zoom=[1,1];
   await engine.ensure();
   if(version!==configVersion)return;
-  for(let i=0;i<2;i++){await engine.set(i,'play',0);await engine.set(i,'pitch',0);await engine.set(i,'loop',1);await engine.set(i,'bend',0);await engine.set(i,'drift',0);if(requestedMode==='foundation'){for(const band of ['low','mid','high'])await engine.set(i,band,0);await engine.setVoice(i,0,'gain',1);await engine.setVoice(i,0,'pan',0);}}
+  for(let i=0;i<2;i++){loops[i]=true;await engine.set(i,'play',0);await engine.set(i,'pitch',0);await engine.set(i,'loop',1);await engine.set(i,'bend',0);await engine.set(i,'drift',0);if(requestedMode==='foundation'){for(const band of ['low','mid','high'])await engine.set(i,band,0);await engine.setVoice(i,0,'gain',1);await engine.setVoice(i,0,'pan',0);}}
   if(version!==configVersion)return;
   if(requestedMode==='pro') {
     if(catalog.tracks.length>=2){await loadTrack(0,catalog.tracks[0].id);if(version!==configVersion)return;await loadTrack(1,catalog.tracks[1].id);}
@@ -150,7 +175,7 @@ function finishStar(){
 async function handle(command) {
   const {type,deck,param,value}=command;
   switch(type) {
-    case 'set': await engine.set(deck,param,param==='elements'&&mode==='foundation'?1:value); if(param==='bpm'&&engine.state[deck].trackId){library.update(engine.state[deck].trackId,{bpm:engine.state[deck].bpm});publishLibrary();}if(['bpm','pitch','elements'].includes(param)){recent=[];lastStart=performance.now();} break;
+    case 'set': if(param==='loop'&&(deck===0||deck===1))loops[deck]=!!value; await engine.set(deck,param,param==='elements'&&mode==='foundation'?1:value); if(param==='bpm'&&engine.state[deck].trackId){library.update(engine.state[deck].trackId,{bpm:engine.state[deck].bpm});publishLibrary();}if(['bpm','pitch','elements'].includes(param)){recent=[];lastStart=performance.now();} break;
     case 'sensitivity': if(deck===0||deck===1)sensitivities[deck]=pitchSensitivity(value);break;
     case 'layout': {const layout=validateLayout(command.layout);if(layout){sensitivities=layout.sensitivity;store('bit-cheer-layout',layout);}break;}
     case 'mixer': await engine.mixer(param,value);if(activeLesson===8&&param==='crossfade'&&telemetry.every(d=>d.playing)){if(value<=.1||value>=.9){const edge=value<=.1?0:1;if(!transition)transition={edge,time:performance.now(),done:false};else if(edge!==transition.edge&&performance.now()-transition.time>=3000)transition.done=true;}}break;
@@ -221,11 +246,15 @@ async function handle(command) {
       const track=library.addLinked(source.key(path,name),name,()=>source.file(path,name));
       publishLibrary();await loadTrack(deck,track.id,false,'Local files');break;
     }
-    case 'skin': {if(!SELECTABLE_SKINS.includes(command.id))break;const name=applySkin(command.id);store('bit-cheer-skin',{id:command.id});skinChanged(command.id,name);break;}
-    case 'importSkin': chooseFile('.toml,.zip,.wsz',async file=>{const custom=await importSkin(file);const name=applySkin('custom',custom);store('bit-cheer-skin',{id:'custom',custom});skinChanged('custom',name,custom);notice(`Skin loaded: ${name}`);});break;
+    case 'skin': {if(!SELECTABLE_SKINS.includes(command.id))break;skinEpoch++;const name=applySkin(command.id);store('bit-cheer-skin',{id:command.id});skinChanged(command.id,name);break;}
+    case 'importSkin': chooseFile('.toml,.zip,.wsz',async file=>{const epoch=++skinEpoch;const custom=await importSkin(file);if(epoch!==skinEpoch)return;const name=applySkin('custom',custom);store('bit-cheer-skin',{id:'custom',custom});skinChanged('custom',name,custom);notice(`Skin loaded: ${name}`);});break;
     case 'loadSkinUrl': {
+      const epoch=++skinEpoch;
       try {
-        const custom=await importSkinFromUrl(command.url);const name=applySkin('custom',custom);
+        const custom=await importSkinFromUrl(command.url);
+        // A newer choice made while this one downloaded wins.
+        if(epoch!==skinEpoch){send({type:'skinUrlResult',ok:false,message:'Another skin was chosen while this one was loading.'});break;}
+        const name=applySkin('custom',custom);
         store('bit-cheer-skin',{id:'custom',custom});skinChanged('custom',name,custom);
         send({type:'skinUrlResult',ok:true,message:`Loaded “${name}”. Enjoy the view!`});
       } catch(error) { send({type:'skinUrlResult',ok:false,message:error instanceof Error?error.message:String(error)}); }
@@ -323,11 +352,16 @@ function draw(now) {
   if(now-lastDraw>32&&!document.hidden){lastDraw=now;
     const style=getComputedStyle(document.documentElement),color=style.getPropertyValue('--accent').trim()||'#b8ee75';
     for(let deck=0;deck<2;deck++){
+      // The jog marker turns with the music, 33⅓ times a minute, and follows scrubbing.
+      const jog=document.getElementById(deck?'jog-b':'jog-a');
+      if(jog)jog.style.setProperty('--jog-angle',`${((engine.state[deck].position||0)%1.8/1.8*360).toFixed(1)}deg`);
       const canvas=document.getElementById(deck?'waveform-b':'waveform-a');if(!canvas)continue;
       const rect=canvas.getBoundingClientRect(),ratio=window.devicePixelRatio||1;
       const w=Math.round(rect.width*ratio),h=Math.round(rect.height*ratio);if(!w||!h)continue;
       if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
-      const ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);ctx.fillStyle=style.getPropertyValue('--screen').trim()||'#080b08';ctx.fillRect(0,0,w,h);
+      const ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);
+      if(document.documentElement.dataset.layout==='kit'){drawKitWave(ctx,canvas,deck,w,h,style);continue;}
+      ctx.fillStyle=style.getPropertyValue('--screen').trim()||'#080b08';ctx.fillRect(0,0,w,h);
       ctx.strokeStyle=color+'25';ctx.lineWidth=ratio;
       for(let i=0;i<=16;i++){ctx.beginPath();ctx.moveTo(i*w/16,0);ctx.lineTo(i*w/16,h);ctx.stroke();}
       ctx.beginPath();ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();
@@ -342,15 +376,52 @@ function draw(now) {
 }
 requestAnimationFrame(draw);
 
+// Skinned waveform: chunky 2px pixels in the skin's own visualizer colors. The background grid
+// and a color column are drawn once per size and skin; each frame only stamps slices of them.
+let waveCache=null;
+function waveAssets(style,w,h,px){
+  const key=`${w}x${h}:${px}:${skinStamp}`;
+  if(waveCache?.key===key)return waveCache;
+  const vis=i=>style.getPropertyValue(`--k-vis-${i}`).trim()||'#0f0';
+  const back=document.createElement('canvas');back.width=w;back.height=h;
+  const b=back.getContext('2d');b.fillStyle=vis(0);b.fillRect(0,0,w,h);b.fillStyle=vis(1);
+  for(let y=px;y<h;y+=px*2)for(let x=px;x<w;x+=px*2)b.fillRect(x,y,px/2,px/2);
+  for(let k=1;k<8;k++)b.fillRect(Math.round(k*w/8/px)*px,0,Math.max(1,px/2),h);
+  const rows=Math.floor(h/px),mid=Math.floor(rows/2),column=document.createElement('canvas');column.width=1;column.height=h;
+  const c=column.getContext('2d');
+  for(let r=0;r<mid;r++){c.fillStyle=vis(17-Math.min(15,Math.floor(r/Math.max(1,mid)*16)));c.fillRect(0,(mid-1-r)*px,1,px);c.fillRect(0,(mid+r)*px,1,px);}
+  return waveCache={key,back,column,mid,peak:vis(23)};
+}
+function drawKitWave(ctx,canvas,deck,w,h,style){
+  const px=Math.max(2,Math.round(2*(window.devicePixelRatio||1))),{back,column,mid,peak}=waveAssets(style,w,h,px);
+  ctx.imageSmoothingEnabled=false;ctx.drawImage(back,0,0);
+  const peaks=engine.waveforms[deck],state=engine.state[deck],duration=Math.max(1,state.duration),visibleDuration=duration/zoom[deck],start=zoom[deck]>1?clamp(state.position-visibleDuration/2,0,duration-visibleDuration):0;
+  for(let x=0;x<w;x+=px*2){
+    const index=Math.min(peaks.length-1,Math.floor((start+x/w*visibleDuration)/duration*peaks.length));
+    const amp=Math.max(1,Math.round((peaks[index]||0)*mid*.92)),top=(mid-amp)*px,height=amp*2*px;
+    ctx.drawImage(column,0,top,1,height,x,top,px*1.5,height);
+  }
+  const playhead=Math.round(clamp((state.position-start)/visibleDuration,0,1)*w/px)*px;
+  ctx.fillStyle=peak;ctx.fillRect(playhead,0,px,h);ctx.fillRect(playhead-px,0,px*3,px);ctx.fillRect(playhead-px,h-px,px*3,px);
+}
+
 queueMicrotask(async()=>{
   const layout=validateLayout(restore('bit-cheer-layout'));if(layout){sensitivities=layout.sensitivity;send({type:'restoreLayout',layout});}
   const saved=restore('bit-cheer-progress');if(saved&&Array.isArray(saved.progress)&&Array.isArray(saved.history))send({type:'restore',...saved});
   skinChanged(document.documentElement.dataset.skin,startupSkinName,startupSkin?.custom);
-  // Skins saved before the live window existed: fetch museum skins again for the full look.
-  if(startupSkin?.id==='custom'&&startupSkin.custom?.originals?.main&&!startupSkin.custom.sheets){
-    if(startupSkin.custom.source)importSkinFromUrl(startupSkin.custom.source).then(custom=>{const name=applySkin('custom',custom);store('bit-cheer-skin',{id:'custom',custom});skinChanged('custom',name,custom);notice(`Skin refreshed: ${name} now dresses every part of your decks.`);}).catch(()=>{});
-    else notice('Import your Winamp skin again to get its full look, including the live Winamp window on each deck.');
+  // Winamp skins saved by an older version: fetch them again from the museum for the full look.
+  const savedCustom=startupSkin?.id==='custom'?startupSkin.custom:null;
+  if(savedCustom&&(savedCustom.originals||savedCustom.kit)&&!validKit(savedCustom.kit)){
+    const epoch=skinEpoch;
+    if(savedCustom.source)importSkinFromUrl(savedCustom.source).then(custom=>{
+      if(epoch!==skinEpoch)return;
+      if(typeof savedCustom.theme?.name==='string'&&savedCustom.theme.name.trim())custom.theme.name=savedCustom.theme.name.trim().slice(0,60);
+      const name=applySkin('custom',custom);store('bit-cheer-skin',{id:'custom',custom});skinChanged('custom',name,custom);notice(`Skin refreshed: ${name} now dresses every part of your decks.`);
+    }).catch(()=>{});
+    else notice('Import your Winamp skin again to see its full look on every control.');
   }
+  if(!builtinInTime){const epoch=skinEpoch;builtinReady.then(ok=>{if(ok&&epoch===skinEpoch&&document.documentElement.dataset.skin===DEFAULT_SKIN){const name=applySkin(DEFAULT_SKIN);skinChanged(DEFAULT_SKIN,name);}});}
+  try{const hidden=restore('bit-cheer-console-hidden');if(typeof hidden==='string'&&/^[ab ]*$/.test(hidden))document.documentElement.dataset.consoleHidden=hidden;}catch{}
   try{const response=await fetch(assetUrl('/catalog.json'));if(!response.ok)throw new Error('Library catalog unavailable. Local imports still work.');catalog=await response.json();library.setBundled(catalog.tracks);publishLibrary();send({type:'skins',skins:(catalog.skins||[]).map(skin=>({...skin,preview:skin.preview?assetUrl(skin.preview):'',archive:skin.archive?assetUrl(skin.archive):''}))});send({type:'referenceCatalog',tracks:(catalog.referenceTracks||[]).map(t=>({id:String(t.id),name:t.title,source:t.source,genre:primaryGenre(t.tags||[]),bpm:Number(t.bpm)||0}))});if(pendingProCatalog&&mode==='pro'&&catalog.tracks.length>=2){pendingProCatalog=false;const version=configVersion;await loadTrack(0,catalog.tracks[0].id);if(version===configVersion&&mode==='pro')await loadTrack(1,catalog.tracks[1].id);}}catch(error){fail(error);}
 });
 // Small diagnostics surface for automated browser/audio verification.

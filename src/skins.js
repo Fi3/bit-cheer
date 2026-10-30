@@ -1,6 +1,7 @@
 import { assetUrl } from './assets.js';
 import { parse } from 'smol-toml';
 import { unzipSync, strFromU8, zipSync, strToU8 } from 'fflate';
+import { buildKit, renderPreview, mix, KIT_PART_KEYS, KIT_COLOR_KEYS, KIT_VERSION } from './skin-kit.js';
 
 const COLORS = ['background', 'panel', 'panelLight', 'text', 'muted', 'accent', 'secondary', 'screen', 'border'];
 export const SKIN_BASES = ['millennium', 'classic', 'classified3', 'classified5', 'bento', 'alien'];
@@ -67,12 +68,18 @@ export function validateSkin(parsed) {
 
 export function readArchive(bytes) {
   let expanded = 0, count = 0;
-  return unzipSync(bytes, { filter: entry => {
-    expanded += entry.originalSize; count++;
-    if (expanded > 24 * 1024 * 1024 || count > 120) throw new Error('Skin archive is too large (24 MB expanded, 120 files maximum).');
-    if (/^(?:\/|[A-Za-z]:)|(?:^|\/)\.\.(?:\/|$)|\\/.test(entry.name)) throw new Error('Skin archive contains an unsafe file path.');
-    return true;
-  } });
+  try {
+    return unzipSync(bytes, { filter: entry => {
+      expanded += entry.originalSize; count++;
+      if (expanded > 24 * 1024 * 1024 || count > 120) throw new Error('Skin archive is too large (24 MB expanded, 120 files maximum).');
+      if (/^(?:\/|[A-Za-z]:)|(?:^|\/)\.\.(?:\/|$)|\\/.test(entry.name)) throw new Error('Skin archive contains an unsafe file path.');
+      return true;
+    } });
+  } catch (error) {
+    // fflate's own errors carry a numeric code ("invalid zip data"…); ours above already read well.
+    if (typeof error?.code === 'number') throw new Error('This file isn’t a readable skin archive: it may be damaged or only partly downloaded. Skins are .wsz (ZIP) files.');
+    throw error;
+  }
 }
 
 function mimeType(path) {
@@ -102,182 +109,49 @@ function numberWidth(bitmap) {
 }
 
 
-// Classic Winamp 2 sprite positions (x, y, w, h) we reuse around the app.
-// Missing files or sheets that are too small are skipped, never fatal.
-const WSZ_SPRITES = {
-  cbuttons: { prev: [0, 0, 23, 18], prevDown: [0, 18, 23, 18], stop: [69, 0, 23, 18], stopDown: [69, 18, 23, 18], next: [92, 0, 22, 18], nextDown: [92, 18, 22, 18], eject: [114, 0, 22, 16], ejectDown: [114, 16, 22, 16] },
-  pledit: { plTopLeft: [0, 0, 25, 20], plTitle: [26, 0, 100, 20], plTopFill: [127, 0, 25, 20], plTopRight: [153, 0, 25, 20], plLeft: [0, 42, 12, 29], plRight: [31, 42, 20, 29], plBottomFill: [179, 0, 25, 38], plBottomLeft: [0, 72, 125, 38], plBottomRight: [126, 72, 150, 38] },
-  volume: { volTrack: [0, 405, 68, 13], volThumb: [15, 422, 14, 11], volThumbDown: [0, 422, 14, 11] },
-  balance: { balTrack: [9, 0, 38, 13], balThumb: [15, 422, 14, 11], balThumbDown: [0, 422, 14, 11] },
-  eqmain: { eqBar: [13, 229, 14, 63], eqThumb: [0, 164, 11, 11], eqThumbDown: [0, 176, 11, 11], eqTitle: [0, 134, 275, 14] },
-  posbar: { posTrack: [0, 0, 248, 10], posThumb: [248, 0, 29, 10], posThumbDown: [278, 0, 29, 10] },
-  titlebar: { tbClose: [18, 0, 9, 9], tbCloseDown: [18, 9, 9, 9], tbShade: [0, 18, 9, 9], tbShadeDown: [9, 18, 9, 9], tbInactive: [27, 15, 275, 14] },
-  shufrep: { shuffle: [28, 0, 47, 15], shuffleDown: [28, 15, 47, 15] },
-};
-export const LIVE_SHEETS = ['main', 'titlebar', 'cbuttons', 'posbar', 'volume', 'balance', 'numbers', 'nums_ex', 'text', 'playpaus', 'monoster', 'shufrep'];
-export const WSZ_SPRITE_KEYS = Object.values(WSZ_SPRITES).flatMap(group => Object.keys(group));
+// ---------- classic Winamp 2 skins (.wsz) ----------
+// The archive becomes a "kit" (see skin-kit.js): pieces, palette, font and window shape.
+const IMAGE_PNG = /^data:image\/png;base64,[a-zA-Z0-9+/=]+$/;
+const FONT_DATA = /^data:font\/ttf;base64,[a-zA-Z0-9+/=]+$/;
+export { contrast } from './skin-kit.js';
 
-async function wszExtras(files, find, mainCanvas, hex) {
-  const sprites = {};
-  for (const [sheet, crops] of Object.entries(WSZ_SPRITES)) {
-    const path = find(`${sheet}.bmp`);
-    if (!path) continue;
-    let bitmap;
-    try { bitmap = await imageBitmap(files[path], path); } catch { continue; }
-    for (const [key, [x, y, w, h]] of Object.entries(crops)) {
-      if (x + w > bitmap.width || y + h > bitmap.height) continue;
-      const crop = document.createElement('canvas'); crop.width = w; crop.height = h;
-      crop.getContext('2d').drawImage(bitmap, x, y, w, h, 0, 0, w, h);
-      sprites[key] = crop.toDataURL('image/png');
-    }
-    bitmap.close();
-  }
-  // Playlist colors are the skin author's own text palette.
-  const colors = {}, pledit = {};
-  const pleditPath = find('pledit.txt');
-  if (pleditPath) {
-    const read = name => strFromU8(files[pleditPath]).match(new RegExp(`^\\s*${name}\\s*=\\s*#?([0-9a-f]{6})`, 'im'))?.[1];
-    const normal = read('Normal'), current = read('Current'), bg = read('NormalBG'), selected = read('SelectedBG');
-    pledit.normal = normal && `#${normal}`; pledit.current = current && `#${current}`; pledit.bg = bg && `#${bg}`; pledit.selected = selected && `#${selected}`;
-  }
-  // Darkest main.bmp tone for the page behind the decks.
-  const data = mainCanvas.getContext('2d').getImageData(0, 0, mainCanvas.width, mainCanvas.height).data;
-  let dark = [255, 255, 255], lum = 765;
-  for (let i = 0; i < data.length; i += 64) { const l = data[i] + data[i + 1] + data[i + 2]; if (l > 30 && l < lum) { lum = l; dark = [data[i], data[i + 1], data[i + 2]]; } }
-  colors.background = hex(dark[0] * 0.6, dark[1] * 0.6, dark[2] * 0.6);
-  return { sprites, colors, pledit };
+// bit.cheer's own Millennium Chrome (an original Winamp 2 skin) fills in anything an
+// imported skin leaves out, the way Winamp falls back to its default skin.
+let baseArchive = null;
+function fetchBaseSkin() {
+  const signal = typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(8000) : undefined;
+  baseArchive ||= fetch(assetUrl('/skins/millennium.wsz'), { signal }).then(async response => {
+    if (!response.ok) throw new Error('Base skin unavailable');
+    return readArchive(new Uint8Array(await response.arrayBuffer()));
+  });
+  // A failed download is retried next time instead of being remembered.
+  baseArchive.catch(() => { baseArchive = null; });
+  return baseArchive;
 }
 
-// Draws the skin's main window and equalizer the way Winamp shows them (275 × 232),
-// so Skin studio can show a real picture of the skin at its true proportions.
-async function renderWindowPreview(files, find) {
-  const sheets = {};
-  for (const name of ['main', 'titlebar', 'cbuttons', 'posbar', 'volume', 'balance', 'shufrep', 'monoster', 'playpaus', 'numbers', 'nums_ex', 'text', 'eqmain']) {
-    const path = find(`${name}.bmp`);
-    if (!path) continue;
-    try { sheets[name] = await imageBitmap(files[path], path); } catch { /* skip broken sheets */ }
-  }
-  if (!sheets.main) return null;
-  const out = document.createElement('canvas'); out.width = 275; out.height = sheets.eqmain ? 232 : 116;
-  const ctx = out.getContext('2d');
-  const draw = (sheet, sx, sy, w, h, dx, dy) => {
-    const img = sheets[sheet];
-    if (img && sx + w <= img.width && sy + h <= img.height) ctx.drawImage(img, sx, sy, w, h, dx, dy, w, h);
-  };
-  // Main window.
-  draw('main', 0, 0, 275, 116, 0, 0);
-  draw('titlebar', 27, 0, 275, 14, 0, 0);
-  draw('playpaus', 0, 0, 9, 9, 26, 28);
-  const digits = sheets.numbers ? 'numbers' : 'nums_ex', time = [0, 1, 2, 8];
-  [48, 60, 78, 90].forEach((x, i) => draw(digits, time[i] * 9, 0, 9, 13, x, 26));
-  const title = 'BIT CHEER  BEATMATCH SCHOOL';
-  [...title].forEach((ch, i) => { const c = ch.charCodeAt(0) - 65; if (c >= 0 && c < 26) draw('text', c * 5, 0, 5, 6, 111 + i * 5, 27); });
-  ['1', '2', '8'].forEach((d, i) => draw('text', Number(d) * 5, 6, 5, 6, 111 + i * 5, 43));
-  ['4', '4'].forEach((d, i) => draw('text', Number(d) * 5, 6, 5, 6, 156 + i * 5, 43));
-  draw('monoster', 0, 0, 29, 12, 212, 41);
-  draw('monoster', 29, 12, 27, 12, 239, 41);
-  draw('volume', 0, 20 * 15, 68, 13, 107, 57); draw('volume', 15, 422, 14, 11, 147, 58);
-  draw('balance', 9, 0, 38, 13, 177, 57); draw('balance', 15, 422, 14, 11, 189, 58);
-  draw('shufrep', 0, 61, 23, 12, 219, 58); draw('shufrep', 23, 61, 23, 12, 242, 58);
-  draw('posbar', 0, 0, 248, 10, 16, 72); draw('posbar', 248, 0, 29, 10, 76, 72);
-  [[0, 16], [23, 39], [46, 62], [69, 85]].forEach(([sx, dx]) => draw('cbuttons', sx, 0, 23, 18, dx, 88));
-  draw('cbuttons', 92, 0, 22, 18, 108, 88); draw('cbuttons', 114, 0, 22, 16, 136, 89);
-  draw('shufrep', 28, 0, 47, 15, 164, 89); draw('shufrep', 0, 0, 28, 15, 210, 89);
-  // Equalizer, with a gentle smile curve on its sliders.
-  if (sheets.eqmain) {
-    draw('eqmain', 0, 0, 275, 116, 0, 116);
-    draw('eqmain', 0, 134, 275, 14, 0, 116);
-    const curve = [20, 12, 16, 19, 22, 24, 22, 19, 15, 12, 9];
-    curve.forEach((level, i) => {
-      const x = i === 0 ? 21 : 78 + (i - 1) * 18, frame = Math.min(27, level);
-      draw('eqmain', 13 + (frame % 14) * 15, frame < 14 ? 164 : 229, 14, 63, x, 116 + 38);
-      draw('eqmain', 0, 164, 11, 11, x + 1, 116 + 38 + Math.round((27 - level) / 27 * 51));
-    });
-  }
-  for (const img of Object.values(sheets)) img.close();
-  return out.toDataURL('image/png');
+// Built-in skins drawn as Winamp skins get the same kit as imports, built once at startup.
+const builtinKits = {};
+export async function prepareBuiltinSkins() {
+  try {
+    const files = await fetchBaseSkin();
+    const kit = await buildKit(files);
+    const preview = renderPreview(kit, kit._pledit);
+    delete kit._sheets; delete kit._pledit;
+    builtinKits.millennium = { base: 'classic', theme: { name: themes.millennium.name }, images: {}, kit, preview };
+  } catch { /* the classic CSS look still works without it */ }
+  return !!builtinKits.millennium;
 }
-
-// ---------- readable colors ----------
-const rgbOf = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-const toHex = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
-const mix = (a, b, t) => toHex(rgbOf(a).map((v, i) => v + (rgbOf(b)[i] - v) * t));
-const luminance = h => { const [r, g, b] = rgbOf(h).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
-export const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
-// Push a color toward white or black until it reads well on the background.
-function readable(fg, bg, min) {
-  const target = luminance(bg) > 0.35 ? '#000000' : '#ffffff';
-  let color = fg;
-  for (let t = 0.1; contrast(color, bg) < min && t <= 1; t += 0.1) color = mix(fg, target, t);
-  return color;
-}
-// One palette for the whole app, built from the skin's playlist colors,
-// the same pair Winamp itself uses for readable text.
-function readablePalette(theme, pledit) {
-  const valid = c => typeof c === 'string' && HEX_COLOR.test(c);
-  const bg = valid(pledit.bg) ? pledit.bg.toLowerCase() : '#000000';
-  const normal = readable(valid(pledit.normal) ? pledit.normal.toLowerCase() : '#00ff00', bg, 7);
-  const current = readable(valid(pledit.current) ? pledit.current.toLowerCase() : '#ffffff', bg, 7);
-  let selected = valid(pledit.selected) ? pledit.selected.toLowerCase() : mix(bg, normal, 0.35);
-  if (contrast(selected, bg) < 1.6) selected = mix(bg, normal, 0.35);
-  const panel = mix(bg, normal, 0.1), panelLight = mix(bg, normal, 0.2);
-  return {
-    background: bg, screen: bg, panel, panelLight,
-    text: readable(current, panel, 7), muted: readable(mix(normal, bg, 0.25), panel, 4.5),
-    accent: current, secondary: normal, border: selected,
-  };
-}
+export const builtinKit = id => builtinKits[id] || null;
 
 async function fromWsz(files, filename) {
-  const paths = Object.keys(files);
-  const find = name => paths.find(path => path.split('/').at(-1).toLowerCase() === name.toLowerCase());
-  const main = find('main.bmp');
-  if (!main) throw new Error('This WSZ is missing main.bmp. Only classic Winamp 2 skins are supported.');
-  const bitmap = await imageBitmap(files[main], main);
-  const canvas = document.createElement('canvas'); canvas.width = bitmap.width; canvas.height = bitmap.height;
-  const ctx = canvas.getContext('2d'); ctx.drawImage(bitmap, 0, 0); bitmap.close();
-  const rgb = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-  let r = 0, g = 0, b = 0, n = 0;
-  for (let i = 0; i < rgb.length; i += 16) {
-    const luminance = (rgb[i] + rgb[i + 1] + rgb[i + 2]) / 3;
-    if (luminance > 25 && luminance < 200) { r += rgb[i]; g += rgb[i + 1]; b += rgb[i + 2]; n++; }
-  }
-  const hex = (red, green, blue) => '#' + [red, green, blue].map(value => Math.round(Math.max(0, Math.min(255, value))).toString(16).padStart(2, '0')).join('');
-  const theme = { ...themes.classic, name: filename.replace(/\.(wsz|zip)$/i, '').slice(0, 60) || 'Imported Winamp skin',
-    panel: n ? hex(r / n, g / n, b / n) : themes.classic.panel,
-    panelLight: n ? hex(r / n * 1.3, g / n * 1.3, b / n * 1.3) : themes.classic.panelLight };
-  const extra = await wszExtras(files, find, canvas, hex);
-  const windowPreview = await renderWindowPreview(files, find);
-  Object.assign(theme, extra.colors, readablePalette(theme, extra.pledit));
-  const images = { frame: dataUrl(files[main], main) }, originals = { main: images.frame };
-  let numbersWidth = 297;
-  for (const [key, name] of [['buttons', 'cbuttons.bmp'], ['numbers', 'numbers.bmp'], ['pitch', 'posbar.bmp']]) {
-    const path = find(name) || (key === 'numbers' ? find('nums_ex.bmp') : null);
-    if (!path) continue;
-    const image = await imageBitmap(files[path], path);
-    try { if (key === 'numbers') numbersWidth = numberWidth(image); } finally { image.close(); }
-    images[key] = dataUrl(files[path], path); originals[key] = images[key];
-  }
-  const titlePath = find('titlebar.bmp');
-  const titleBitmap = titlePath ? await imageBitmap(files[titlePath], titlePath) : null;
-  if (titlePath) originals.titlebar = dataUrl(files[titlePath], titlePath);
-  const titleSource = titleBitmap || canvas;
-  const title = document.createElement('canvas');
-  const x = titleBitmap && titleBitmap.width >= 302 ? 27 : 0;
-  title.width = Math.min(275, titleSource.width - x); title.height = Math.min(14, titleSource.height);
-  title.getContext('2d').drawImage(titleSource, x, 0, title.width, title.height, 0, 0, title.width, title.height);
-  titleBitmap?.close(); images.titlebar = title.toDataURL('image/png');
-  // Full sheets for the live Winamp window on each deck.
-  const sheets = {};
-  for (const name of LIVE_SHEETS) {
-    const path = find(`${name}.bmp`);
-    if (path && files[path].length <= MAX_IMAGE_BYTES) sheets[name] = dataUrl(files[path], path);
-  }
-  const visPath = find('viscolor.txt');
-  const viscolor = visPath ? strFromU8(files[visPath]).split(/\r?\n/).map(line => line.match(/^\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)).filter(Boolean).slice(0, 24).map(m => hex(+m[1], +m[2], +m[3])) : [];
-  // The skin's main color, for borders and frames (never behind text).
-  const tone = n ? hex(r / n, g / n, b / n) : null;
-  return { base: 'classic', theme, assets: {}, images, originals, numbersWidth, preview: windowPreview || images.frame, sprites: extra.sprites, sheets, viscolor, tone };
+  const kit = await buildKit(files, { fetchBase: fetchBaseSkin });
+  const preview = renderPreview(kit, kit._pledit);
+  delete kit._sheets; delete kit._pledit;
+  const c = kit.colors;
+  const name = filename.replace(/\.(wsz|zip)$/i, '').replace(/[_]+/g, ' ').trim().slice(0, 60) || 'Imported Winamp skin';
+  // Classic palette names stay filled for anything that still reads them.
+  const theme = { name, background: c.desk, panel: c.listBg, panelLight: c.listSel, text: c.listFg, muted: mix(c.listFg, c.listBg, 0.3), accent: c.listHi, secondary: c.lcdFg, screen: c.lcdBg, border: c.frame };
+  return { base: 'classic', theme, assets: {}, images: { titlebar: kit.parts.titleStrip }, kit, preview };
 }
 
 export async function importSkin(file) {
@@ -329,25 +203,104 @@ export async function importSkinFromUrl(input) {
 
 function museumPage(input) {
   const md5 = String(input).match(/[a-f0-9]{32}/i)?.[0]?.toLowerCase();
-  return md5 ? `https://skins.webamp.org/skin/${md5}/` : '';
+  if (!md5) return '';
+  // Keep the skin's file name, so a later refresh still knows what it is called.
+  let name = '';
+  try { name = decodeURIComponent(new URL(String(input).trim()).pathname.split('/').filter(Boolean).at(-1) || ''); } catch { /* not a URL */ }
+  return /^[^/?#]{1,80}\.wsz$/i.test(name) ? `https://skins.webamp.org/skin/${md5}/${encodeURIComponent(name)}` : `https://skins.webamp.org/skin/${md5}/`;
 }
 
 // What Skin studio shows as "Now wearing".
 export function skinPicture(id, custom) {
   if (id === 'custom') return typeof custom?.preview === 'string' && IMAGE_DATA.test(custom.preview) ? custom.preview : '';
+  if (builtinKits[id]?.preview) return builtinKits[id].preview;
   return Object.hasOwn(themes, id) ? assetUrl(`/skins/${id}.png`) : '';
+}
+
+const kebab = key => key.replace(/[A-Z]/g, match => '-' + match.toLowerCase());
+const KIT_SHEET_NAMES = ['main', 'titlebar', 'cbuttons', 'posbar', 'volume', 'balance', 'numbers', 'nums_ex', 'text', 'playpaus', 'monoster', 'shufrep', 'eqmain'];
+// A stored kit is only used when it is current and made of safe, generated images.
+export function validKit(kit) {
+  return !!kit && typeof kit === 'object' && kit.version === KIT_VERSION && typeof kit.sheets?.main === 'string' && IMAGE_PNG.test(kit.sheets.main);
+}
+
+let kitFont = null, kitFontSource = '';
+function loadKitFont(source) {
+  if (typeof document === 'undefined' || !document.fonts || typeof FontFace === 'undefined') return;
+  if (source === kitFontSource) return;
+  if (kitFont) { document.fonts.delete(kitFont); kitFont = null; }
+  kitFontSource = typeof source === 'string' ? source : '';
+  if (!kitFontSource || !FONT_DATA.test(kitFontSource)) return;
+  let bytes;
+  try { const binary = atob(kitFontSource.slice(kitFontSource.indexOf(',') + 1)); bytes = new Uint8Array(binary.length); for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i); }
+  catch { return; } // a damaged stored font: the labels fall back to the monospace font
+  const face = new FontFace('Kit Pixel', bytes.buffer);
+  kitFont = face; document.fonts.add(face);
+  face.load().catch(() => { if (kitFont === face) { document.fonts.delete(face); kitFont = null; } });
+}
+
+// Kit variables carry hundreds of KB of images: keep them in one stylesheet rather than in
+// the root element's style attribute. Every value is validated before it gets here.
+function writeKitVars(root, vars) {
+  const canStyle = typeof document.getElementById === 'function' && typeof document.createElement === 'function' && document.head;
+  if (canStyle) {
+    let style = document.getElementById('bit-cheer-kit');
+    if (!style) { style = document.createElement('style'); style.id = 'bit-cheer-kit'; document.head.append(style); }
+    // One :root rule, filled property by property, so no value can ever add rules of its own.
+    style.textContent = ':root{}';
+    const rule = style.sheet?.cssRules?.[0];
+    if (vars && rule) for (const [key, value] of Object.entries(vars)) rule.style.setProperty(key, value);
+    return;
+  }
+  if (vars) for (const [key, value] of Object.entries(vars)) root.style.setProperty(key, value);
+}
+
+function applyKit(root, kit) {
+  const colors = kit.colors || {}, vars = {};
+  // Colors added after a kit was saved fall back to their closest older relative.
+  const relative = { numBg: 'lcdBg', numFg: 'lcdFg', numDim: 'lcdDim' };
+  for (const key of KIT_COLOR_KEYS) {
+    const value = HEX_COLOR.test(colors[key] || '') ? colors[key] : colors[relative[key]];
+    vars[`--k-${kebab(key)}`] = HEX_COLOR.test(value || '') ? value : '#808080';
+  }
+  (Array.isArray(kit.vis) ? kit.vis : []).slice(0, 24).forEach((color, i) => { vars[`--k-vis-${i}`] = HEX_COLOR.test(color) ? color : '#00ff00'; });
+  const present = [];
+  for (const key of KIT_PART_KEYS) {
+    const value = kit.parts?.[key], ok = typeof value === 'string' && IMAGE_PNG.test(value);
+    if (ok) present.push(key);
+    vars[`--k-${kebab(key)}`] = ok ? `url("${value}")` : 'none';
+  }
+  for (const name of KIT_SHEET_NAMES) {
+    const value = kit.sheets?.[name], ok = typeof value === 'string' && IMAGE_PNG.test(value);
+    if (ok) present.push(`sheet-${name}`);
+    vars[`--k-sheet-${kebab(name)}`] = ok ? `url("${value}")` : 'none';
+  }
+  // Kits from before the cleaned transport sheet keep the plain one.
+  if (vars['--k-cb-clean'] === 'none') vars['--k-cb-clean'] = vars['--k-sheet-cbuttons'];
+  vars['--k-numbers-w'] = kit.numbersWidth === 108 ? '108' : '99';
+  vars['--k-gen-slice'] = String(Number.isInteger(kit.genSlice) && kit.genSlice >= 2 && kit.genSlice <= 8 ? kit.genSlice : 3);
+  vars['--k-bottom-edge'] = String(Number.isInteger(kit.bottomEdge) && kit.bottomEdge >= 2 && kit.bottomEdge <= 14 ? kit.bottomEdge : 6);
+  vars['--k-number-sheet'] = kit.sheets?.numbers && IMAGE_PNG.test(kit.sheets.numbers) ? `url("${kit.sheets.numbers}")` : kit.sheets?.nums_ex && IMAGE_PNG.test(kit.sheets.nums_ex) ? `url("${kit.sheets.nums_ex}")` : 'none';
+  const font = typeof kit.bodyFont === 'string' && /^[A-Za-z ]{2,40}$/.test(kit.bodyFont) ? `"${kit.bodyFont}", ` : '';
+  vars['--k-body-font'] = `${font}Tahoma, Verdana, "DM Sans", Arial, sans-serif`;
+  writeKitVars(root, vars);
+  root.dataset.kit = present.join(' ');
+  root.dataset.kitFont = kit.font && FONT_DATA.test(kit.font) ? 'on' : '';
+  loadKitFont(kit.font);
 }
 
 export function applySkin(id, custom = null) {
   const builtin = Object.hasOwn(themes, id) ? id : DEFAULT_SKIN;
+  const kit = custom ? (validKit(custom.kit) ? custom.kit : null) : builtinKits[builtin]?.kit || null;
   const base = custom ? (SKIN_BASES.includes(custom.base) ? custom.base : 'classic') : builtin;
   const theme = { ...themes[base], name: custom?.theme?.name || themes[base].name };
   for (const key of COLORS) if (custom?.theme?.[key] && HEX_COLOR.test(custom.theme[key])) theme[key] = custom.theme[key];
+  if (kit && !custom) { const c = kit.colors; Object.assign(theme, { background: c.desk, panel: c.listBg, panelLight: c.listSel, text: c.listFg, muted: c.lcdDim, accent: c.listHi, secondary: c.lcdFg, screen: c.lcdBg, border: c.frame }); }
   const root = document.documentElement;
   root.dataset.skin = custom ? 'custom' : builtin;
-  root.dataset.layout = layoutOf(base);
-  for (const key of COLORS) root.style.setProperty(`--${key.replace(/[A-Z]/g, match => '-' + match.toLowerCase())}`, theme[key]);
-  const inherited = builtinAssets(base), urls = {}, artwork = [];
+  root.dataset.layout = kit ? 'kit' : layoutOf(base);
+  for (const key of COLORS) root.style.setProperty(`--${kebab(key)}`, theme[key]);
+  const inherited = kit ? {} : builtinAssets(base), urls = {}, artwork = [];
   for (const key of SKIN_ASSETS) {
     const supplied = custom?.images?.[key];
     const valid = typeof supplied === 'string' && IMAGE_DATA.test(supplied);
@@ -357,23 +310,11 @@ export function applySkin(id, custom = null) {
     root.style.setProperty(`--skin-${key}`, urls[key]);
   }
   root.dataset.artwork = artwork.join(' ');
-  const sprites = [];
-  for (const key of WSZ_SPRITE_KEYS) {
-    const value = custom?.sprites?.[key];
-    const ok = typeof value === 'string' && IMAGE_DATA.test(value);
-    if (ok) sprites.push(key);
-    root.style.setProperty(`--wsz-${key}`, ok ? `url("${value}")` : 'none');
-  }
-  // Main window art doubles as the deck backdrop for imported Winamp skins.
-  const main = custom?.originals?.main;
-  if (sprites.length && typeof main === 'string' && IMAGE_DATA.test(main)) { sprites.push('main'); root.style.setProperty('--wsz-main', `url("${main}")`); }
-  else root.style.setProperty('--wsz-main', 'none');
-  root.dataset.wsz = sprites.join(' ');
-  const tone = custom?.tone;
-  root.style.setProperty('--skin-tone', typeof tone === 'string' && HEX_COLOR.test(tone) ? tone : 'var(--border)');
-  root.style.setProperty('--number-sheet', urls.numbers);
-  root.style.setProperty('--transport-sheet', urls.buttons);
-  const width = custom?.numbersWidth === 297 || custom?.numbersWidth === 324 ? custom.numbersWidth : base === 'bento' ? 324 : 297;
+  if (kit) applyKit(root, kit);
+  else { writeKitVars(root, null); root.dataset.kit = ''; root.dataset.kitFont = ''; loadKitFont(''); }
+  root.style.setProperty('--number-sheet', kit ? 'var(--k-number-sheet)' : urls.numbers);
+  root.style.setProperty('--transport-sheet', kit ? 'var(--k-sheet-cbuttons)' : urls.buttons);
+  const width = kit ? (kit.numbersWidth === 108 ? 324 : 297) : custom?.numbersWidth === 297 || custom?.numbersWidth === 324 ? custom.numbersWidth : base === 'bento' ? 324 : 297;
   root.style.setProperty('--numbers-width', `${width}px`);
   return theme.name;
 }
@@ -383,7 +324,7 @@ export function skinTemplate() {
 }
 
 export function downloadTemplate() {
-  const readme = `BIT CHEER SKIN FORMAT v1\n\nEdit skin.toml; import it alone for a color/layout skin, or zip it with images.\nbase selects the starting skin: millennium, classic, classified3, classified5, bento, alien.\nOmitting base keeps older skins on classic. Missing colors and artwork inherit that base.\nAll nine colors use #rrggbb. Artwork can replace the panel, titlebar, page background,\nframe, transport buttons, number glyphs, platter, and pitch fader. Paths are relative\nto skin.toml. PNG/JPG/WebP/BMP only; no scripts, SVG, remote URLs, or parent paths.\n\nSprite conventions: buttons uses the classic Winamp 136x36 CBUTTONS sheet.\nNumber sheets are 99x13 NUMBERS or 108x13 NUMS_EX; the UI scales glyphs 3x.\nTitle strips are normally 275x14; frame artwork is normally MAIN 275x116.\nOther raster artwork may use different dimensions, up to 4096x4096 pixels.\nEach image must be below 2MB; archive below 10MB compressed and 24MB expanded;\n120 files maximum.\n\nClassic Winamp 2 .wsz archives can be imported directly. Bit Cheer preserves MAIN,\nCBUTTONS, NUMBERS/NUMS_EX, POSBAR, and TITLEBAR artwork. The active title strip is\ncropped from the original TITLEBAR at x27,y0,275x14 when the full sheet is present.\nThese archives use the classic structural layout; use a TOML base to choose another.\nModern .wal/.wms skin scripts are not executed.\n`;
+  const readme = `BIT CHEER SKIN FORMAT v1\n\nEdit skin.toml; import it alone for a color/layout skin, or zip it with images.\nbase selects the starting skin: millennium, classic, classified3, classified5, bento, alien.\nOmitting base keeps older skins on classic. Missing colors and artwork inherit that base.\nAll nine colors use #rrggbb. Artwork can replace the panel, titlebar, page background,\nframe, transport buttons, number glyphs, platter, and pitch fader. Paths are relative\nto skin.toml. PNG/JPG/WebP/BMP only; no scripts, SVG, remote URLs, or parent paths.\n\nSprite conventions: buttons uses the classic Winamp 136x36 CBUTTONS sheet.\nNumber sheets are 99x13 NUMBERS or 108x13 NUMS_EX; the UI scales glyphs 3x.\nTitle strips are normally 275x14; frame artwork is normally MAIN 275x116.\nOther raster artwork may use different dimensions, up to 4096x4096 pixels.\nEach image must be below 2MB; archive below 10MB compressed and 24MB expanded;\n120 files maximum.\n\nClassic Winamp 2 .wsz archives can be imported directly: every control is drawn\nfrom the skin's own sheets (main window, buttons, sliders, equalizer, playlist frame,\nlettering and colors). Modern .wal/.wms skin scripts are not executed.\n`;
   const bytes = zipSync({ 'skin.toml': strToU8(skinTemplate()), 'README.txt': strToU8(readme) });
   const url = URL.createObjectURL(new Blob([bytes], { type: 'application/zip' })), a = document.createElement('a');
   a.href = url; a.download = 'bit-cheer-skin-template.zip'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
