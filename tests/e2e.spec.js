@@ -810,7 +810,7 @@ test('a denied output-device change restores the confirmed selector and preserve
 });
 
 test('Foundation stays kick-only and each deck has independent tempo and material actions', async ({ page }) => {
-  await expect(page.getByText('KICK-ONLY EXERCISE', { exact: true })).toBeVisible();
+  await expect(page.locator('.deck-a .loop-badge')).toHaveText('KICK-ONLY');
   expect(await page.evaluate(() => window.bitCheer.audio.state.map(deck => deck.elements))).toEqual([1, 1]);
   await expect(page.locator('.foundation-guide')).toBeVisible();
   await expect(page.locator('button.element')).toHaveCount(0);

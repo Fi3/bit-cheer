@@ -1442,7 +1442,6 @@ focusView model =
                             ]
                         , pitchView number deck
                         , volumeView number deck
-                        , consoleBar model number
                         ]
                 )
                 [ 0, 1 ]
@@ -1617,91 +1616,61 @@ modeDescription mode =
 
 practiceView : Model -> Html Msg
 practiceView model =
+    let
+        anyPlaying =
+            model.a.playing || model.b.playing
+    in
     div [ class "practice-page" ]
         [ div [ class "page-heading" ]
-            [ div []
-                [ div [ class "eyebrow" ] [ text "THE ART OF BEATMATCHING", span [ class "eyebrow-divider" ] [ text "/" ], text (String.toUpper model.mode) ]
-                , h1 [] [ text (modeName model.mode) ]
+            [ div [ class "heading-copy" ]
+                [ h1 [] [ text (modeName model.mode) ]
                 , p [] [ text (modeDescription model.mode) ]
                 ]
-            , div [ class "session-badge" ] [ span [ class "status-dot" ] [], text "PRACTICE SESSION", strong [] [ text (pad2 (List.length model.history + 1)) ] ]
-            ]
-        , div [ class "practice-toolbar" ]
-            [ div [ class "toolbar-left" ]
-                [ span [ class "mode-pill" ]
+            , div [ class "heading-actions" ]
+                [ button [ classList [ ( "play-both-button", True ), ( "engaged", anyPlaying ) ], onClick PlayBoth ]
                     [ text
-                        (if model.a.source == "pcm" && model.b.source == "pcm" then
-                            "REAL TRACKS"
-
-                         else if model.a.source /= model.b.source then
-                            "MIXED SOURCES"
-
-                         else if model.mode == "foundation" then
-                            "KICK-ONLY EXERCISE"
+                        (if anyPlaying then
+                            "Ⅱ Pause both decks"
 
                          else
-                            "GENERATED LOOPS"
+                            "▶ Play both decks"
                         )
+                    , small [] [ text "SPACE" ]
                     ]
-                , span [ class "toolbar-description" ]
-                    [ text
-                        (if model.mode == "pro" then
-                            "Local playback · nothing uploaded"
+                , div [ class "toolbar-actions" ]
+                    [ button [ class "session-focus-button", onClick (FocusSession True), attribute "aria-label" "Focus session" ] [ text "Focus session ⛶" ]
+                    , toggle "Hide BPM" model.hideBpm HideBpm
+                    , if not (String.isEmpty model.drill) then
+                        button [ class "small-button", onClick NewChallenge, title "Start a new drill with both decks reset" ] [ text "New challenge" ]
 
-                         else
-                            "32 beats · endless possibilities"
-                        )
+                      else if model.mode == "star" then
+                        button [ class "small-button", onClick NewChallenge, title "Start a new 60-second run with fresh loops" ] [ text "New run" ]
+
+                      else if model.mode == "pro" then
+                        case model.star of
+                            Just run ->
+                                if run.done then
+                                    button [ class "small-button star-run-button", onClick (ToggleStarRun True), title "Start another 60-second Star run on these tracks" ] [ text "★ New star run" ]
+
+                                else
+                                    button [ class "small-button star-run-button is-active", onClick (ToggleStarRun False), title "Stop the drift and cancel this run" ] [ text "★ Stop star run" ]
+
+                            Nothing ->
+                                button [ class "small-button star-run-button", onClick (ToggleStarRun True), title "The decks start drifting like real turntables. Keep them in sync for 60 seconds. Good luck, superstar." ] [ text "★ Star run" ]
+
+                      else
+                        text ""
                     ]
-                ]
-            , div [ class "toolbar-actions" ]
-                [ button [ class "session-focus-button", onClick (FocusSession True), attribute "aria-label" "Focus session" ] [ text "Focus session ⛶" ]
-                , toggle "Hide BPM" model.hideBpm HideBpm
-                , if not (String.isEmpty model.drill) then
-                    button [ class "small-button", onClick NewChallenge, title "Start a new drill with both decks reset" ] [ text "New challenge" ]
-
-                  else if model.mode == "star" then
-                    button [ class "small-button", onClick NewChallenge, title "Start a new 60-second run with fresh loops" ] [ text "New run" ]
-
-                  else if model.mode == "pro" then
-                    case model.star of
-                        Just run ->
-                            if run.done then
-                                button [ class "small-button star-run-button", onClick (ToggleStarRun True), title "Start another 60-second Star run on these tracks" ] [ text "★ New star run" ]
-
-                            else
-                                button [ class "small-button star-run-button is-active", onClick (ToggleStarRun False), title "Stop the drift and cancel this run" ] [ text "★ Stop star run" ]
-
-                        Nothing ->
-                            button [ class "small-button star-run-button", onClick (ToggleStarRun True), title "The decks start drifting like real turntables. Keep them in sync for 60 seconds. Good luck, superstar." ] [ text "★ Star run" ]
-
-                  else
-                    text ""
                 ]
             ]
-        , if model.mode == "foundation" then
-            foundationGuide
-
-          else
-            text ""
         , div [ class "deck-rack" ]
             [ div [ class "rack-title" ] [ span [] [ text "BIT.CHEER / DUAL DECK SYSTEM" ], span [ class "rack-grip" ] [ text "▥ ▥ ▥ ▥ ▥ ▥ ▥" ], span [] [ text "STEREO · 32-BIT FLOAT" ] ]
             , div [ class "decks" ] [ deckView model 0 model.a, deckView model 1 model.b ]
             , proTrackPickers model
             , globalModulesView model
-            , div [ class "rack-footer" ] [ span [] [ text "● RUST DSP / WEBASSEMBLY" ], span [] [ text "OUTPUT RATE FOLLOWS YOUR AUDIO DEVICE" ], span [] [ text "NO SYNC. ALL YOU." ] ]
             ]
         , div [ class "under-decks" ]
-            [ button [ class "play-both-button", onClick PlayBoth ]
-                [ text
-                    (if model.a.playing || model.b.playing then
-                        "Ⅱ Pause both decks"
-
-                     else
-                        "▶ Play both decks"
-                    )
-                , small [] [ text "SPACE" ]
-                ]
-            , if model.mode == "foundation" then
+            [ if model.mode == "foundation" then
                 button [ class "builder-invitation", onClick (SetMode "builder") ] [ text "Ready for more? Build a layered ", span [ class "keep-together" ] [ text "loop →" ] ]
 
               else if model.mode /= "pro" && model.a.source == "generated" && model.b.source == "generated" then
@@ -1713,16 +1682,17 @@ practiceView model =
               else
                 text ""
             ]
-        , div [ class "practice-tip" ] [ span [] [ text "A LITTLE POINTER" ], text "Match the speed first. Then use nudge to bring the kicks into the same moment." ]
         ]
 
 
+{-| The three Foundation steps, shown in the coach. Each step's detail is its tooltip.
+-}
 foundationGuide : Html Msg
 foundationGuide =
     div [ class "foundation-guide", attribute "aria-label" "Foundation practice steps" ]
-        [ div [ class "foundation-step" ] [ span [] [ text "01" ], div [] [ strong [] [ text "Listen" ], small [] [ text "Play both kick drums. Hear which one drifts ahead." ] ] ]
-        , div [ class "foundation-step" ] [ span [] [ text "02" ], div [] [ strong [] [ text "Match tempo" ], small [] [ text "Adjust one pitch fader until the drift stops." ] ] ]
-        , div [ class "foundation-step" ] [ span [] [ text "03" ], div [] [ strong [] [ text "Nudge & check" ], small [] [ text "Line up the kicks, then check your match." ] ] ]
+        [ div [ class "foundation-step", title "Play both kick drums. Hear which one drifts ahead." ] [ span [] [ text "1" ], strong [] [ text "Listen" ] ]
+        , div [ class "foundation-step", title "Adjust one pitch fader until the drift stops." ] [ span [] [ text "2" ], strong [] [ text "Match tempo" ] ]
+        , div [ class "foundation-step", title "Line up the kicks, then check your match." ] [ span [] [ text "3" ], strong [] [ text "Nudge & check" ] ]
         ]
 
 
@@ -1899,6 +1869,9 @@ playerModule scope item content =
                     (if item.id == "picker" && scope >= 0 then
                         "Deck " ++ deckLetter scope ++ " — " ++ labelText
 
+                     else if item.id == "pitch" then
+                        "Pitch"
+
                      else
                         labelText
                     )
@@ -1983,157 +1956,6 @@ addModuleMenu model scope =
         ]
 
 
-{-| A Winamp playlist's bottom bar under each console, drawn by the skin (kit skins only).
-The add-module menu sits on the skin's ADD button, the displays show time, and the mini transport works.
-Its buttons repeat controls that exist elsewhere, so the bar is hidden from assistive technology.
--}
-consoleBar : Model -> Int -> Html Msg
-consoleBar =
-    barWith False
-
-
-{-| The same bar under a track picker: its mini transport's ends step through the tracks.
--}
-pickerBar : Model -> Int -> Html Msg
-pickerBar =
-    barWith True
-
-
-barWith : Bool -> Model -> Int -> Html Msg
-barWith picker model scope =
-    if not model.skinKit then
-        text ""
-
-    else
-        let
-            clock seconds =
-                let
-                    total =
-                        max 0 (floor seconds)
-                in
-                String.fromInt (total // 60) ++ ":" ++ pad2 (modBy 60 total)
-
-            anyPlaying =
-                model.a.playing || model.b.playing
-
-            ( running, mini, transport ) =
-                if scope == -1 then
-                    ( "A " ++ clock model.a.position ++ " B " ++ clock model.b.position
-                    , ( "", "" )
-                    , [ ( "prev", NoOp )
-                      , ( "play", ifThen (not anyPlaying) PlayBoth )
-                      , ( "pause", ifThen anyPlaying PlayBoth )
-                      , ( "stop", ifThen anyPlaying PlayBoth )
-                      , ( "next", NoOp )
-                      , ( "eject", NoOp )
-                      ]
-                    )
-
-                else
-                    let
-                        deck =
-                            getDeck scope model
-
-                        total =
-                            max 0 (floor deck.position)
-                    in
-                    ( clock deck.position ++ "/" ++ clock deck.duration
-                    , ( pad2 (min 99 (total // 60)), pad2 (modBy 60 total) )
-                    , [ ( "prev"
-                        , if picker then
-                            PreviousTrack scope
-
-                          else
-                            Nudge scope -0.04
-                        )
-                      , ( "play", ifThen (not deck.playing) (Play scope) )
-                      , ( "pause", ifThen deck.playing (Play scope) )
-                      , ( "stop", Cue scope )
-                      , ( "next"
-                        , if picker then
-                            NextTrack scope
-
-                          else
-                            Nudge scope 0.04
-                        )
-                      , ( "eject"
-                        , if model.mode == "pro" then
-                            ImportTrack scope
-
-                          else
-                            ChangeTrack scope
-                        )
-                      ]
-                    )
-
-            ifThen condition msg =
-                if condition then
-                    msg
-
-                else
-                    NoOp
-        in
-        div [ class "console-bar", attribute "aria-hidden" "true" ]
-            [ span [ class "bar-time" ] [ text running ]
-            , span [ class "bar-mini" ]
-                [ text
-                    (if String.isEmpty (Tuple.first mini) then
-                        ""
-
-                     else
-                        Tuple.first mini ++ ":" ++ Tuple.second mini
-                    )
-                ]
-            , div [ class "bar-transport" ] (List.map (\( name, msg ) -> button [ class ("bar-" ++ name), attribute "tabindex" "-1", title (barTip picker scope model.mode name), onClick msg ] []) transport)
-            ]
-
-
-barTip : Bool -> Int -> String -> String -> String
-barTip picker scope mode name =
-    case ( scope == -1, name ) of
-        ( True, "play" ) ->
-            "Play both decks"
-
-        ( True, "pause" ) ->
-            "Pause both decks"
-
-        ( True, "stop" ) ->
-            "Pause both decks"
-
-        ( True, _ ) ->
-            ""
-
-        ( False, "prev" ) ->
-            if picker then
-                "Previous track"
-
-            else
-                "Nudge back"
-
-        ( False, "play" ) ->
-            "Play"
-
-        ( False, "pause" ) ->
-            "Pause"
-
-        ( False, "stop" ) ->
-            "Stop and return to cue"
-
-        ( False, "next" ) ->
-            if picker then
-                "Next track"
-
-            else
-                "Nudge forward"
-
-        ( False, _ ) ->
-            if mode == "pro" then
-                "Import a track"
-
-            else
-                "Change track"
-
-
 deckView : Model -> Int -> Deck -> Html Msg
 deckView model number deck =
     let
@@ -2191,7 +2013,6 @@ deckView model number deck =
           else
             text ""
         , addModuleMenu model number
-        , consoleBar model number
           ]
         ]
 
@@ -2206,15 +2027,7 @@ deckModuleContent model number deck moduleId =
             pitchView number deck
 
         "volume" ->
-            if model.skinKit then
-                -- Winamp skins add a level meter in the skin's analyser colors under the slider.
-                div [ class "volume-stack" ]
-                    [ volumeView number deck
-                    , div [ class "deck-level", attribute "aria-hidden" "true", attribute "style" ("--level:" ++ String.fromFloat (clamp 0 1 deck.peak)) ] []
-                    ]
-
-            else
-                volumeView number deck
+            volumeView number deck
 
         "jog" ->
             jogView number deck
@@ -2235,7 +2048,7 @@ deckModuleContent model number deck moduleId =
             composerView number deck
 
         "picker" ->
-            div [ class "picker-stack" ] [ trackPickerView model number deck, pickerBar model number ]
+            trackPickerView model number deck
 
         _ ->
             text ""
@@ -2308,8 +2121,8 @@ screenView model number deck =
                 ]
             , div [ class "time-display" ]
                 [ if model.skinKit then
-                    -- Winamp skins show time in their own NUMBERS digits, like the BPM.
-                    span [ class "lcd-time lcd-number", attribute "role" "img", attribute "aria-label" (timeDisplay deck.position) ] (lcdDigits (timeDisplay deck.position))
+                    -- With a Winamp skin the live window above shows the time; the screen pairs the BPM with the pitch.
+                    span [ class "lcd-pitch", attribute "aria-hidden" "true" ] [ text ("PITCH " ++ signed 2 deck.pitch ++ "%") ]
 
                   else
                     span [ class "lcd-time" ] [ text (timeDisplay deck.position) ]
@@ -2317,6 +2130,9 @@ screenView model number deck =
                     [ text
                         (if model.hideBpm then
                             "LISTEN. DON'T LOOK."
+
+                         else if model.skinKit then
+                            "SOURCE " ++ fixed 1 deck.bpm
 
                          else
                             "SOURCE " ++ fixed 1 deck.bpm ++ " BPM"
@@ -2408,18 +2224,11 @@ transportView model number deck =
               else
                 text ""
             ]
-        , small [ class "deck-action-hint" ]
-            [ text
-                (if model.drill == "phase" || model.drill == "phrase" then
-                    "Tempo is fixed for this drill. New challenge resets both decks."
+        , if model.drill == "phase" || model.drill == "phrase" then
+            small [ class "deck-action-hint" ] [ text "Tempo is fixed for this drill. New challenge resets both decks." ]
 
-                 else if model.mode == "foundation" then
-                    "Tempo changes speed. Track changes the kick voice."
-
-                 else
-                    "Change this deck independently."
-                )
-            ]
+          else
+            text ""
         ]
 
 
@@ -2450,7 +2259,7 @@ pitchView number deck =
 
 volumeView : Int -> Deck -> Html Msg
 volumeView number deck =
-    div [ class "deck-volume-row" ] [ label [] [ text ("DECK " ++ deckLetter number ++ " VOLUME"), input [ type_ "range", A.min "0", A.max "1", step "0.01", value (String.fromFloat deck.volume), onInput (DeckValue number "volume"), attribute "aria-label" ("Deck " ++ deckLetter number ++ " volume"), rangeVar deck.volume ] [] ], strong [] [ text (fixed 0 (deck.volume * 100) ++ "%") ] ]
+    div [ class "deck-volume-row" ] [ label [] [ text "VOLUME", input [ type_ "range", A.min "0", A.max "1", step "0.01", value (String.fromFloat deck.volume), onInput (DeckValue number "volume"), attribute "aria-label" ("Deck " ++ deckLetter number ++ " volume"), rangeVar deck.volume ] [] ], strong [] [ text (fixed 0 (deck.volume * 100) ++ "%") ] ]
 
 
 jogView : Int -> Deck -> Html Msg
@@ -2700,7 +2509,7 @@ proTrackPickers model =
                 (\number ->
                     scopeModules number (activeLayout model)
                         |> List.filter (\item -> item.id == "picker")
-                        |> List.map (\item -> playerModule number item (div [ class "picker-stack" ] [ trackPickerView model number (getDeck number model), pickerBar model number ]))
+                        |> List.map (\item -> playerModule number item (trackPickerView model number (getDeck number model)))
                 )
                 [ 0, 1 ]
             )
@@ -2714,7 +2523,6 @@ globalModulesView model =
     div [ class "session-modules" ]
         [ div [ class "global-module-grid" ] (List.map (\item -> playerModule -1 item (globalModuleContent model item.id)) (activeLayout model).global)
         , addModuleMenu model -1
-        , consoleBar model -1
         ]
 
 
@@ -3158,32 +2966,45 @@ confirmedSelect revision attributes children =
 
 coachView : Model -> Html Msg
 coachView model =
+    let
+        lesson =
+            model.currentLesson |> Maybe.andThen (\number -> List.head (List.filter (\item -> item.number == number) lessons))
+
+        heading =
+            case lesson of
+                Just item ->
+                    "Lesson " ++ String.fromInt item.number ++ " · " ++ item.name
+
+                Nothing ->
+                    if model.star /= Nothing then
+                        "★ Star run"
+
+                    else if not (String.isEmpty model.drill) then
+                        model.drill ++ " drill"
+
+                    else if model.mode == "pro" then
+                        "Find the downbeat."
+
+                    else
+                        "Listen for the double hit."
+
+        instruction =
+            case lesson of
+                Just item ->
+                    String.replace ("Lesson " ++ String.fromInt item.number ++ ": ") "" item.instruction
+
+                Nothing ->
+                    if String.isEmpty model.drill then
+                        "Play both decks, then move deck B's pitch fader until the beats stop drifting. Nudge them into place."
+
+                    else
+                        drillInstruction model.drill
+    in
     section [ class "coach-panel" ]
         [ div [ class "panel-heading" ]
-            [ span [ class "panel-icon" ] [ text "◎" ]
-            , h2 [] [ text "Your ears. Your call." ]
-            , span [ class "mini-badge" ]
-                [ text
-                    (if model.star /= Nothing then
-                        "STAR RUN"
-
-                     else if String.isEmpty model.drill then
-                        "COACH"
-
-                     else
-                        String.toUpper model.drill ++ " DRILL"
-                    )
-                ]
+            [ span [ class "panel-icon", attribute "aria-hidden" "true" ] [ text "◎" ]
+            , h2 [] [ text heading ]
             ]
-        , case model.currentLesson |> Maybe.andThen (\number -> List.head (List.filter (\lesson -> lesson.number == number) lessons)) of
-            Just lesson ->
-                div [ class "lesson-instruction" ]
-                    [ strong [] [ text ("LESSON " ++ String.fromInt lesson.number ++ " · " ++ lesson.name) ]
-                    , p [] [ text lesson.instruction ]
-                    ]
-
-            Nothing ->
-                text ""
         , case model.result of
             Just result ->
                 div [ class "match-result", attribute "role" "status" ]
@@ -3217,9 +3038,19 @@ coachView model =
                         starMeter run
 
                     Nothing ->
-                        coachCopy model
+                        p [ class "coach-instruction" ] [ text instruction ]
         , div [ class "coach-bottom" ]
-            [ button [ class "primary-button", onClick Check ]
+            [ if model.mode == "foundation" then
+                foundationGuide
+
+              else
+                text ""
+            , if List.isEmpty model.history then
+                text ""
+
+              else
+                span [ class "coach-stats" ] [ text (String.fromInt (List.length model.history) ++ " checks · " ++ String.fromInt (average model.history) ++ " avg. score") ]
+            , button [ class "primary-button", onClick Check ]
                 [ text
                     (if starRunning model then
                         "Finish the run"
@@ -3229,42 +3060,6 @@ coachView model =
                     )
                 , span [] [ text "↗" ]
                 ]
-            , span []
-                [ text
-                    (if List.isEmpty model.history then
-                        "No pressure. Just practice."
-
-                     else
-                        String.fromInt (List.length model.history) ++ " checks · " ++ String.fromInt (average model.history) ++ " avg. score"
-                    )
-                ]
-            ]
-        ]
-
-
-coachCopy : Model -> Html Msg
-coachCopy model =
-    div [ class "coach-copy" ]
-        [ h3 []
-            [ text
-                (if model.mode == "pro" then
-                    "Find the downbeat."
-
-                 else if model.currentLesson /= Nothing then
-                    "Start with the kick."
-
-                 else
-                    "Listen for the double hit."
-                )
-            ]
-        , p []
-            [ text
-                (if String.isEmpty model.drill then
-                    "Play both decks, then move deck B's pitch fader until the beats stop drifting. Nudge them into place."
-
-                 else
-                    drillInstruction model.drill
-                )
             ]
         ]
 

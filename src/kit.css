@@ -15,23 +15,41 @@
   --k-bevel: inset var(--kp) var(--kp) 0 var(--k-face-light), inset calc(-1 * var(--kp)) calc(-1 * var(--kp)) 0 var(--k-face-dark);
   --k-bevel-in: inset var(--kp) var(--kp) 0 var(--k-face-dark), inset calc(-1 * var(--kp)) calc(-1 * var(--kp)) 0 var(--k-face-light);
   --k-sunken: inset var(--kp) var(--kp) 0 var(--k-edge-dark), inset calc(-1 * var(--kp)) calc(-1 * var(--kp)) 0 color-mix(in srgb, var(--k-frame-light) 60%, transparent);
+  /* The page is laid out on Winamp's own grid: every deck is one 275-pixel window wide, and the
+     header, mixer and footer span exactly the two decks, so all edges line up. */
+  --deck-w: calc(275 * var(--kp));
+  --deck-gap: calc(10 * var(--kp));
+  --block: calc(2 * var(--deck-w) + var(--deck-gap));
   color-scheme: dark;
   background: var(--k-desk);
   accent-color: var(--k-accent);
 }
 :root[data-layout=kit] body {
+  /* A touch of the early-2000s desktop, kept in the wallpaper: a soft light ribbon behind the windows
+     and a few faint bubbles in the empty margins (wide screens only). Nothing touches the controls. */
+  --desk-ribbon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 1000' preserveAspectRatio='xMidYMid slice'%3E%3Cdefs%3E%3ClinearGradient id='f' x1='0' y1='0' x2='1' y2='0'%3E%3Cstop offset='0' stop-color='%23fff' stop-opacity='0'/%3E%3Cstop offset='.35' stop-color='%23fff' stop-opacity='1'/%3E%3Cstop offset='.75' stop-color='%23fff' stop-opacity='.5'/%3E%3Cstop offset='1' stop-color='%23fff' stop-opacity='0'/%3E%3C/linearGradient%3E%3Cfilter id='b' x='-5%25' y='-60%25' width='110%25' height='220%25'%3E%3CfeGaussianBlur stdDeviation='30'/%3E%3C/filter%3E%3Cfilter id='s' x='-5%25' y='-60%25' width='110%25' height='220%25'%3E%3CfeGaussianBlur stdDeviation='3'/%3E%3C/filter%3E%3C/defs%3E%3Cpath d='M-100 640 C 320 470 800 760 1700 330 L 1700 470 C 800 900 330 610 -100 790 Z' fill='url(%23f)' opacity='.07' filter='url(%23b)'/%3E%3Cpath d='M-100 690 C 340 530 820 800 1700 380' fill='none' stroke='url(%23f)' stroke-width='6' opacity='.12' filter='url(%23s)'/%3E%3Cpath d='M-100 700 C 350 540 830 810 1700 392' fill='none' stroke='url(%23f)' stroke-width='1.2' opacity='.22'/%3E%3C/svg%3E");
+  --desk-bubble: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3CradialGradient id='r' cx='.5' cy='.5' r='.5'%3E%3Cstop offset='.62' stop-color='%23fff' stop-opacity='0'/%3E%3Cstop offset='.92' stop-color='%23fff' stop-opacity='.07'/%3E%3Cstop offset='1' stop-color='%23fff' stop-opacity='.22'/%3E%3C/radialGradient%3E%3CradialGradient id='h' cx='.33' cy='.27' r='.26'%3E%3Cstop offset='0' stop-color='%23fff' stop-opacity='.38'/%3E%3Cstop offset='1' stop-color='%23fff' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='49.5' fill='url(%23r)'/%3E%3Ccircle cx='50' cy='50' r='49.5' fill='url(%23h)'/%3E%3C/svg%3E");
+  --gut: calc((100vw - var(--block)) / 2);
   background-color: var(--k-desk);
   background-image:
+    var(--desk-bubble), var(--desk-bubble), var(--desk-bubble), var(--desk-bubble),
+    var(--desk-ribbon),
     radial-gradient(90% 70vh at 50% 0, color-mix(in srgb, var(--k-desk) 35%, transparent) 0, color-mix(in srgb, var(--k-desk) 80%, transparent) 55%, var(--k-desk) 100%),
     var(--k-desk-glow);
-  background-size: 100% 100%, 100% 80vh;
+  background-size: 64px 64px, 22px 22px, 46px 46px, 16px 16px, cover, 100% 100%, 100% 80vh;
+  background-position:
+    left calc(var(--gut) / 2 - 32px) top 34%,
+    left calc(var(--gut) / 2 + 6px) top calc(34% + 80px),
+    right calc(var(--gut) / 2 - 23px) top 62%,
+    right calc(var(--gut) / 2 + 10px) top calc(62% - 44px),
+    center, 0 0, 0 0;
   background-repeat: no-repeat;
   background-attachment: fixed;
   font-family: var(--k-body-font);
   color: var(--k-list-fg);
 }
 :root[data-layout=kit] .app-shell {
-  max-width: 1280px; margin: 0 auto; padding: 14px 20px 26px;
+  max-width: calc(var(--block) + 40px); margin: 0 auto; padding: 14px 20px 26px;
   border: 0; background: none; box-shadow: none; image-rendering: pixelated;
   font-family: var(--k-body-font); color: var(--k-list-fg);
 }
@@ -211,38 +229,27 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 }
 :root[data-layout=kit] .app-shell .notice.error { color: var(--k-list-hi); }
 :root[data-layout=kit] .app-shell .notice button, :root[data-layout=kit][data-kit~=genBtn] .app-shell .notice > button { width: calc(10 * var(--kp)); height: calc(10 * var(--kp)); min-height: 0; padding: 0; flex: 0 0 auto; border: 0; border-image: none; background: var(--k-face); box-shadow: var(--k-bevel), 0 0 0 var(--kp) var(--k-edge-dark); }
-:root[data-layout=kit] .app-shell .page-heading { margin-bottom: calc(6 * var(--kp)); align-items: flex-start; gap: calc(10 * var(--kp)); }
+:root[data-layout=kit] .app-shell .page-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: calc(10 * var(--kp)); margin: 0 0 calc(8 * var(--kp)); }
+:root[data-layout=kit] .app-shell .heading-copy { min-width: 0; }
+:root[data-layout=kit] .app-shell .heading-actions { display: flex; flex-direction: column; align-items: flex-end; gap: calc(4 * var(--kp)); flex: 0 0 auto; }
+:root[data-layout=kit] .app-shell .heading-actions .toolbar-actions { display: flex; align-items: center; gap: calc(6 * var(--kp)); margin: 0; }
 :root[data-layout=kit] .app-shell .eyebrow { color: var(--k-accent-dim); margin-bottom: calc(4 * var(--kp)); display: flex; gap: calc(3 * var(--kp)); }
-:root[data-layout=kit] .app-shell .eyebrow-divider { opacity: .6; }
 :root[data-layout=kit] .app-shell .page-heading h1 {
   font: var(--k-text-big)/var(--k-text-big) var(--k-pixel); letter-spacing: 0; text-transform: uppercase; color: var(--k-accent);
   text-shadow: var(--kp) var(--kp) 0 color-mix(in srgb, var(--k-desk) 50%, #000); margin: 0 0 calc(4 * var(--kp));
 }
-:root[data-layout=kit] .app-shell .page-heading p { font: 14px/1.55 var(--k-body-font); color: var(--k-desk-dim); max-width: 640px; }
-:root[data-layout=kit] .app-shell .session-badge {
-  display: inline-flex; align-items: center; gap: calc(4 * var(--kp)); padding: calc(3 * var(--kp)) calc(5 * var(--kp)); border: 0; border-radius: 0;
-  background: var(--k-lcd-bg); color: var(--k-lcd-dim); box-shadow: var(--k-sunken), 0 0 0 var(--kp) var(--k-edge-dark);
-}
-:root[data-layout=kit] .app-shell .session-badge strong { font: var(--k-text-big)/1 var(--k-pixel); color: var(--k-lcd-fg); }
-:root[data-layout=kit] .app-shell .practice-toolbar { margin: 0 0 calc(6 * var(--kp)); padding: 0; border: 0; background: none; box-shadow: none; gap: calc(6 * var(--kp)); }
-:root[data-layout=kit] .app-shell .toolbar-left { gap: calc(5 * var(--kp)); }
-:root[data-layout=kit] .app-shell .mode-pill { padding: calc(2 * var(--kp)) calc(4 * var(--kp)); border: 0; border-radius: 0; background: var(--k-list-sel); color: var(--k-list-sel-fg); box-shadow: none; }
-:root[data-layout=kit] .app-shell .toolbar-description { font: 13px var(--k-body-font); color: var(--k-desk-dim); }
+:root[data-layout=kit] .app-shell .page-heading p { font: 14px/1.55 var(--k-body-font); color: var(--k-desk-dim); max-width: 640px; margin: 0; }
 :root[data-layout=kit] .app-shell .toolbar-actions { gap: calc(6 * var(--kp)); color: var(--k-list-fg); }
-:root[data-layout=kit] .app-shell .foundation-guide {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 0 0 calc(8 * var(--kp)); padding: calc(3 * var(--kp)) calc(4 * var(--kp));
-  border: 0; border-radius: 0; background: var(--k-list-bg); box-shadow: var(--k-sunken), 0 0 0 var(--kp) var(--k-edge-dark);
-}
-:root[data-layout=kit] .app-shell .foundation-step { display: flex; gap: calc(4 * var(--kp)); align-items: center; padding: calc(2 * var(--kp)) calc(4 * var(--kp)); border: 0; background: none; }
-:root[data-layout=kit] .app-shell .foundation-step > span { font: var(--k-text-big)/1 var(--k-pixel); color: var(--k-list-hi); }
-:root[data-layout=kit] .app-shell .foundation-step strong { font: var(--k-text)/var(--k-text) var(--k-pixel); text-transform: uppercase; color: var(--k-list-hi); display: block; margin-bottom: calc(2 * var(--kp)); }
-:root[data-layout=kit] .app-shell .foundation-step small { font: 12px/1.35 var(--k-body-font); color: var(--k-list-fg); }
+:root[data-layout=kit] .app-shell .foundation-guide { display: flex; flex-wrap: wrap; align-items: center; gap: calc(3 * var(--kp)) calc(8 * var(--kp)); margin: 0; padding: 0; border: 0; background: none; box-shadow: none; }
+:root[data-layout=kit] .app-shell .foundation-step { display: inline-flex; align-items: center; gap: calc(3 * var(--kp)); padding: 0; border: 0; background: none; cursor: help; }
+:root[data-layout=kit] .app-shell .foundation-step > span { min-width: calc(8 * var(--kp)); padding: var(--kp) calc(2 * var(--kp)); text-align: center; font: var(--k-text)/1 var(--k-pixel); color: var(--k-list-sel-fg); background: var(--k-list-sel); }
+:root[data-layout=kit] .app-shell .foundation-step strong { display: block; margin: 0; font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; color: var(--k-list-fg); }
 
 /* ---------- the rack: two docked Winamps and a session window ---------- */
 :root[data-layout=kit] .app-shell .deck-rack { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
 :root[data-layout=kit] .app-shell .deck-rack::before, :root[data-layout=kit] .app-shell .deck-rack::after { display: none; }
 :root[data-layout=kit] .app-shell .rack-title { display: none; }
-:root[data-layout=kit] .app-shell .decks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(10 * var(--kp)); align-items: start; margin: 0; }
+:root[data-layout=kit] .app-shell .decks { display: grid; grid-template-columns: repeat(2, var(--deck-w)); gap: var(--deck-gap); justify-content: center; align-items: start; margin: 0; }
 :root[data-layout=kit] .app-shell .decks .deck {
   display: flex; flex-direction: column; align-items: flex-start; padding: 0; margin: 0; border: 0; border-radius: 0; background: none; box-shadow: none;
   border-image: none; min-width: 0;
@@ -255,6 +262,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 
 /* The console: a playlist window under the main window. */
 :root[data-layout=kit] .app-shell .deck-console {
+  --k-pl-scroll: none; --k-pl-scroll-down: none; --pz: 1.5;
   position: relative; align-self: stretch; margin-top: 0;
   padding: calc(20 * var(--kp)) calc(20 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) calc(12 * var(--kp));
   background:
@@ -306,8 +314,8 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .deck-state.playing .status-dot { background-position: 0 0; }
 
 /* Modules: shaded playlist bars with the deck's controls underneath. */
-:root[data-layout=kit] .app-shell .deck-module-grid { margin: 0; gap: calc(2 * var(--kp)); padding: calc(2 * var(--kp)) 0; grid-template-columns: minmax(0, 1fr); }
-:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch { grid-template-columns: minmax(0, 1fr) calc(90 * var(--kp)); }
+:root[data-layout=kit] .app-shell .deck-module-grid { margin: 0; gap: calc(2 * var(--kp)); padding: calc(2 * var(--kp)) 0; grid-template-columns: minmax(0, 1fr); grid-auto-flow: row dense; }
+:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch { grid-template-columns: minmax(0, 1fr) calc(80 * var(--kp)); }
 :root[data-layout=kit] .app-shell .player-module {
   position: relative; margin: 0; padding: 0; border: 0; border-radius: 0; background: var(--k-list-bg); box-shadow: none; color: var(--k-list-fg); overflow: visible; border-image: none;
 }
@@ -350,48 +358,14 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .add-module-menu small { font: 11px/1.3 var(--k-body-font); color: var(--k-list-dim); }
 :root[data-layout=kit] .app-shell .empty-deck { padding: calc(6 * var(--kp)); color: var(--k-list-fg); font: 13px var(--k-body-font); }
 
-/* The console's foot is the skin's own playlist bottom bar: ADD opens the module menu, the displays
-   show time and the mini transport plays, like Winamp's. Positions follow Winamp's 125 + 150 pixel corners. */
-:root[data-layout=kit] .app-shell :is(.deck-console, .session-modules, .focus-channel):has(> .console-bar),
-:root[data-layout=kit] .app-shell .pro-track-pickers .player-module:has(.console-bar) { padding-bottom: calc(40 * var(--kp)); }
-:root[data-layout=kit] .app-shell :is(.deck-console, .session-modules, .focus-channel):has(> .console-bar)::after,
-:root[data-layout=kit] .app-shell .pro-track-pickers .player-module:has(.console-bar)::after { display: none; }
-:root[data-layout=kit] .app-shell .picker-stack { display: contents; }
-/* Folded, a console is Winamp's smallest playlist: title bar on bottom bar. */
-:root[data-layout=kit][data-console-hidden~=a] .app-shell .deck-a .deck-console:has(> .console-bar),
-:root[data-layout=kit][data-console-hidden~=b] .app-shell .deck-b .deck-console:has(> .console-bar) { padding-bottom: calc(38 * var(--kp)); }
-:root[data-layout=kit] .app-shell .console-bar {
-  position: absolute; left: 0; right: 0; bottom: 0; height: calc(38 * var(--kp)); pointer-events: none;
-  background:
-    var(--k-pl-bl) left bottom / calc(125 * var(--kp)) calc(38 * var(--kp)) no-repeat,
-    var(--k-pl-br) right bottom / calc(150 * var(--kp)) calc(38 * var(--kp)) no-repeat,
-    var(--k-pl-b) left bottom / calc(25 * var(--kp)) calc(38 * var(--kp)) repeat-x;
-}
-:root[data-layout=kit] .app-shell .console-bar > :is(.bar-time, .bar-mini) {
-  position: absolute; height: calc(6 * var(--kp)); overflow: hidden; white-space: nowrap;
-  font-family: var(--k-pixel); font-size: calc(6 * var(--kp)); line-height: calc(6 * var(--kp)); letter-spacing: 0; text-transform: uppercase;
-  color: var(--k-lcd-fg); background: var(--k-lcd-bg);
-}
-:root[data-layout=kit] .app-shell .console-bar > .bar-time { left: calc(100% - 143 * var(--kp)); bottom: calc(22 * var(--kp)); max-width: calc(89 * var(--kp)); }
-:root[data-layout=kit] .app-shell .console-bar > .bar-mini { left: calc(100% - 79 * var(--kp)); bottom: calc(9 * var(--kp)); } /* "mm:ss" in five TEXT cells from x 71: the colon lands on x 81 */
-:root[data-layout=kit] .app-shell .console-bar > .bar-mini:empty { display: none; }
-:root[data-layout=kit] .app-shell .console-bar > .bar-transport { position: absolute; left: calc(100% - 147 * var(--kp)); bottom: calc(6 * var(--kp)); height: calc(10 * var(--kp)); display: flex; pointer-events: auto; }
-:root[data-layout=kit] .app-shell .bar-transport > button {
-  width: calc(10 * var(--kp)); height: 100%; min-width: 0; min-height: 0; padding: 0; margin: 0; border: 0; border-radius: 0; border-image: none;
-  background: transparent; box-shadow: none; filter: none; font-size: 0; color: transparent; cursor: pointer;
-}
-:root[data-layout=kit] .app-shell .bar-transport > :is(.bar-stop, .bar-next) { width: calc(9 * var(--kp)); }
-:root[data-layout=kit] .app-shell .bar-transport > button:active { background: color-mix(in srgb, var(--k-lcd-fg) 30%, transparent); }
+/* The window's last row: the add-module menu, a skin field like the playlist's own. */
 :root[data-layout=kit] .app-shell :is(.deck-console, .session-modules) > .add-module-menu {
-  position: absolute; z-index: 2; left: calc(12 * var(--kp)); bottom: calc(11 * var(--kp)); width: calc(23 * var(--kp)); height: calc(19 * var(--kp));
-  display: block; margin: 0; padding: 0; border: 0;
+  display: flex; justify-content: flex-end; align-items: center; margin: calc(2 * var(--kp)) 0 0; padding: calc(3 * var(--kp)) 0 calc(1 * var(--kp));
+  border: 0; border-top: var(--kp) solid color-mix(in srgb, var(--k-list-fg) 16%, transparent);
 }
-:root[data-layout=kit] .app-shell :is(.deck-console, .session-modules) > .add-module-menu select {
-  position: absolute; inset: 0; width: 100%; height: 100%; min-width: 0; padding: 0; opacity: 0; cursor: pointer;
-}
-:root[data-layout=kit] .app-shell :is(.deck-console, .session-modules) > .add-module-menu select:disabled { cursor: default; }
 :root[data-layout=kit] .app-shell :is(.deck-console, .session-modules) > .add-module-menu small { display: none; }
-:root[data-layout=kit] .app-shell :is(.deck-console, .session-modules) > .add-module-menu:focus-within { outline: var(--kp) solid var(--k-accent); outline-offset: var(--kp); }
+:root[data-layout=kit] .app-shell :is(.deck-console, .session-modules) > .add-module-menu select { min-width: calc(92 * var(--kp)); }
+:root[data-layout=kit] .app-shell :is(.deck-console, .session-modules) > .add-module-menu select:disabled { opacity: .5; cursor: default; }
 
 /* Screen: the skin's display, with its NUMBERS digits at 4x. */
 :root[data-layout=kit] .app-shell .module-screen .module-body { padding: calc(3 * var(--kp)); }
@@ -427,7 +401,11 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 }
 :root[data-layout=kit] .app-shell .lcd-colon::before { top: calc(3 * var(--kp)); }
 :root[data-layout=kit] .app-shell .lcd-colon::after { top: calc(8 * var(--kp)); }
-:root[data-layout=kit] .app-shell .lcd-row .time-display small { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
+:root[data-layout=kit] .app-shell .lcd-row .time-display small { grid-column: 1 / 3; grid-row: 2; justify-self: start; }
+:root[data-layout=kit] .app-shell .lcd-row .lcd-pitch {
+  grid-column: 3; grid-row: 2; justify-self: end; align-self: end; white-space: nowrap;
+  font: var(--k-text)/var(--k-text) var(--k-pixel); text-transform: uppercase; color: var(--k-lcd-fg);
+}
 :root[data-layout=kit] .app-shell .lcd { display: flex; align-items: flex-end; gap: calc(3 * var(--kp)); padding: 0; border: 0; background: none; box-shadow: none; min-width: 0; }
 :root[data-layout=kit] .app-shell .lcd small { color: var(--k-lcd-dim); padding-bottom: 0; }
 :root[data-layout=kit] .app-shell .lcd-number { display: inline-flex; align-items: flex-end; gap: 0; font-size: 0; line-height: 1; color: var(--k-num); filter: none; text-shadow: none; }
@@ -477,15 +455,20 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .nudge-controls button:active:not(:disabled) { background-position: 0 calc(-18 * var(--kp)); box-shadow: none; padding: 0; }
 :root[data-layout=kit] .app-shell .nudge-controls button:last-child:active:not(:disabled) { background-position: calc(-92 * var(--kp)) calc(-18 * var(--kp)); }
 :root[data-layout=kit] .app-shell .nudge-controls button:hover:not(:disabled) { background-color: transparent; filter: brightness(1.12); }
-:root[data-layout=kit] .app-shell .deck-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: calc(3 * var(--kp)); padding: 0; margin: 0; background: none; border: 0; box-shadow: none; }
-:root[data-layout=kit] .app-shell .deck-action { width: 100%; min-width: 0; overflow: hidden; }
+:root[data-layout=kit] .app-shell .deck-actions { display: flex; gap: calc(3 * var(--kp)); padding: 0; margin: 0; background: none; border: 0; box-shadow: none; }
+:root[data-layout=kit] .app-shell .deck-actions > .deck-action { flex: 1 1 auto; width: auto; min-width: 0; padding-left: calc(3 * var(--kp)); padding-right: calc(3 * var(--kp)); overflow: hidden; }
 :root[data-layout=kit] .app-shell .deck-action-hint { font: 11px/1.3 var(--k-body-font); color: var(--k-list-dim); margin: 0; }
 
 /* Pitch: a zoomed equalizer slider. Its bar follows the pitch like an EQ band. */
-:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch > .module-pitch:not(.is-collapsed) { grid-column: 2; grid-row: 1 / span 9; align-self: stretch; }
-:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch:has(> :nth-child(5)) > .module-pitch:not(.is-collapsed) { grid-row: 1 / span 3; }
-:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch:has(> :nth-child(5)) > :nth-child(n+5):not(.module-pitch) { grid-column: 1 / -1; }
-:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch:has(> :nth-child(5)) .pitch-wheel-hint { display: none; }
+/* The pitch fader runs exactly beside the screen, transport and volume (whichever are there);
+   every other module spans the console underneath. */
+:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch > :is(.module-screen, .deck-transport, .module-volume) { grid-column: 1; }
+:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch > :not(.module-screen):not(.deck-transport):not(.module-volume):not(.module-pitch) { grid-column: 1 / -1; }
+:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch > .module-pitch:not(.is-collapsed) { grid-column: 2; grid-row: 1 / span 3; align-self: stretch; }
+:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch:not(:has(> .module-screen)) > .module-pitch:not(.is-collapsed),
+:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch:not(:has(> .module-volume)) > .module-pitch:not(.is-collapsed) { grid-row: 1 / span 2; }
+:root[data-layout=kit] .app-shell .deck-module-grid.has-pitch:not(:has(> .module-screen)):not(:has(> .module-volume)) > .module-pitch:not(.is-collapsed) { grid-row: 1 / span 1; }
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-wheel-hint { display: none; }
 :root[data-layout=kit] .app-shell .module-pitch .module-body { padding: calc(4 * var(--kp)) calc(3 * var(--kp)); height: calc(100% - 14 * var(--kp)); }
 :root[data-layout=kit] .app-shell:not(.session-focus-view) .pitch-section,
 :root[data-layout=kit] .app-shell .pitch-section {
@@ -540,11 +523,30 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .pitch-sensitivity span { white-space: nowrap; }
 :root[data-layout=kit] .app-shell:not(.session-focus-view) .pitch-wheel-hint { display: none; }
 
+/* In the console: the scale sits right beside the rail; fine steps and settings are pinned to the bottom,
+   level with the volume row; the readout lives on the screen. */
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-section {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); grid-template-rows: minmax(0, 1fr) auto auto; align-items: start; row-gap: calc(3 * var(--kp)); column-gap: calc(2 * var(--kp)); height: 100%;
+}
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-section > .pitch-track { grid-column: 1 / -1; grid-row: 1; width: calc((14 * var(--pz) + 20) * var(--kp)); }
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-section > .pitch-fine { grid-column: 1 / -1; grid-row: 2; }
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-section > .pitch-range { grid-column: 1; grid-row: 3; }
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-section > .pitch-sensitivity { grid-column: 2; grid-row: 3; }
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-section select { padding-left: calc(2 * var(--kp)); }
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-ticks { left: auto; right: calc((14 * var(--pz) + 3) * var(--kp)); align-items: flex-end; }
+:root[data-layout=kit] .app-shell .deck-module-grid:has(> .module-screen:not(.is-collapsed)) .pitch-section > .pitch-value { display: none; }
+:root[data-layout=kit] .app-shell .deck-module-grid .pitch-section > .pitch-value { grid-column: 1 / -1; grid-row: 2; }
+:root[data-layout=kit] .app-shell .deck-module-grid:not(:has(> .module-screen:not(.is-collapsed))) .pitch-section { grid-template-rows: minmax(0, 1fr) auto auto auto; }
+:root[data-layout=kit] .app-shell .deck-module-grid:not(:has(> .module-screen:not(.is-collapsed))) .pitch-section > .pitch-fine { grid-row: 3; }
+:root[data-layout=kit] .app-shell .deck-module-grid:not(:has(> .module-screen:not(.is-collapsed))) .pitch-section > :is(.pitch-range, .pitch-sensitivity) { grid-row: 4; }
+
 /* Volume: VOLUME.BMP at 2x, frame follows the level. */
 :root[data-layout=kit] .app-shell .module-volume .module-body { padding: calc(4 * var(--kp)) calc(5 * var(--kp)); }
 :root[data-layout=kit] .app-shell .deck-volume-row, :root[data-layout=kit] .app-shell .module-volume .deck-volume-row { display: flex; align-items: center; gap: calc(5 * var(--kp)); margin: 0; padding: 0; border: 0; background: none; box-shadow: none; }
 :root[data-layout=kit] .app-shell .deck-volume-row > label, :root[data-layout=kit] .app-shell .module-volume .deck-volume-row > label { display: flex; align-items: center; gap: calc(5 * var(--kp)); flex: 1; color: var(--k-list-dim); min-width: 0; white-space: nowrap; }
 :root[data-layout=kit] .app-shell .deck-volume-row > strong { color: var(--k-list-hi); min-width: calc(20 * var(--kp)); text-align: right; }
+:root[data-layout=kit] .app-shell .module-volume .deck-volume-row > label { font-size: 0; gap: 0; }
+:root[data-layout=kit] .app-shell .module-volume .deck-volume-row input[type=range] { margin-left: 0; }
 :root[data-layout=kit] .app-shell :is(.deck-volume-row, .master-volume) input[type=range] {
   flex: 0 0 auto; width: calc(68 * var(--kp)); height: calc(13 * var(--kp)); margin-left: auto;
 }
@@ -753,6 +755,11 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .panel-heading, :root[data-layout=kit] .app-shell .global-module-grid .panel-heading { display: flex; align-items: center; gap: calc(4 * var(--kp)); margin: 0 0 calc(4 * var(--kp)); padding: 0; border: 0; background: none; }
 :root[data-layout=kit] .app-shell .panel-icon { display: none; }
 :root[data-layout=kit] .app-shell .panel-heading h2 { font: var(--k-text-big)/1 var(--k-pixel); text-transform: uppercase; color: var(--k-list-hi); letter-spacing: 0; }
+:root[data-layout=kit] .app-shell .coach-panel .panel-heading { margin-bottom: calc(3 * var(--kp)); }
+:root[data-layout=kit] .app-shell .coach-panel .panel-heading h2 { font-size: var(--k-text); line-height: var(--k-text); }
+:root[data-layout=kit] .app-shell .coach-instruction { margin: 0; font: 13px/1.5 var(--k-body-font); color: var(--k-list-fg); }
+:root[data-layout=kit] .app-shell .coach-bottom > .foundation-guide { margin-right: auto; }
+:root[data-layout=kit] .app-shell .coach-stats { font: 12px var(--k-body-font); color: var(--k-list-dim); }
 :root[data-layout=kit] .app-shell .mini-badge { margin-left: auto; padding: var(--kp) calc(3 * var(--kp)); border: 0; border-radius: 0; background: var(--k-list-sel); color: var(--k-list-sel-fg); }
 :root[data-layout=kit] .app-shell .lesson-instruction { margin: 0 0 calc(4 * var(--kp)); padding: calc(3 * var(--kp)) calc(5 * var(--kp)); border: 0; border-radius: 0; background: var(--k-lcd-bg); color: var(--k-lcd-fg); box-shadow: var(--k-sunken); }
 :root[data-layout=kit] .app-shell .lesson-instruction strong { font: var(--k-text)/1.4 var(--k-pixel); text-transform: uppercase; color: var(--k-lcd-fg); }
@@ -760,7 +767,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .player-module .panel-heading .mini-badge { display: none; }
 :root[data-layout=kit] .app-shell .coach-copy h3 { font: var(--k-text)/1.5 var(--k-pixel); text-transform: uppercase; color: var(--k-list-hi); margin: 0 0 calc(2 * var(--kp)); }
 :root[data-layout=kit] .app-shell .coach-copy p { font: 13px/1.5 var(--k-body-font); }
-:root[data-layout=kit] .app-shell .coach-bottom { display: flex; align-items: center; justify-content: space-between; gap: calc(6 * var(--kp)); margin-top: calc(5 * var(--kp)); padding: 0; border: 0; }
+:root[data-layout=kit] .app-shell .coach-bottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: calc(4 * var(--kp)) calc(6 * var(--kp)); margin-top: calc(5 * var(--kp)); padding: 0; border: 0; }
 :root[data-layout=kit] .app-shell .coach-bottom > span { font: 12px var(--k-body-font); color: var(--k-list-dim); }
 :root[data-layout=kit] .app-shell .match-result { display: flex; align-items: center; gap: calc(8 * var(--kp)); padding: calc(3 * var(--kp)); background: var(--k-lcd-bg); box-shadow: var(--k-sunken); border: 0; border-radius: 0; }
 :root[data-layout=kit] .app-shell .score-circle { display: grid; place-items: center; width: auto; height: auto; padding: calc(3 * var(--kp)) calc(5 * var(--kp)); border: 0; border-radius: 0; background: none; box-shadow: none; }
@@ -833,11 +840,11 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 }
 :root[data-layout=kit] .app-shell .picker-current strong { font: var(--k-text)/1 var(--k-pixel); color: var(--k-list-hi); }
 :root[data-layout=kit] .app-shell .source-settings { display: flex; align-items: end; gap: calc(4 * var(--kp)); flex-wrap: wrap; }
-:root[data-layout=kit] .app-shell .track-picker > small { font: 11px var(--k-body-font); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .track-picker > small:not(.library-count) { display: none; }
 
 /* Rack footer, play-both and tips. */
-:root[data-layout=kit] .app-shell .rack-footer { display: flex; justify-content: space-between; gap: calc(6 * var(--kp)); margin: calc(5 * var(--kp)) 0 0; padding: 0 calc(2 * var(--kp)); border: 0; background: none; color: var(--k-desk-dim); }
-:root[data-layout=kit] .app-shell .under-decks { display: flex; align-items: center; justify-content: space-between; gap: calc(6 * var(--kp)); margin: calc(8 * var(--kp)) 0 calc(4 * var(--kp)); }
+:root[data-layout=kit] .app-shell .under-decks { display: flex; align-items: center; justify-content: flex-end; gap: calc(6 * var(--kp)); margin: calc(6 * var(--kp)) 0 0; }
+:root[data-layout=kit] .app-shell .under-decks:empty { display: none; }
 :root[data-layout=kit] .app-shell .play-both-button {
   display: inline-flex; align-items: center; gap: calc(5 * var(--kp)); min-height: calc(18 * var(--kp)); padding: 0 calc(8 * var(--kp)); border: 0; border-radius: 0;
   font: var(--k-text-big)/1 var(--k-pixel); text-transform: uppercase; color: var(--k-accent-text); background: color-mix(in srgb, var(--k-accent) 80%, var(--k-desk));
@@ -847,8 +854,6 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .play-both-button:active { box-shadow: inset var(--kp) var(--kp) 0 color-mix(in srgb, var(--k-accent) 50%, #000), 0 0 0 var(--kp) var(--k-edge-dark); transform: translateY(var(--kp)); }
 :root[data-layout=kit] .app-shell .play-both-button small { font: var(--k-text)/var(--k-text) var(--k-pixel); height: calc(8 * var(--kp)); display: inline-flex; align-items: center; padding: 0 calc(2 * var(--kp)); background: color-mix(in srgb, var(--k-accent-text) 22%, transparent); color: inherit; border: 0; border-radius: 0; }
 :root[data-layout=kit] .app-shell .under-decks .muted { font: 12px var(--k-body-font); color: var(--k-desk-dim); }
-:root[data-layout=kit] .app-shell .practice-tip { display: flex; align-items: center; gap: calc(5 * var(--kp)); margin: calc(4 * var(--kp)) 0 0; padding: 0; border: 0; background: none; font: 13px var(--k-body-font); color: var(--k-desk-dim); }
-:root[data-layout=kit] .app-shell .practice-tip > span { color: var(--k-accent); }
 :root[data-layout=kit] .app-shell .footer { margin-top: calc(10 * var(--kp)); padding: calc(4 * var(--kp)) 0 0; border: 0; border-top: var(--kp) solid color-mix(in srgb, var(--k-list-fg) 14%, transparent); background: none; color: var(--k-desk-dim); }
 :root[data-layout=kit] .app-shell .footer a { color: var(--k-accent); font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; }
 :root[data-layout=kit] .app-shell .footer-separator { opacity: .5; padding: 0 calc(3 * var(--kp)); }
@@ -1131,36 +1136,29 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 /* Shorter screens get a shorter fader, so the session fits without scrolling. */
 @media (max-height: 780px) { :root[data-layout=kit] .session-focus-view .focus-channel > .pitch-section { --pz: 3; } }
 @media (max-width: 1040px) { :root[data-layout=kit] .session-focus-view .focus-toolbar small { display: none; } }
-/* A playlist bar needs Winamp's 275 pixels: narrower focus windows keep their plain bottom edge. */
+@media (max-width: 1359px) { :root[data-layout=kit] body { --desk-bubble: none; } }
+/* Below two windows' width the decks stack: everything keeps one window's width, so edges still line up. */
 @media (max-width: 1179px) {
-  :root[data-layout=kit] .session-focus-view .focus-channel > .console-bar { display: none; }
-  :root[data-layout=kit] .app-shell .focus-channel:has(> .console-bar) { padding-bottom: calc(calc(var(--k-bottom-edge, 6) + 6) * var(--kp)); }
-  :root[data-layout=kit] .app-shell .focus-channel:has(> .console-bar)::after { display: block; }
-}
-
-/* Narrow windows: the decks stack. */
-@media (max-width: 1100px) {
-  :root[data-layout=kit] .app-shell .topbar .engine-status { font-size: 0; gap: 0; padding: 0 calc(3 * var(--kp)); }
-  :root[data-layout=kit] .app-shell .nav-item { padding: 0 calc(3 * var(--kp)); }
-}
-@media (max-width: 1240px) {
-  :root[data-layout=kit] .app-shell .decks { grid-template-columns: minmax(calc(275 * var(--kp)), calc(330 * var(--kp))); justify-content: center; }
+  :root[data-layout=kit] .app-shell:not(.session-focus-view) { max-width: calc(var(--deck-w) + 40px); }
+  :root[data-layout=kit] .app-shell :is(.decks, .pro-track-pickers) { grid-template-columns: var(--deck-w); justify-content: center; }
   :root[data-layout=kit] .app-shell .mode-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 760px) {
-  :root[data-layout=kit] .app-shell { padding: 8px 8px 20px; }
-  /* The title bar keeps the brand and status on its first row; the nav gets a row of its own. */
   :root[data-layout=kit] .app-shell .topbar { grid-template-columns: auto minmax(0, 1fr); height: auto; row-gap: calc(3 * var(--kp)); padding-bottom: calc(3 * var(--kp)); background-color: var(--k-frame); }
   :root[data-layout=kit] .app-shell .topbar > .brand { grid-column: 1; grid-row: 1; margin-top: calc(5 * var(--kp)); }
   :root[data-layout=kit] .app-shell .topbar-right { grid-column: 2; grid-row: 1; justify-self: end; margin: calc(5 * var(--kp)) 0 0; min-width: 0; }
   :root[data-layout=kit] .app-shell .main-nav { grid-column: 1 / -1; grid-row: 2; min-width: 0; flex-wrap: wrap; justify-content: flex-start; justify-self: stretch; margin: 0; }
-  :root[data-layout=kit] .app-shell .session-badge, :root[data-layout=kit] .app-shell .toolbar-description { display: none; }
-  :root[data-layout=kit] .app-shell .page-heading h1 { font-size: 18px; line-height: 18px; }
-  :root[data-layout=kit] .app-shell :is(.practice-toolbar, .toolbar-actions, .under-decks) { flex-wrap: wrap; }
-  :root[data-layout=kit] .app-shell :is(.builder-invitation, .add-element-button, .play-both-button) { max-width: 100%; white-space: normal; line-height: 1.3; text-align: left; }
-  :root[data-layout=kit] .app-shell .foundation-guide, :root[data-layout=kit] .app-shell .mode-list { grid-template-columns: minmax(0, 1fr); }
-  :root[data-layout=kit] .app-shell .global-module-grid, :root[data-layout=kit] .app-shell .pro-track-pickers { grid-template-columns: minmax(0, 1fr); }
+  :root[data-layout=kit] .app-shell .page-heading { flex-direction: column; align-items: stretch; }
+  :root[data-layout=kit] .app-shell .heading-actions { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+  :root[data-layout=kit] .app-shell .global-module-grid { grid-template-columns: minmax(0, 1fr); }
   :root[data-layout=kit] .app-shell .global-module-grid > .player-module { grid-column: 1; }
+  :root[data-layout=kit] .app-shell .footer { display: flex; flex-direction: column; align-items: flex-start; gap: calc(3 * var(--kp)); }
+  :root[data-layout=kit] .app-shell .footer > span { flex-wrap: wrap; row-gap: calc(2 * var(--kp)); }
+}
+@media (max-width: 760px) {
+  :root[data-layout=kit] .app-shell { padding: 8px 8px 20px; }
+  /* The title bar keeps the brand and status on its first row; the nav gets a row of its own. */
+  :root[data-layout=kit] .app-shell .page-heading h1 { font-size: 18px; line-height: 18px; }
+  :root[data-layout=kit] .app-shell :is(.toolbar-actions, .under-decks) { flex-wrap: wrap; }
+  :root[data-layout=kit] .app-shell :is(.builder-invitation, .add-element-button, .play-both-button) { max-width: 100%; white-space: normal; line-height: 1.3; text-align: left; }
   :root[data-layout=kit] .app-shell .skin-import-panel:not(.skin-url-panel) { grid-template-columns: minmax(0, 1fr); }
   :root[data-layout=kit] .app-shell :is(.skin-url-form, .now-wearing, .coach-bottom, .tap-content) { flex-wrap: wrap; }
   :root[data-layout=kit] .app-shell .now-wearing-frame, :root[data-layout=kit] .app-shell .now-wearing-image { width: 100%; max-width: calc(275 * var(--kp)); }
@@ -1170,7 +1168,6 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   :root[data-layout=kit] .app-shell .footer { display: flex; flex-direction: column; align-items: flex-start; gap: calc(4 * var(--kp)); }
   :root[data-layout=kit] .app-shell .footer > span { flex-wrap: wrap; row-gap: calc(2 * var(--kp)); }
   :root[data-layout=kit] .app-shell .footer-separator { display: none; }
-  :root[data-layout=kit] .app-shell :is(.deck-console, .session-modules) > .add-module-menu select { inset: calc(-6 * var(--kp)); width: auto; height: auto; }
   :root[data-layout=kit] .app-shell .skin-url-form > input { flex: 1 1 100%; min-width: 0; }
   :root[data-layout=kit] .app-shell .skin-import-actions :is(button) { white-space: normal; width: 100%; min-width: 0; }
   :root[data-layout=kit] .app-shell.session-focus-view { padding: 6px; }
@@ -1187,11 +1184,19 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 }
 @media (max-width: 640px) {
   :root[data-layout=kit] { --kp: 1px; }
-  :root[data-layout=kit] .app-shell .decks { grid-template-columns: minmax(0, 1fr); }
+  /* Phones: the windows stay at one screen pixel per skin pixel and the consoles use the full width. */
+  :root[data-layout=kit] .app-shell:not(.session-focus-view) { max-width: none; }
+  :root[data-layout=kit] .app-shell :is(.decks, .pro-track-pickers) { grid-template-columns: minmax(0, 1fr); }
+  :root[data-layout=kit] .app-shell .deck-console { --pz: 2; }
   :root[data-layout=kit] .app-shell .deck-module-grid.has-pitch { grid-template-columns: minmax(0, 1fr) calc(96 * var(--kp)); }
   /* Phone widths: buttons and pitch settings stack instead of clipping; no wheel or keys to mention. */
-  :root[data-layout=kit] .app-shell .deck-actions { grid-template-columns: minmax(0, 1fr); }
+  :root[data-layout=kit] .app-shell .deck-actions { flex-direction: column; }
+  :root[data-layout=kit] .app-shell .lcd-row .time-display small { grid-column: 1 / -1; }
+  :root[data-layout=kit] .app-shell .lcd-row .lcd-pitch { grid-column: 1 / -1; grid-row: 3; justify-self: start; }
+  :root[data-layout=kit] .app-shell .footer-separator { display: inline; }
+  :root[data-layout=kit] .app-shell .deck-module-grid .pitch-section { grid-template-rows: minmax(0, 1fr) auto auto auto; }
   :root[data-layout=kit] .app-shell .deck-module-grid .pitch-section > :is(.pitch-range, .pitch-sensitivity) { grid-column: 1 / -1; }
+  :root[data-layout=kit] .app-shell .deck-module-grid .pitch-section > .pitch-sensitivity { grid-row: 4; }
   :root[data-layout=kit] .app-shell .pitch-wheel-hint, :root[data-layout=kit] .app-shell .play-both-button small { display: none; }
   :root[data-layout=kit] .app-shell .play-both-button { width: 100%; font-size: 18px; justify-content: center; }
   :root[data-layout=kit] .app-shell .main-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); justify-items: center; }
