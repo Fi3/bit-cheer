@@ -115,7 +115,7 @@ test.afterEach(async ({ page }) => {
 
 test('desktop renders real waveform canvases and accessible two-deck controls', async ({ page }, testInfo) => {
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'millennium');
-  await expect(page.locator('html')).toHaveAttribute('data-layout', 'classified5');
+  await expect(page.locator('html')).toHaveAttribute('data-layout', 'kit');
   await expect(page.getByRole('slider', { name: 'Deck A pitch', exact: true })).toBeVisible();
   await expect(page.getByRole('slider', { name: 'Deck B pitch', exact: true })).toBeVisible();
   await expect(page.locator('.player-module[data-scope="deck-a"]')).toHaveCount(3);
@@ -227,14 +227,14 @@ test('skin studio applies Millennium Chrome and imports persistent TOML and orig
   await page.screenshot({ path: testInfo.outputPath('skin-studio.png'), fullPage: true });
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
   await importFile(page, page.getByRole('button', { name: /Import a skin/ }), asset('skins/electric-blue.toml'));
-  await expect(page.locator('.active-skin')).toContainText('Electric Blue 2001');
+  await expect(page.locator('#now-wearing-title')).toContainText('Electric Blue 2001');
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'custom');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'custom');
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
-  await expect(page.locator('.active-skin')).toContainText('Electric Blue 2001');
+  await expect(page.locator('#now-wearing-title')).toContainText('Electric Blue 2001');
   await importFile(page, page.getByRole('button', { name: /Import a skin/ }), asset('skins/classified3.wsz'));
-  await expect(page.locator('.active-skin')).toContainText('classified3');
+  await expect(page.locator('#now-wearing-title')).toContainText('classified3');
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--skin-titlebar'))).toContain('data:image/png');
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: /Download template/ }).click();
@@ -248,6 +248,195 @@ test('invalid skins report an error and preserve the current design', async ({ p
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'millennium');
 });
 
+// A 24-bit BMP from a pixel function, for synthetic skins.
+function bmp(width, height, color) {
+  const row = Math.ceil(width * 3 / 4) * 4, bytes = new Uint8Array(54 + row * height), view = new DataView(bytes.buffer);
+  bytes.set([66, 77]); view.setUint32(2, bytes.length, true); view.setUint32(10, 54, true); view.setUint32(14, 40, true);
+  view.setInt32(18, width, true); view.setInt32(22, height, true); view.setUint16(26, 1, true); view.setUint16(28, 24, true); view.setUint32(34, row * height, true);
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+    const [r, g, b] = color(x, y), i = 54 + (height - 1 - y) * row + x * 3;
+    bytes[i] = b; bytes[i + 1] = g; bytes[i + 2] = r;
+  }
+  return bytes;
+}
+
+test('skins that paint their controls on a picture still get usable console controls and lettering', async ({ page }) => {
+  // A "picture" main window, transport icons painted straight onto it (all alike), a volume bar that is
+  // only that picture, and lettering in two inks (red letters, white digits), like Excel Saga or SimCity.
+  const art = (x, y) => [(x * 37 + y * 11) % 256, (x * 13 + y * 29) % 256, (x * 7 + y * 53) % 256];
+  const transport = [[0, 16, 88], [23, 39, 88], [46, 62, 88], [69, 85, 88], [92, 108, 88], [114, 136, 89]];
+  const icon = (x, y) => x >= 8 && x <= 13 && y >= 5 && y <= 12;
+  const cbuttons = bmp(136, 36, (x, y) => {
+    const cell = transport.findLast(([cx]) => x >= cx), [cx, mx, my] = cell, local = x - cx, top = y % 18;
+    return icon(local, top) ? [60, 60, 70] : art(mx + local, my + top);
+  });
+  const volume = bmp(68, 433, (x, y) => art(107 + x, 57 + y % 15));
+  const text = bmp(155, 18, (x, y) => (x % 5 < 4 && y % 6 < 5 && (x + y) % 2 === 0) ? (y < 6 ? [255, 0, 0] : [255, 255, 255]) : [0, 0, 0]);
+  const files = { 'Painted/main.bmp': bmp(275, 116, art), 'Painted/cbuttons.bmp': cbuttons, 'Painted/volume.bmp': volume, 'Painted/text.bmp': text };
+  await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
+  // The skin's own pixels, exactly as imported (Comfort and HD would recolor and enlarge them).
+  await page.getByRole('button', { name: 'Original pixels', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-render', 'original');
+  await importFile(page, page.getByRole('button', { name: /Import a skin/ }), { name: 'painted.wsz', mimeType: 'application/zip', buffer: Buffer.from(zipSync(files)) });
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'custom');
+  await expect(page.locator('html')).toHaveAttribute('data-layout', 'kit');
+  const result = await page.evaluate(async () => {
+    const style = getComputedStyle(document.documentElement);
+    const image = async name => {
+      const src = style.getPropertyValue(name).trim().match(/url\("?(.*?)"?\)$/)[1];
+      const img = new Image(); img.src = src; await img.decode();
+      const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
+      const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
+      return (x, y) => '#' + [...ctx.getImageData(x, y, 1, 1).data.slice(0, 3)].map(v => v.toString(16).padStart(2, '0')).join('');
+    };
+    const transportAt = await image('--k-cb-clean'), volumeAt = await image('--k-vol-strip');
+    await document.fonts.load('12px "Kit Pixel"');
+    const canvas = document.createElement('canvas'); canvas.width = 40; canvas.height = 20;
+    const ctx = canvas.getContext('2d'); ctx.font = '12px "Kit Pixel"'; ctx.fillStyle = '#000'; ctx.fillText('A', 4, 14);
+    const ink = [...ctx.getImageData(0, 0, 40, 20).data].filter((v, i) => i % 4 === 3 && v > 0).length;
+    return {
+      // The play button's symbol (a triangle centered on the cell) in the button text color.
+      playSymbol: transportAt(32, 8), faceText: style.getPropertyValue('--k-face-text').trim(),
+      // An empty volume frame: the groove's inside, in the display color.
+      groove: volumeAt(30, 6), lcdBg: style.getPropertyValue('--k-lcd-bg').trim(),
+      letterInk: ink,
+    };
+  });
+  expect(result.playSymbol, 'Look-alike icons on a picture become a clear play symbol on the skin button').toBe(result.faceText);
+  expect(result.groove, 'A volume bar that is only the picture becomes a plain groove').toBe(result.lcdBg);
+  expect(result.letterInk, 'Letters drawn in a second ink still make it into the skin font').toBeGreaterThan(5);
+});
+
+test('skin looks: Comfort and HD are prepared from the stored kit and Original pixels restores it exactly', async ({ page }) => {
+  const root = page.locator('html');
+  const look = () => page.evaluate(async () => {
+    const rule = document.getElementById('bit-cheer-kit').sheet.cssRules[0].style;
+    const src = rule.getPropertyValue('--k-sheet-main').match(/url\("?(.*?)"?\)/)[1];
+    const img = new Image(); img.src = src; await img.decode();
+    return { scheme: src.split(':')[0], width: img.naturalWidth, live: document.querySelector('.winamp-live canvas')?.width ?? null, face: rule.getPropertyValue('--k-face').trim() };
+  });
+  // The default look is Comfort + HD: the skin's pictures redrawn at four times their resolution.
+  await expect(root).toHaveAttribute('data-render', 'hd');
+  await expect.poll(async () => (await look()).width).toBe(275 * 4);
+  const hd = await look();
+  expect(hd.scheme, 'Prepared looks are page-made images, never remote ones').toBe('blob');
+  // The live window picks the finer sheets up on its next frame.
+  await expect.poll(async () => (await look()).live, { message: 'The live main window draws at the finer resolution' }).toBe(275 * 4);
+  await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
+  await page.getByRole('button', { name: 'Original pixels', exact: true }).click();
+  await expect(root).toHaveAttribute('data-render', 'original');
+  const original = await look();
+  expect(original.scheme, 'Original pixels shows the stored kit itself').toBe('data');
+  expect(original.width).toBe(275);
+  await page.getByRole('button', { name: 'Comfort', exact: true }).click();
+  await expect(root).toHaveAttribute('data-render', 'comfort');
+  await expect(page.getByRole('button', { name: 'Comfort', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  const comfort = await look();
+  expect(comfort.width, 'Comfort keeps the original resolution').toBe(275);
+  expect(comfort.face, 'Comfort softens the palette').not.toBe(original.face);
+  await page.reload();
+  await expect(root).toHaveAttribute('data-render', 'comfort');
+  await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
+  await page.getByRole('button', { name: 'Original pixels', exact: true }).click();
+  await expect(root).toHaveAttribute('data-render', 'original');
+  expect((await look()).face, 'Back to Original pixels gives back the exact palette').toBe(original.face);
+});
+
+test('the skin\'s Winamp window: every button it shows works, shade folds it to a working bar, balance pans the deck', async ({ page }) => {
+  const root = page.locator('html');
+  await expect(root).toHaveAttribute('data-winamp-live', 'on');
+  const canvas = page.locator('.deck-a .winamp-live canvas');
+  const at = async (target, x, y) => { const box = await target.boundingBox(), k = box.width / 275; return [box.x + x * k, box.y + y * k]; };
+  // Windowshade: the title bar's shade button folds the window to its 14-pixel bar, and back.
+  await page.mouse.click(...await at(canvas, 258, 7));
+  await expect(root).toHaveAttribute('data-main-shaded', 'a');
+  await expect.poll(async () => Math.round((await page.locator('.deck-a .winamp-live').boundingBox()).height / ((await canvas.boundingBox()).width / 275))).toBe(14);
+  // The bar's mini transport and position bar work like the big ones.
+  await page.mouse.click(...await at(canvas, 180, 6));
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].playing)).toBe(true);
+  await page.mouse.click(...await at(canvas, 191, 6));
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].playing)).toBe(false);
+  await page.mouse.click(...await at(canvas, 258, 7));
+  await expect(root).toHaveAttribute('data-main-shaded', '');
+  // Balance pans deck B: drag its thumb to the right end.
+  const b = page.locator('.deck-b .winamp-live canvas');
+  await page.mouse.move(...await at(b, 196, 63)); await page.mouse.down(); await page.mouse.move(...await at(b, 214, 63), { steps: 4 }); await page.mouse.up();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.balances[1])).toBe(1);
+  // Windows that can't fold or close wear the playlist corner without those buttons.
+  const corners = await page.evaluate(() => {
+    const style = sel => getComputedStyle(document.querySelector(sel)).backgroundImage;
+    const rule = document.getElementById('bit-cheer-kit').sheet.cssRules[0].style;
+    return { topbar: style('.topbar'), mixer: style('.session-modules'), plain: rule.getPropertyValue('--k-pl-tr-plain'), corner: rule.getPropertyValue('--k-pl-tr') };
+  });
+  expect(corners.plain).toMatch(/^url\(/);
+  expect(corners.plain).not.toBe(corners.corner);
+  for (const window of ['topbar', 'mixer']) expect(corners[window], `${window} must not show dead shade/close buttons`).not.toContain(corners.corner.slice(5, 60));
+});
+
+test('every word in a skinned page is set in the skin\'s lettering, dropdown lists included', async ({ page }) => {
+  const offenders = () => page.evaluate(() => {
+    const out = [];
+    for (const el of document.querySelectorAll('.app-shell *')) {
+      const own = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+      const field = el.matches('input:not([type=range], [type=checkbox], [type=radio], [type=file]), select, textarea');
+      const box = el.getBoundingClientRect(), style = getComputedStyle(el);
+      if ((!own && !field) || !box.width || !box.height || style.visibility === 'hidden' || parseFloat(style.fontSize) === 0) continue;
+      const size = parseFloat(style.fontSize);
+      if (!/^"?Kit Pixel/.test(style.fontFamily) || Math.abs(size / 6 - Math.round(size / 6)) > 0.01) out.push(`${el.className || el.tagName}: ${style.fontFamily.split(',')[0]} ${style.fontSize}`);
+    }
+    return out;
+  });
+  for (const name of ['Practice', 'Learning path', 'Training', 'Skin studio']) {
+    await page.getByRole('button', { name, exact: true }).click();
+    expect(await offenders(), `${name}: text outside the skin's lettering`).toEqual([]);
+  }
+  await page.getByRole('button', { name: 'Practice', exact: true }).click();
+  await page.getByLabel('Add module to deck A', { exact: true }).click();
+  const list = page.getByRole('listbox', { name: 'Add module to deck A choices' });
+  await expect(list).toBeVisible();
+  expect(await list.getByRole('option').first().evaluate(o => getComputedStyle(o).fontFamily), 'Dropdown entries use the skin lettering too').toMatch(/^"?Kit Pixel/);
+});
+
+test('dropdowns open the skin\'s own list in every browser, by pointer and by keyboard', async ({ page }) => {
+  const list = page.getByRole('listbox');
+  // Pointer: the field opens the skin's list; choosing an entry is the same as choosing it in the browser's.
+  await page.getByLabel('Add module to deck A', { exact: true }).click();
+  await expect(list).toBeVisible();
+  await expect(list.getByRole('option', { name: 'Waveform', exact: true })).toBeVisible();
+  await list.getByRole('option', { name: 'Waveform', exact: true }).click();
+  await expect(list).toBeHidden();
+  await expect(moduleElement(page, 'waveform', 'A')).toBeVisible();
+  // Keyboard: Enter opens, arrows move, Enter chooses; the field keeps the focus afterwards.
+  const range = page.getByLabel('Deck A pitch range', { exact: true });
+  await range.focus();
+  await page.keyboard.press('Enter');
+  await expect(list).toBeVisible();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(range).toHaveValue('16');
+  await expect(range).toBeFocused();
+  // Space opens the list (and doesn't start the decks); Escape leaves the value as it was.
+  await page.keyboard.press('Space');
+  await expect(list).toBeVisible();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Escape');
+  await expect(list).toBeHidden();
+  await expect(range).toHaveValue('16');
+  expect(await page.evaluate(() => window.bitCheer.audio.state.some(deck => deck.playing))).toBe(false);
+  // Typing jumps to an entry; a press outside closes the list without a change.
+  const sensitivity = page.getByLabel('Deck A pitch sensitivity', { exact: true });
+  await sensitivity.focus();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.type('c');
+  await page.keyboard.press('Enter');
+  await expect(sensitivity).toHaveValue('0.25');
+  await sensitivity.click();
+  await expect(list).toBeVisible();
+  await page.mouse.click(4, 300);
+  await expect(list).toBeHidden();
+  await expect(sensitivity).toHaveValue('0.25');
+});
+
 test('a custom TOML and graphic ZIP applies colors and image assets and survives reload', async ({ page }) => {
   const manifest = 'version = 1\nname = "Pixel Harbor Test"\nbase = "bento"\n[colors]\naccent = "#25c4ee"\n[assets]\npanel = "panel.png"\n';
   const bytes = zipSync({
@@ -258,7 +447,7 @@ test('a custom TOML and graphic ZIP applies colors and image assets and survives
   await importFile(page, page.getByRole('button', { name: /Import a skin/ }), {
     name: 'pixel-harbor.zip', mimeType: 'application/zip', buffer: Buffer.from(bytes),
   });
-  await expect(page.locator('.active-skin')).toContainText('Pixel Harbor Test');
+  await expect(page.locator('#now-wearing-title')).toContainText('Pixel Harbor Test');
   await expect(page.locator('html')).toHaveAttribute('data-skin', 'custom');
   await expect(page.locator('html')).toHaveAttribute('data-layout', 'bento');
   const applied = await page.evaluate(() => {
@@ -282,7 +471,7 @@ test('a custom TOML and graphic ZIP applies colors and image assets and survives
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--skin-panel'))).toBe(applied.panel);
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim())).toBe('#25c4ee');
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
-  await expect(page.locator('.active-skin')).toContainText('Pixel Harbor Test');
+  await expect(page.locator('#now-wearing-title')).toContainText('Pixel Harbor Test');
 
   // Every structural base must honor every documented graphic slot. Checking
   // computed styles catches a theme-specific override hiding an imported asset.
@@ -810,7 +999,7 @@ test('a denied output-device change restores the confirmed selector and preserve
 });
 
 test('Foundation stays kick-only and each deck has independent tempo and material actions', async ({ page }) => {
-  await expect(page.getByText('KICK-ONLY EXERCISE', { exact: true })).toBeVisible();
+  await expect(page.locator('.deck-a .loop-badge')).toHaveText('KICK-ONLY');
   expect(await page.evaluate(() => window.bitCheer.audio.state.map(deck => deck.elements))).toEqual([1, 1]);
   await expect(page.locator('.foundation-guide')).toBeVisible();
   await expect(page.locator('button.element')).toHaveCount(0);
@@ -1330,7 +1519,8 @@ test('configured hosting path serves the actual engine catalog skin bitmaps and 
   await expect.poll(() => page.locator('img').evaluateAll(images => images.length >= 4 && images.every(image => image.complete && image.naturalWidth > 0))).toBe(true);
   const creditPaths = await page.locator('a[href], img[src]').evaluateAll(nodes => nodes.map(node => node.href || node.src).filter(value => new URL(value).origin === location.origin).map(value => new URL(value).pathname));
   expect(creditPaths.filter(pathname => !pathname.startsWith(prefix)), 'Credits downloads, artwork and Back must retain the Pages base').toEqual([]);
-  const appRequests = [...page.__requests, ...worklets].map(url => new URL(url)).filter(url => url.origin === hosting.origin);
+  // blob: URLs (the skin's Comfort/HD images, made in the page) are memory, not requests to the host.
+  const appRequests = [...page.__requests, ...worklets].map(url => new URL(url)).filter(url => url.origin === hosting.origin && url.protocol !== 'blob:');
   expect(appRequests.some(url => url.pathname.endsWith('/engine.wasm'))).toBe(true);
   expect(appRequests.some(url => url.pathname.endsWith('/audio-worklet.js'))).toBe(true);
   expect(appRequests.some(url => url.pathname.endsWith('/catalog.json'))).toBe(true);
