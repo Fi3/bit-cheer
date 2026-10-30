@@ -4,7 +4,7 @@
 // missing comes from the bundled base skin, and sprites outside a sheet stay transparent.
 import { buildPixelFont, TEXT_GLYPHS, SYMBOL_GLYPHS, symbolBits } from './pixel-font.js';
 
-export const KIT_VERSION = 7;
+export const KIT_VERSION = 8;
 export const KIT_SHEETS = ['main', 'titlebar', 'cbuttons', 'posbar', 'volume', 'balance', 'numbers', 'nums_ex', 'text', 'playpaus', 'monoster', 'shufrep', 'eqmain', 'pledit', 'genex'];
 // Sheets the live windows draw from at runtime (the rest only feed pieces and colors).
 export const LIVE_SHEETS = ['main', 'titlebar', 'cbuttons', 'posbar', 'volume', 'balance', 'numbers', 'nums_ex', 'text', 'playpaus', 'monoster', 'shufrep', 'eqmain'];

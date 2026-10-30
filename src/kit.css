@@ -227,7 +227,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .sidebar { display: block; padding: 0; margin: calc(6 * var(--kp)) 0 0; border: 0; background: none; box-shadow: none; }
 :root[data-layout=kit] .app-shell .sidebar :is(.sidebar-heading, .sidebar-progress, .sidebar-bottom) { display: none; }
 :root[data-layout=kit] .app-shell .mode-list {
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; padding: calc(3 * var(--kp)) calc(4 * var(--kp));
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0; padding: calc(3 * var(--kp)) calc(4 * var(--kp)); /* every mode on one row */
   background: var(--k-list-bg); box-shadow: var(--k-sunken), 0 0 0 var(--kp) var(--k-edge-dark);
 }
 :root[data-layout=kit] .app-shell .mode-card {
@@ -1166,7 +1166,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 @media (max-width: 1179px) {
   :root[data-layout=kit] .app-shell:not(.session-focus-view) { max-width: calc(var(--deck-w) + 40px); }
   :root[data-layout=kit] .app-shell :is(.decks, .pro-track-pickers) { grid-template-columns: var(--deck-w); justify-content: center; }
-  :root[data-layout=kit] .app-shell .mode-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  :root[data-layout=kit] .app-shell .mode-list { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   :root[data-layout=kit] .app-shell .topbar { grid-template-columns: auto minmax(0, 1fr); height: auto; row-gap: calc(3 * var(--kp)); padding-bottom: calc(3 * var(--kp)); background-color: var(--k-frame); }
   :root[data-layout=kit] .app-shell .topbar > .brand { grid-column: 1; grid-row: 1; margin-top: calc(5 * var(--kp)); }
   :root[data-layout=kit] .app-shell .topbar-right { grid-column: 2; grid-row: 1; justify-self: end; margin: calc(5 * var(--kp)) 0 0; min-width: 0; }

@@ -53,6 +53,17 @@ export const SYMBOL_GLYPHS = {
   '◒': ['.###.', '#...#', '#####', '#####', '.###.'],
   '▥': ['#####', '#.#.#', '#.#.#', '#.#.#', '#####'],
   '⌨': ['#####', '#.#.#', '#####', '#...#', '#####'],
+  '★': ['..#..', '.###.', '#####', '.###.', '##.##'],
+  '📁': ['##...', '#####', '#...#', '#...#', '#####'],
+  '↰': ['.#...', '#####', '.#..#', '....#', '....#'],
+  '♪': ['..#..', '..##.', '..#.#', '###..', '###..'],
+  '◖': ['..###', '.####', '#####', '.####', '..###'],
+  '◗': ['###..', '####.', '#####', '####.', '###..'],
+  '│': ['..#..', '..#..', '..#..', '..#..', '..#..', '..#..'],
+  '╵': ['..#..', '..#..', '..#..', '.....', '.....'],
+  '☼': ['#.#.#', '.###.', '##.##', '.###.', '#.#.#'],
+  'ϟ': ['..##.', '.##..', '#####', '..##.', '.##..'],
+  '↟': ['..#..', '.#.#.', '..#..', '.#.#.', '..#..'],
 };
 export function symbolBits(rows, width = 5, height = 6) {
   const bits = new Uint8Array(width * height);
@@ -63,14 +74,14 @@ export function symbolBits(rows, width = 5, height = 6) {
 // glyphs: { char: Uint8Array(w*h) of 0/1 } — all cells share width × height. scale: how many cells
 // make one TEXT.BMP pixel (a smoothed 4× redraw of the lettering has 20 × 24 cells and scale 4).
 export function buildPixelFont(glyphs, { width = 5, height = 6, family = 'Kit Pixel', scale = 1 } = {}) {
-  const chars = Object.keys(glyphs).filter(c => c.length === 1 && c.codePointAt(0) <= 0xffff && c !== ' ');
+  const chars = Object.keys(glyphs).filter(c => [...c].length === 1 && c !== ' ');
   // Deduplicate identical bitmaps so upper/lower case share a glyph.
   const glyphIds = new Map(), shapes = [[]], keyToId = new Map();
   shapes.push([]); // 1: space
   for (const ch of chars) {
     const bits = glyphs[ch], key = Array.from(bits).join('');
     if (!keyToId.has(key)) { keyToId.set(key, shapes.length); shapes.push(rectangles(bits, width, height)); }
-    glyphIds.set(ch.charCodeAt(0), keyToId.get(key));
+    glyphIds.set(ch.codePointAt(0), keyToId.get(key));
   }
   glyphIds.set(32, 1); glyphIds.set(0xa0, 1);
   // The bottom row hangs below the baseline: TEXT.BMP letters stand on the row above it, as in
@@ -148,8 +159,10 @@ function hmtx(shapes, advance) {
   return new Uint8Array(view.buffer);
 }
 
+// Two maps: format 4 for the Basic Multilingual Plane, and format 12 for every character, so symbols
+// beyond it (📁) get their pixel glyphs too.
 function cmap(glyphIds) {
-  const codes = [...glyphIds.keys()].sort((a, b) => a - b);
+  const all = [...glyphIds.keys()].sort((a, b) => a - b), codes = all.filter(c => c <= 0xffff);
   const segs = codes.map(c => ({ start: c, end: c, delta: (glyphIds.get(c) - c) & 0xffff }));
   segs.push({ start: 0xffff, end: 0xffff, delta: 1 });
   const segCount = segs.length, sub = new DataView(new ArrayBuffer(16 + segCount * 8));
@@ -157,9 +170,14 @@ function cmap(glyphIds) {
   let o = 0; const u16 = v => { sub.setUint16(o, v); o += 2; };
   u16(4); u16(sub.byteLength); u16(0); u16(segCount * 2); u16(searchRange); u16(log); u16(segCount * 2 - searchRange);
   segs.forEach(s => u16(s.end)); u16(0); segs.forEach(s => u16(s.start)); segs.forEach(s => u16(s.delta)); segs.forEach(() => u16(0));
-  const header = new DataView(new ArrayBuffer(12));
-  header.setUint16(0, 0); header.setUint16(2, 1); header.setUint16(4, 3); header.setUint16(6, 1); header.setUint32(8, 12);
-  return concat([new Uint8Array(header.buffer), new Uint8Array(sub.buffer)]);
+  const full = new DataView(new ArrayBuffer(16 + all.length * 12));
+  full.setUint16(0, 12); full.setUint32(4, full.byteLength); full.setUint32(12, all.length);
+  all.forEach((c, i) => { full.setUint32(16 + i * 12, c); full.setUint32(20 + i * 12, c); full.setUint32(24 + i * 12, glyphIds.get(c)); });
+  const header = new DataView(new ArrayBuffer(20));
+  header.setUint16(0, 0); header.setUint16(2, 2);
+  header.setUint16(4, 3); header.setUint16(6, 1); header.setUint32(8, 20);
+  header.setUint16(12, 3); header.setUint16(14, 10); header.setUint32(16, 20 + sub.byteLength);
+  return concat([new Uint8Array(header.buffer), new Uint8Array(sub.buffer), new Uint8Array(full.buffer)]);
 }
 
 function head(advance, ascent, descent, em) {
