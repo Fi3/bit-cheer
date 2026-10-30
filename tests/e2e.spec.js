@@ -307,6 +307,10 @@ test('keyboard control: digits switch views, ` and Esc enter and leave Focus ses
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('group', { name: 'Deck A keys' })).toContainText('Tempo');
+  // Pitch leads the help, with the real step sizes of the decks' Wheel / keys setting.
+  await expect(dialog.locator('.help-column').first()).toContainText('Pitch: match the tempo');
+  await expect(dialog).toContainText('Down / up one step: 0.05%');
+  await expect(dialog).toContainText('Down / up ten steps: 0.5%');
   await expect(dialog).toContainText('Add an element to both decks');
   await page.keyboard.press('f');
   await page.waitForTimeout(150);

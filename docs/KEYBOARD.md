@@ -252,7 +252,7 @@ Lessons (Learning path) and drills (Training) run in the views above, so the sam
 
 ### 7.8 Keyboard help
 
-`?` opens a dialog with the three letter rows drawn as key caps in the skin's style (deck A, the mixer keys, deck B), the Shift and track-key meanings for the current view, and the other keys of the current view. In Focus session it lists only Focus session's keys and leaves the unused caps blank.
+`?` opens a dialog with the three letter rows drawn as key caps in the skin's style (deck A, the mixer keys, deck B), with the pitch row labelled. Below it, pitch comes first, because matching the tempo is what the app teaches: a **Pitch** list gives every pitch key with the real step sizes taken from each deck's Wheel / keys setting (for example "Down / up one step: 0.05%", or "A 0.05%, B 0.25%" when the decks differ), the Shift step, the arrows, pitch to 0 and holding. Then come the other deck keys (with the track key's meaning in this view) and the keys of the current view. In Focus session it lists only Focus session's keys and leaves the unused caps blank.
 
 While it is open, `Tab` and `Shift`+`Tab` move between its two buttons, `Space` / `Enter` press them, and `?` or `Esc` close it. On the practice page, closing returns the keyboard focus to the `?` button in the top bar.
 

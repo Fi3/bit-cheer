@@ -45,6 +45,10 @@
 .keycap strong{font:13px 'IBM Plex Mono',monospace;color:var(--accent)}
 .keycap small{font:7px 'IBM Plex Mono',monospace;text-transform:uppercase;color:var(--text);white-space:nowrap;min-height:9px}
 .keycap.is-idle{opacity:.4}
+.keycap,.key-legend-label{height:46px;justify-content:center}
+.key-block-title{line-height:12px;min-height:12px}
+.key-legend-label{display:flex;align-items:center;justify-content:flex-end;font:8px 'IBM Plex Mono',monospace;letter-spacing:1px;text-transform:uppercase;color:var(--accent);white-space:nowrap}
+.help-column h3.help-pitch-title{color:var(--accent)}
 .help-columns{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:0 28px}
 .help-column h3{font:8px 'IBM Plex Mono',monospace;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted)}
 .help-column .shortcut-list{margin:8px 0 18px}

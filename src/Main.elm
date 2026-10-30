@@ -3772,26 +3772,47 @@ helpView model =
         keyList entries =
             ul [ class "shortcut-list" ] (List.map (\( key, action ) -> li [] [ strong [] [ text key ], span [] [ text action ] ]) entries)
 
-        notes =
-            [ ( "Shift", "Finer: 0.01% pitch, a smaller nudge, 1% volume" )
-            , ( "−1 +1", "One step of the deck's Wheel / keys setting" )
-            , ( "Back Fwd", "Tap to nudge, hold to bend the speed" )
-            , ( "Shift Cue", "Save the cue here" )
+        -- One pitch step is each deck's Wheel / keys setting; show the real sizes.
+        percent multiple =
+            let
+                size sensitivity =
+                    String.fromFloat (toFloat (round (sensitivity * multiple * 100)) / 100) ++ "%"
+            in
+            if model.a.sensitivity == model.b.sensitivity then
+                size model.a.sensitivity
+
+            else
+                "A " ++ size model.a.sensitivity ++ ", B " ++ size model.b.sensitivity
+
+        pitchKeys =
+            [ ( "W E · I O", "Down / up one step: " ++ percent 1 ++ " (the deck's Wheel / keys setting)" )
+            , ( "Q R · U P", "Down / up ten steps: " ++ percent 10 )
+            , ( "↓ ↑", "Deck B down / up one step" )
+            , ( "Shift", "With any pitch key: 0.01%, the finest step" )
+            , ( "Z · /", "Back to 0%, the track's own tempo" )
+            , ( "Hold", "Keeps moving; past the fader's end the range widens" )
+            ]
+
+        deckKeys =
+            [ ( "F · J", "Play / pause" )
+            , ( "S D · K L", "Nudge back / forward. Hold to bend the speed" )
+            , ( "← →", "Deck B nudge back / forward" )
+            , ( "A · ;", "Back to the cue. Shift: save the cue here" )
+            , ( "X C · , .", "Volume down / up. Shift: 1%" )
             ]
                 ++ (if model.focused then
                         []
 
                     else if model.mode == "pro" then
-                        [ ( "Next", "Next track. Shift: previous track" ) ]
+                        [ ( "V · M", "Next track. Shift: previous track" ) ]
 
                     else
-                        [ ( "Tempo", "Randomize tempo. Shift: change track" ) ]
+                        [ ( "V · M", "Randomize tempo. Shift: change track" ) ]
                    )
 
         viewKeys =
             if model.focused then
                 [ ( "Space", "Play / pause both decks" )
-                , ( "↑ ↓ ← →", "Deck B: pitch and nudge" )
                 , ( "G H · Y", "Crossfader: hold to glide · center" )
                 , ( "` · Esc", "Leave Focus session" )
                 , ( "?", "Open or close this help" )
@@ -3799,7 +3820,6 @@ helpView model =
 
             else
                 [ ( "Space", "Play / pause both decks" )
-                , ( "↑ ↓ ← →", "Deck B: pitch and nudge" )
                 , ( "Enter"
                   , if starRunning model then
                         "Finish the run"
@@ -3841,7 +3861,7 @@ helpView model =
                 [ p [] [ text "Left hand plays deck A, right hand plays deck B, the mixer sits in between. Index fingers on F and J play. Match the tempo with pitch, then line up the beats with nudge." ]
                 , keyboardMap model
                 , div [ class "help-columns" ]
-                    [ div [ class "help-column" ] [ h3 [] [ text "Deck keys" ], keyList notes ]
+                    [ div [ class "help-column" ] [ h3 [ class "help-pitch-title" ] [ text "Pitch: match the tempo" ], keyList pitchKeys, h3 [] [ text "Deck keys" ], keyList deckKeys ]
                     , div [ class "help-column" ]
                         [ h3 []
                             [ text
@@ -3893,7 +3913,9 @@ keyboardMap model =
                 )
     in
     div [ class "keyboard-map" ]
-        [ block "Deck A" [ [ ( "Q", "−10" ), ( "W", "−1" ), ( "E", "+1" ), ( "R", "+10" ) ], [ ( "A", "Cue" ), ( "S", "Back" ), ( "D", "Fwd" ), ( "F", "Play" ) ], [ ( "Z", "0%" ), ( "X", "Vol−" ), ( "C", "Vol+" ), ( "V", track ) ] ]
+        [ div [ class "key-block key-legend", attribute "aria-hidden" "true" ]
+            [ small [ class "key-block-title" ] [], span [ class "key-legend-label" ] [ text "Pitch ▸" ], span [ class "key-legend-label" ] [], span [ class "key-legend-label" ] [] ]
+        , block "Deck A" [ [ ( "Q", "−10" ), ( "W", "−1" ), ( "E", "+1" ), ( "R", "+10" ) ], [ ( "A", "Cue" ), ( "S", "Back" ), ( "D", "Fwd" ), ( "F", "Play" ) ], [ ( "Z", "0%" ), ( "X", "Vol−" ), ( "C", "Vol+" ), ( "V", track ) ] ]
         , block "Mix" [ [ ( "T", only practice "Tap" ), ( "Y", "Mid" ) ], [ ( "G", "◀ A" ), ( "H", "B ▶" ) ], [ ( "B", only practice "BPM" ), ( "N", only practice "New" ) ] ]
         , block "Deck B" [ [ ( "U", "−10" ), ( "I", "−1" ), ( "O", "+1" ), ( "P", "+10" ) ], [ ( "J", "Play" ), ( "K", "Back" ), ( "L", "Fwd" ), ( ";", "Cue" ) ], [ ( "M", track ), ( ",", "Vol−" ), ( ".", "Vol+" ), ( "/", "0%" ) ] ]
         ]
