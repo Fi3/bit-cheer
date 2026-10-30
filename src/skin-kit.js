@@ -4,7 +4,7 @@
 // missing comes from the bundled base skin, and sprites outside a sheet stay transparent.
 import { buildPixelFont, TEXT_GLYPHS, SYMBOL_GLYPHS, symbolBits } from './pixel-font.js';
 
-export const KIT_VERSION = 6;
+export const KIT_VERSION = 7;
 export const KIT_SHEETS = ['main', 'titlebar', 'cbuttons', 'posbar', 'volume', 'balance', 'numbers', 'nums_ex', 'text', 'playpaus', 'monoster', 'shufrep', 'eqmain', 'pledit', 'genex'];
 // Sheets the live windows draw from at runtime (the rest only feed pieces and colors).
 export const LIVE_SHEETS = ['main', 'titlebar', 'cbuttons', 'posbar', 'volume', 'balance', 'numbers', 'nums_ex', 'text', 'playpaus', 'monoster', 'shufrep', 'eqmain'];
@@ -35,7 +35,7 @@ export const KIT_PARTS = {
   titleStrip: ['titlebar', 27, 0, 275, 14], titleStripI: ['titlebar', 27, 15, 275, 14],
   genBtn: ['genex', 0, 0, 47, 15], genBtnDown: ['genex', 0, 16, 47, 15],
 };
-export const KIT_PART_KEYS = [...Object.keys(KIT_PARTS), 'eqBars', 'volStrip', 'balStrip', 'deskGlow', 'plBEdge', 'plBlEdge', 'plBrEdge', 'shLm', 'jogPlatter', 'cbClean'];
+export const KIT_PART_KEYS = [...Object.keys(KIT_PARTS), 'eqBars', 'volStrip', 'balStrip', 'deskGlow', 'plBEdge', 'plBlEdge', 'plBrEdge', 'shLm', 'jogPlatter', 'cbClean', 'plTrPlain', 'plTrPlainI', 'plTrShade', 'plTrShadeI', 'plTrClose'];
 export const KIT_COLOR_KEYS = ['desk', 'deskLight', 'deskDim', 'listBg', 'listFg', 'listHi', 'listSel', 'listSelFg', 'listDim', 'lcdBg', 'lcdFg', 'lcdDim', 'num', 'numBg', 'numFg', 'numDim', 'face', 'faceLight', 'faceDark', 'faceText', 'accent', 'accentText', 'accentDim', 'frame', 'frameLight', 'frameDark', 'title', 'titleBg', 'titleDim'];
 const SAFE_FONTS = ['Arial', 'Arial Narrow', 'Tahoma', 'Verdana', 'Trebuchet MS', 'Courier New', 'Lucida Console', 'Lucida Sans Unicode', 'Georgia', 'Times New Roman', 'Comic Sans MS', 'Impact', 'Segoe UI', 'MS Sans Serif', 'Microsoft Sans Serif', 'Century Gothic', 'Franklin Gothic Medium', 'Palatino Linotype', 'Book Antiqua', 'Small Fonts', 'Terminal', 'Fixedsys'];
 const DEFAULT_VIS = ['#000000', '#181818', '#ef3110', '#ce2910', '#d65a00', '#d66600', '#d67300', '#c67b08', '#dea518', '#d6b521', '#bdde29', '#94de21', '#29ce10', '#32be10', '#39b510', '#319c08', '#298c10', '#188408', '#ffffff', '#d6d6de', '#adadc6', '#8c8ca5', '#6b6b8c', '#ffffff'];
@@ -111,6 +111,53 @@ function crop(sheet, x, y, w, h) {
   return c;
 }
 const url = canvas => canvas.toDataURL('image/png');
+
+// Winamp paints the playlist's shade and close buttons into its top-right corner, at fixed spots
+// (x 4–12 and 14–22, rows 3–11). This clears the ones listed in `drop`: with the title bar's own
+// pattern when the corner continues it (most skins), else with each row's color from the corner's
+// left edge (corners drawn as a picture of their own).
+function cornerWithout(corner, tile, drop) {
+  const W = 25, H = 20, out = document.createElement('canvas'); out.width = W; out.height = H;
+  const g = out.getContext('2d', { willReadFrequently: true }); g.drawImage(corner, 0, 0);
+  let c, t;
+  try { c = g.getImageData(0, 0, W, H); t = tile.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H); } catch { return out; }
+  if (!(c?.data?.length >= W * H * 4) || !(t?.data?.length >= W * H * 4)) return out; // test doubles: no pixels
+  const at = (img, x, y) => img.data.slice((y * W + x) * 4, (y * W + x) * 4 + 4);
+  let same = 0, n = 0;
+  for (let y = 1; y <= 13; y++) for (let x = 0; x <= 2; x++) { n++; if (distance(at(c, x, y), at(t, x, y)) <= 40) same++; }
+  const continues = same >= n * 0.85, spans = { shade: [3, 13], close: [13, 23] };
+  for (const name of drop) for (let y = 1; y <= 13; y++) for (let x = spans[name][0]; x < spans[name][1]; x++) {
+    c.data.set(continues ? at(t, x, y) : at(c, 1, y), (y * W + x) * 4);
+  }
+  g.putImageData(c, 0, 0);
+  return out;
+}
+
+// A generic button is drawn as a 9-slice, so its edges stretch along their length and any mark in
+// them (a stray pixel of the skin's label) would become a dash: each edge band takes its most common
+// cross-section all along, and the corners stay as drawn.
+function evenEdges(source, slice) {
+  const w = source.width, h = source.height, s = slice;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(source, 0, 0);
+  if (w <= 2 * s || h <= 2 * s) return c;
+  let img;
+  try { img = g.getImageData(0, 0, w, h); } catch { return c; }
+  if (!(img?.data?.length >= w * h * 4)) return c; // test doubles: no pixels
+  const d = new Uint32Array(img.data.buffer, img.data.byteOffset, w * h);
+  const even = (count, at) => {
+    const tally = new Map();
+    for (let i = 0; i < count; i++) { const key = Array.from({ length: s }, (_, k) => d[at(i, k)]).join(); tally.set(key, (tally.get(key) || 0) + 1); }
+    const best = [...tally].sort((a, b) => b[1] - a[1])[0][0].split(',').map(Number);
+    for (let i = 0; i < count; i++) for (let k = 0; k < s; k++) d[at(i, k)] = best[k];
+  };
+  even(w - 2 * s, (i, k) => k * w + s + i);
+  even(w - 2 * s, (i, k) => (h - 1 - k) * w + s + i);
+  even(h - 2 * s, (i, k) => (s + i) * w + k);
+  even(h - 2 * s, (i, k) => (s + i) * w + w - 1 - k);
+  g.putImageData(img, 0, 0);
+  return c;
+}
 
 // Most common colors in a set of rectangles, bucketed to 4 bits per channel.
 function histogram(sheet, rects) {
@@ -284,6 +331,15 @@ export async function buildKit(files, { fetchBase } = {}) {
     const ctx = c.getContext('2d'); ctx.translate(w, 0); ctx.scale(-1, 1); ctx.drawImage(crop(sheet, x, y, w, h), 0, 0);
     parts[key] = url(c);
   }
+  // Windows that can't fold or close wear the playlist corner without the buttons they can't honour.
+  if (sheets.pledit) {
+    for (const [suffix, y] of [['', 0], ['I', 21]]) {
+      const corner = crop(sheets.pledit, 153, y, 25, 20), tile = crop(sheets.pledit, 127, y, 25, 20);
+      parts[`plTrPlain${suffix}`] = url(cornerWithout(corner, tile, ['shade', 'close']));
+      parts[`plTrShade${suffix}`] = url(cornerWithout(corner, tile, ['close']));
+    }
+    parts.plTrClose = url(cornerWithout(crop(sheets.pledit, 153, 0, 25, 20), crop(sheets.pledit, 127, 0, 25, 20), ['shade']));
+  }
   // The playlist's bottom bar carries buttons; only its outer edge closes our windows.
   let bottomEdge = 6;
   if (sheets.pledit) {
@@ -314,17 +370,17 @@ export async function buildKit(files, { fetchBase } = {}) {
     const face = genexFace(sheets.genex), frame = playlistFrame(sheets.pledit), popup = menuPopupFace(sheets.pledit);
     genex = (frame && akin(face, frame)) || (popup && akin(face, popup));
   }
-  if (menu) { parts.genBtn = url(menu.up); parts.genBtnDown = url(menu.down); }
-  else if (!genex) { delete parts.genBtn; delete parts.genBtnDown; }
   const genSlice = menu ? 3 : genex ? measureButtonSlice(sheets.genex) : 3;
+  const genArt = menu ? { up: evenEdges(menu.up, genSlice), down: evenEdges(menu.down, genSlice), slice: genSlice }
+    : genex ? { up: evenEdges(crop(sheets.genex, 0, 0, 47, 15), genSlice), down: evenEdges(crop(sheets.genex, 0, 16, 47, 15), genSlice), slice: genSlice } : null;
+  if (genArt) { parts.genBtn = url(genArt.up); parts.genBtnDown = url(genArt.down); }
+  else { delete parts.genBtn; delete parts.genBtnDown; }
 
   const colors = derivePalette({ sheets, pledit, vis, menu, genex });
   const visColors = vis.length >= 18 ? vis : DEFAULT_VIS;
   // The console's transport: the skin's own buttons when they are whole buttons, else its icons (or clear
   // symbols) on its generic button. Fixed-size cuts can carry bits of window art (Garfield's teddy bear):
   // cleanTransport keeps only the part of each button that changes when pressed.
-  const genArt = menu ? { up: menu.up, down: menu.down, slice: genSlice }
-    : genex ? { up: crop(sheets.genex, 0, 0, 47, 15), down: crop(sheets.genex, 0, 16, 47, 15), slice: genSlice } : null;
   const transport = transportSheet(sheets, colors, genArt);
   if (transport) parts.cbClean = url(transport);
   // Sliders painted straight onto the main window's picture get a plain groove in the console.
@@ -751,7 +807,8 @@ function derivePalette({ sheets, pledit, vis, menu, genex }) {
 }
 
 // ---------- TEXT.BMP → font ----------
-function textFont(sheet) {
+// The skin's lettering as 5 × 6 bitmaps (plus the symbols TEXT.BMP lacks), or null for an empty sheet.
+function lettering(sheet) {
   const clusters = textClusters(sheet);
   if (!clusters) return null;
   const glyphs = {};
@@ -766,10 +823,20 @@ function textFont(sheet) {
   }
   if (lit < 80) return null; // an empty or broken text sheet
   for (const [ch, rows] of Object.entries(SYMBOL_GLYPHS)) glyphs[ch] = symbolBits(rows);
-  const ttf = buildPixelFont(glyphs, { family: 'Kit Pixel' });
+  return glyphs;
+}
+// The same, from any drawable (the kit's stored TEXT sheet), for the HD lettering.
+export const textGlyphs = drawable => lettering(new Sheet('text', drawable));
+
+export function fontDataUrl(ttf) {
   let binary = '';
   for (let i = 0; i < ttf.length; i += 32768) binary += String.fromCharCode(...ttf.subarray(i, i + 32768));
-  return { dataUrl: `data:font/ttf;base64,${btoa(binary)}` };
+  return `data:font/ttf;base64,${btoa(binary)}`;
+}
+
+function textFont(sheet) {
+  const glyphs = lettering(sheet);
+  return glyphs ? { dataUrl: fontDataUrl(buildPixelFont(glyphs, { family: 'Kit Pixel' })) } : null;
 }
 
 // ---------- preview: main window, equalizer and playlist, like the Skin Museum ----------
@@ -844,11 +911,23 @@ export function renderPreview(kit, pledit) {
   text('01:28', 125 + 71, y0 + 78 + 23);
   draw('pledit', 52, 53, 8, 18, 260, y0 + 20);
   const rows = [['1. Foundation', '1:04'], ['2. Loop builder', '2:08'], ['3. By ear', '3:16'], ['4. Pro decks', '4:00']];
+  // The entries in the skin's own lettering (as every word in the app is), in the playlist's colors;
+  // the playlist font from pledit.txt only when the skin has no usable lettering.
+  const glyphs = sheets.text ? lettering(sheets.text) : null;
   ctx.font = `9px ${pledit?.font ? `"${pledit.font}", ` : ''}Arial, sans-serif`; ctx.textBaseline = 'top';
+  const write = (str, x, y, right = false) => {
+    if (!glyphs) { ctx.fillText(str, right ? x - ctx.measureText(str).width : x, y + 1); return; }
+    const left = right ? x - str.length * 5 : x;
+    [...str].forEach((ch, i) => {
+      const bits = glyphs[ch] || glyphs[ch.toLowerCase()];
+      if (bits) for (let k = 0; k < 30; k++) if (bits[k]) ctx.fillRect(left + i * 5 + k % 5, y + 3 + Math.floor(k / 5), 1, 1);
+    });
+  };
   rows.forEach(([name, time], i) => {
     const y = y0 + 23 + i * 13;
     if (i === 2) { ctx.fillStyle = c.listSel; ctx.fillRect(12, y - 1, 243, 13); }
-    ctx.fillStyle = i === 0 ? c.listHi : c.listFg; ctx.fillText(name, 16, y + 1); ctx.fillText(time, 252 - ctx.measureText(time).width, y + 1);
+    ctx.fillStyle = i === 2 ? c.listSelFg || c.listFg : i === 0 ? c.listHi : c.listFg;
+    write(name, 16, y); write(time, 252, y, true);
   });
   return out.toDataURL('image/png');
 }

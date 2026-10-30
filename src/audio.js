@@ -18,7 +18,7 @@ export class AudioEngine {
     this.send = send; this.context = null; this.node = null; this.pending = null;
     this.state = [0, 1].map(i => ({ bpm: i ? 124 : 120, pitch: 0, playing: false, position: 0, beat: 0, peak: 0, duration: 32 * 60 / (i ? 124 : 120), elements: 1, seed: i + 1, source: 'generated', trackId: null, voices: newVoices(), solo: -1, name: i ? 'KICK STUDY · 02' : 'KICK STUDY · 01' }));
     this.waveforms = [generatedWaveform(1, 1), generatedWaveform(1, 2)];
-    this.crossfade = .5; this.masterVolume = .75; this.volumes = [.8, .8]; this.splitCue = false;
+    this.crossfade = .5; this.masterVolume = .75; this.volumes = [.8, .8]; this.balances = [0, 0]; this.splitCue = false;
     this.routing = { mode: 'mix', a: 0, b: 1 }; this.hardwareGraph = null;
     this.outputDevices = [{ id: 'default', label: 'System default' }]; this.outputChoiceVersion = 0; this.outputSwitch = null; this.outputListener = null;
     this.pendingLoads = new Map(); this.loadVersions = [0, 0]; this.loadSequence = 0;
@@ -199,7 +199,8 @@ export class AudioEngine {
       const hardware = this.routing.mode !== 'mix';
       const blend = hardware || this.splitCue ? 1 : i ? Math.sin(this.crossfade * Math.PI / 2) : Math.cos(this.crossfade * Math.PI / 2);
       this.gains[i].gain.setTargetAtTime(this.volumes[i] * blend, this.context.currentTime, .012);
-      this.panners[i].pan.setTargetAtTime(!hardware && this.splitCue ? (i ? 1 : -1) : 0, this.context.currentTime, .012);
+      // Split cue sends A hard left and B hard right; otherwise each deck sits where its balance puts it.
+      this.panners[i].pan.setTargetAtTime(hardware ? 0 : this.splitCue ? (i ? 1 : -1) : this.balances[i], this.context.currentTime, .012);
     }
     this.master.gain.setTargetAtTime(this.masterVolume, this.context.currentTime, .012);
     this.hardwareGraph?.setMasterVolume(this.masterVolume);
@@ -295,6 +296,8 @@ export class AudioEngine {
     await this.outputSwitch;
   }
 
+  // A deck's stereo balance, -1 (left) to 1 (right): the Winamp window's balance slider.
+  async balance(deck, value) { await this.ensure(); this.balances[deck ? 1 : 0] = clamp(Number(value) || 0, -1, 1); this.mix(); }
   async mixer(param, value) { await this.ensure(); if (param === 'crossfade') this.crossfade = clamp(value, 0, 1); if (param === 'master') this.masterVolume = clamp(value, 0, 1); if (param === 'splitCue') this.splitCue = !!value; this.mix(); }
 
 

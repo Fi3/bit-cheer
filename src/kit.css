@@ -45,18 +45,20 @@
     center, 0 0, 0 0;
   background-repeat: no-repeat;
   background-attachment: fixed;
-  font-family: var(--k-body-font);
+  font-family: var(--k-pixel);
   color: var(--k-list-fg);
 }
 :root[data-layout=kit] .app-shell {
   max-width: calc(var(--block) + 40px); margin: 0 auto; padding: 14px 20px 26px;
   border: 0; background: none; box-shadow: none; image-rendering: pixelated;
-  font-family: var(--k-body-font); color: var(--k-list-fg);
+  font-family: var(--k-pixel); color: var(--k-list-fg);
 }
 /* Older Millennium-only rules must not leak into the kit version of Millennium. */
 html:root[data-layout=kit] .app-shell:not(.session-focus-view) { background: none; }
 html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell :is(h1, h2, h3, p, small, span, strong, label) { text-shadow: none; }
+/* Every word is set in the skin's own lettering, which has a single weight: never smear it into a fake bold or italic. */
+:root[data-layout=kit] :is(.app-shell, .help-modal) { font-synthesis: none; }
 :root[data-layout=kit] .app-shell :is(button, a, input, select, [tabindex]):focus-visible { outline: var(--kp) solid var(--k-accent); outline-offset: var(--kp); }
 :root[data-layout=kit] ::selection { background: var(--k-list-sel); color: var(--k-list-sel-fg); }
 :root[data-layout=kit] .app-shell a { color: var(--k-accent); }
@@ -105,7 +107,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   .add-element-button, .lesson-button, .deck-add-element, .generate-pattern, .voice-solo, .help-button, .shortcut-link,
   .set-cue, .exit-focus-button, .load-track-button, .tap-button),
 :root[data-layout=kit][data-kit~=genBtn] .app-shell .pitch-fine > button, :root[data-layout=kit][data-kit~=genBtn] .app-shell .notice > button {
-  border: calc(var(--k-gen-slice, 3) * var(--kp)) solid transparent; border-image: var(--k-gen-btn) var(--k-gen-slice, 3) fill / calc(var(--k-gen-slice, 3) * var(--kp)) stretch; box-shadow: none; background: none;
+  border: calc(var(--k-gen-slice, 3) * var(--kp)) solid transparent; border-image: var(--k-gen-btn) var(--k-gen-slice-img, 3) fill / calc(var(--k-gen-slice, 3) * var(--kp)) stretch; box-shadow: none; background: none;
   padding: 0 calc(max(0, 5 - var(--k-gen-slice, 3)) * var(--kp)); min-height: calc(15 * var(--kp));
 }
 :root[data-layout=kit][data-kit~=genBtnDown] .app-shell :is(.primary-button, .secondary-button, .small-button, .text-button, .deck-action, .session-focus-button, .builder-invitation,
@@ -130,7 +132,33 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   background-size: calc(7 * var(--kp)) var(--kp), calc(5 * var(--kp)) var(--kp), calc(3 * var(--kp)) var(--kp), var(--kp) var(--kp);
   background-position: right calc(3 * var(--kp)) top calc(50% - 2 * var(--kp)), right calc(4 * var(--kp)) top calc(50% - var(--kp)), right calc(5 * var(--kp)) top 50%, right calc(6 * var(--kp)) top calc(50% + var(--kp));
 }
-:root[data-layout=kit] .app-shell select option { font-family: var(--k-body-font); text-transform: none; background: var(--k-list-bg); color: var(--k-list-fg); }
+:root[data-layout=kit] .app-shell select option { font-family: var(--k-pixel); text-transform: none; background: var(--k-list-bg); color: var(--k-list-fg); }
+/* The open list: a little playlist in the skin's colors, frame and lettering, the chosen entry lit,
+   the one under the pointer on the selection bar. Browsers that let a page draw a select's list
+   (customizable select) show it in full; the others show their own list in the skin's colors. */
+@supports (appearance: base-select) {
+  :root[data-layout=kit] .app-shell select, :root[data-layout=kit] .app-shell select::picker(select) { appearance: base-select; }
+  :root[data-layout=kit] .app-shell select::picker-icon { display: none; } /* the field draws its own arrow */
+  :root[data-layout=kit] .app-shell select:open { box-shadow: var(--k-sunken), 0 0 0 var(--kp) var(--k-accent); }
+  :root[data-layout=kit] .app-shell select::picker(select) {
+    margin: var(--kp) 0; padding: var(--kp); border: var(--kp) solid var(--k-edge-dark); border-radius: 0;
+    background: var(--k-list-bg); color: var(--k-list-fg); font: var(--k-text)/16px var(--k-pixel);
+    box-shadow: inset var(--kp) var(--kp) 0 color-mix(in srgb, var(--k-frame-light) 45%, transparent), 0 calc(3 * var(--kp)) 0 #0008;
+    max-height: min(60vh, calc(180 * var(--kp))); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--k-face) var(--k-list-bg);
+  }
+  :root[data-layout=kit] .app-shell select option {
+    display: flex; align-items: center; gap: calc(2 * var(--kp)); min-height: 16px; padding: var(--kp) calc(4 * var(--kp));
+    font: var(--k-text)/16px var(--k-pixel); text-transform: uppercase; white-space: nowrap;
+    background: transparent; color: var(--k-list-fg); border: 0; border-radius: 0; outline: 0; cursor: pointer;
+  }
+  :root[data-layout=kit] .app-shell select option::checkmark { content: '▸'; color: var(--k-list-hi); }
+  :root[data-layout=kit] .app-shell select option:not(:checked)::checkmark { visibility: hidden; }
+  :root[data-layout=kit] .app-shell select option:checked { color: var(--k-list-hi); }
+  :root[data-layout=kit] .app-shell select option:is(:hover, :focus-visible):not(:disabled) { background: var(--k-list-sel); color: var(--k-list-sel-fg); }
+  :root[data-layout=kit] .app-shell select option:is(:hover, :focus-visible):not(:disabled)::checkmark { color: var(--k-list-sel-fg); }
+  :root[data-layout=kit] .app-shell select option:disabled { color: var(--k-list-dim); cursor: default; }
+  :root[data-layout=kit] .app-shell select optgroup { font: var(--k-text)/16px var(--k-pixel); color: var(--k-list-dim); text-transform: uppercase; }
+}
 :root[data-layout=kit] .app-shell input[type=url]::placeholder { color: var(--k-lcd-dim); }
 
 /* Toggles light the skin's equalizer ON button. */
@@ -167,12 +195,13 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .eq-control input[type=range]::-moz-range-thumb { width: calc(11 * var(--kp)); height: calc(11 * var(--kp)); background-image: var(--k-eq-thumb); }
 
 /* ---------- top bar: a Winamp title bar across the app ---------- */
+:root[data-layout=kit] .skip-link { font: var(--k-text)/16px var(--k-pixel); }
 :root[data-layout=kit] .skip-link:not(:focus) { clip-path: inset(50%); opacity: 0; }
 :root[data-layout=kit] .app-shell .topbar {
   position: relative; height: calc(20 * var(--kp)); min-height: 0; padding: 0 calc(26 * var(--kp)) 0 calc(26 * var(--kp)); gap: calc(6 * var(--kp));
   display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center;
   border: 0; border-radius: 0; box-shadow: 0 calc(2 * var(--kp)) 0 #0006; color: var(--k-face-text);
-  background: var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat, var(--k-pl-tr) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+  background: var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat, var(--k-pl-tr-plain, var(--k-pl-tr)) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
     var(--k-pl-t) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x, var(--k-frame);
 }
 :root[data-layout=kit] .app-shell .brand { justify-self: start; gap: calc(3 * var(--kp)); padding: 0 calc(3 * var(--kp)); height: calc(10 * var(--kp)); background: var(--k-title-bg); box-shadow: 0 0 0 var(--kp) var(--k-title-bg); color: var(--k-title); }
@@ -209,15 +238,15 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 }
 :root[data-layout=kit] .app-shell .mode-card {
   display: flex; align-items: center; gap: calc(4 * var(--kp)); min-height: 0; padding: calc(3 * var(--kp)) calc(4 * var(--kp)); border: 0; border-radius: 0;
-  background: transparent; box-shadow: none; color: var(--k-list-fg); text-align: left; font-family: var(--k-body-font); filter: none;
+  background: transparent; box-shadow: none; color: var(--k-list-fg); text-align: left; font-family: var(--k-pixel); filter: none;
 }
 :root[data-layout=kit] .app-shell .mode-card:hover { background: color-mix(in srgb, var(--k-list-sel) 45%, transparent); filter: none; }
 :root[data-layout=kit] .app-shell .mode-card.selected { background: var(--k-list-sel); color: var(--k-list-sel-fg); border: 0; box-shadow: none; }
 :root[data-layout=kit] .app-shell .mode-number { color: inherit; opacity: .9; }
 :root[data-layout=kit] .app-shell .mode-copy { display: flex; flex-direction: column; gap: var(--kp); min-width: 0; }
-:root[data-layout=kit] .app-shell .mode-copy strong { font: 600 14px/1.15 var(--k-body-font); color: inherit; letter-spacing: 0; }
+:root[data-layout=kit] .app-shell .mode-copy strong { font: var(--k-text)/16px var(--k-pixel); color: inherit; letter-spacing: 0; }
 :root[data-layout=kit] .app-shell .mode-card.selected .mode-copy strong { color: var(--k-list-sel-fg); }
-:root[data-layout=kit] .app-shell .mode-copy small { font: 12px/1.2 var(--k-body-font); color: inherit; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:root[data-layout=kit] .app-shell .mode-copy small { font: var(--k-text)/16px var(--k-pixel); color: inherit; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 :root[data-layout=kit] .app-shell .mode-arrow { display: none; }
 :root[data-layout=kit] .app-shell .mode-card.selected :is(.mode-number, .mode-arrow) { color: var(--k-list-sel-fg); opacity: 1; }
 
@@ -225,7 +254,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .main-content { padding: calc(8 * var(--kp)) 0 0; max-width: none; }
 :root[data-layout=kit] .app-shell .notice {
   border: 0; border-radius: 0; margin: 0 0 calc(6 * var(--kp)); padding: calc(3 * var(--kp)) calc(5 * var(--kp)); gap: calc(6 * var(--kp));
-  background: var(--k-lcd-bg); color: var(--k-lcd-fg); box-shadow: var(--k-sunken), 0 0 0 var(--kp) var(--k-edge-dark); font: 13px/1.4 var(--k-body-font); text-transform: none;
+  background: var(--k-lcd-bg); color: var(--k-lcd-fg); box-shadow: var(--k-sunken), 0 0 0 var(--kp) var(--k-edge-dark); font: var(--k-text)/18px var(--k-pixel); text-transform: none;
 }
 :root[data-layout=kit] .app-shell .notice.error { color: var(--k-list-hi); }
 :root[data-layout=kit] .app-shell .notice button, :root[data-layout=kit][data-kit~=genBtn] .app-shell .notice > button { width: calc(10 * var(--kp)); height: calc(10 * var(--kp)); min-height: 0; padding: 0; flex: 0 0 auto; border: 0; border-image: none; background: var(--k-face); box-shadow: var(--k-bevel), 0 0 0 var(--kp) var(--k-edge-dark); }
@@ -238,7 +267,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   font: var(--k-text-big)/var(--k-text-big) var(--k-pixel); letter-spacing: 0; text-transform: uppercase; color: var(--k-accent);
   text-shadow: var(--kp) var(--kp) 0 color-mix(in srgb, var(--k-desk) 50%, #000); margin: 0 0 calc(4 * var(--kp));
 }
-:root[data-layout=kit] .app-shell .page-heading p { font: 14px/1.55 var(--k-body-font); color: var(--k-desk-dim); max-width: 640px; margin: 0; }
+:root[data-layout=kit] .app-shell .page-heading p { font: var(--k-text)/18px var(--k-pixel); color: var(--k-desk-dim); max-width: 640px; margin: 0; }
 :root[data-layout=kit] .app-shell .toolbar-actions { gap: calc(6 * var(--kp)); color: var(--k-list-fg); }
 :root[data-layout=kit] .app-shell .foundation-guide { display: flex; flex-wrap: wrap; align-items: center; gap: calc(3 * var(--kp)) calc(8 * var(--kp)); margin: 0; padding: 0; border: 0; background: none; box-shadow: none; }
 :root[data-layout=kit] .app-shell .foundation-step { display: inline-flex; align-items: center; gap: calc(3 * var(--kp)); padding: 0; border: 0; background: none; cursor: help; }
@@ -259,6 +288,8 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   display: block; position: relative; width: calc(275 * var(--kp)); height: calc(116 * var(--kp)); margin: 0; padding: 0; border: 0; background: none;
 }
 :root[data-layout=kit] .app-shell .winamp-live canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; cursor: default; animation: none; touch-action: none; }
+/* Windowshade (the title bar's shade button): the main window folds to its 14-pixel bar. */
+:root[data-layout=kit][data-main-shaded~=a] .app-shell .deck-a .winamp-live, :root[data-layout=kit][data-main-shaded~=b] .app-shell .deck-b .winamp-live { height: calc(14 * var(--kp)); }
 
 /* The console: a playlist window under the main window. */
 :root[data-layout=kit] .app-shell .deck-console {
@@ -268,7 +299,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   background:
     var(--k-pl-scroll) right calc(7 * var(--kp)) top calc(20 * var(--kp)) / calc(8 * var(--kp)) calc(18 * var(--kp)) no-repeat,
     var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
-    var(--k-pl-tr) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-tr-shade, var(--k-pl-tr)) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
     var(--k-pl-t) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x,
     var(--k-pl-l) left 0 top calc(20 * var(--kp)) / calc(12 * var(--kp)) calc(29 * var(--kp)) repeat-y,
     var(--k-pl-r) right 0 top calc(20 * var(--kp)) / calc(20 * var(--kp)) calc(29 * var(--kp)) repeat-y,
@@ -293,10 +324,10 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .console-shade::after { content: ''; position: absolute; inset: calc(-2 * var(--kp)); }
 :root[data-layout=kit] .app-shell .console-shade:active { background: var(--k-pl-shade-down) 0 0 / 100% 100% no-repeat; }
 :root[data-layout=kit] .app-shell .deck-console:hover, :root[data-layout=kit] .app-shell .deck-console:focus-within {
-  background-image: var(--k-pl-scroll-down, var(--k-pl-scroll)), var(--k-pl-tl), var(--k-pl-tr), var(--k-pl-t), var(--k-pl-l), var(--k-pl-r);
+  background-image: var(--k-pl-scroll-down, var(--k-pl-scroll)), var(--k-pl-tl), var(--k-pl-tr-shade, var(--k-pl-tr)), var(--k-pl-t), var(--k-pl-l), var(--k-pl-r);
 }
 :root[data-layout=kit] .app-shell .deck-console:not(:hover):not(:focus-within) {
-  background-image: var(--k-pl-scroll), var(--k-pl-tl-i, var(--k-pl-tl)), var(--k-pl-tr-i, var(--k-pl-tr)), var(--k-pl-t-i, var(--k-pl-t)), var(--k-pl-l), var(--k-pl-r);
+  background-image: var(--k-pl-scroll), var(--k-pl-tl-i, var(--k-pl-tl)), var(--k-pl-tr-shade-i, var(--k-pl-tr-i, var(--k-pl-tr))), var(--k-pl-t-i, var(--k-pl-t)), var(--k-pl-l), var(--k-pl-r);
 }
 /* Deck name sits in the title bar like the playlist's title. */
 :root[data-layout=kit] .app-shell .deck-heading {
@@ -355,8 +386,8 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 }
 :root[data-layout=kit] .app-shell .add-module-menu select { min-width: calc(92 * var(--kp)); }
 :root[data-layout=kit] .app-shell .composer-actions .instrument-selector, :root[data-layout=kit] .app-shell .external-discovery select { min-width: calc(92 * var(--kp)); }
-:root[data-layout=kit] .app-shell .add-module-menu small { font: 11px/1.3 var(--k-body-font); color: var(--k-list-dim); }
-:root[data-layout=kit] .app-shell .empty-deck { padding: calc(6 * var(--kp)); color: var(--k-list-fg); font: 13px var(--k-body-font); }
+:root[data-layout=kit] .app-shell .add-module-menu small { font: var(--k-text)/16px var(--k-pixel); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .empty-deck { padding: calc(6 * var(--kp)); color: var(--k-list-fg); font: var(--k-text)/14px var(--k-pixel); }
 
 /* The window's last row: the add-module menu, a skin field like the playlist's own. */
 :root[data-layout=kit] .app-shell :is(.deck-console, .session-modules) > .add-module-menu {
@@ -457,7 +488,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .nudge-controls button:hover:not(:disabled) { background-color: transparent; filter: brightness(1.12); }
 :root[data-layout=kit] .app-shell .deck-actions { display: flex; gap: calc(3 * var(--kp)); padding: 0; margin: 0; background: none; border: 0; box-shadow: none; }
 :root[data-layout=kit] .app-shell .deck-actions > .deck-action { flex: 1 1 auto; width: auto; min-width: 0; padding-left: calc(3 * var(--kp)); padding-right: calc(3 * var(--kp)); overflow: hidden; }
-:root[data-layout=kit] .app-shell .deck-action-hint { font: 11px/1.3 var(--k-body-font); color: var(--k-list-dim); margin: 0; }
+:root[data-layout=kit] .app-shell .deck-action-hint { font: var(--k-text)/16px var(--k-pixel); color: var(--k-list-dim); margin: 0; }
 
 /* Pitch: a zoomed equalizer slider. Its bar follows the pitch like an EQ band. */
 /* The pitch fader runs exactly beside the screen, transport and volume (whichever are there);
@@ -637,7 +668,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .loop-module .toggle-label input:checked + .toggle-track { background-image: var(--k-sheet-shufrep); background-position: 0 calc(-30 * var(--kp)); }
 :root[data-layout=kit] .app-shell .loop-module .toggle-label:active input + .toggle-track { background-image: var(--k-sheet-shufrep); background-position: 0 calc(-15 * var(--kp)); }
 :root[data-layout=kit] .app-shell .loop-module .toggle-label:active input:checked + .toggle-track { background-image: var(--k-sheet-shufrep); background-position: 0 calc(-45 * var(--kp)); }
-:root[data-layout=kit] .app-shell .loop-module small { font: 12px/1.3 var(--k-body-font); }
+:root[data-layout=kit] .app-shell .loop-module small { font: var(--k-text)/16px var(--k-pixel); }
 
 /* Waveform. */
 :root[data-layout=kit] .app-shell .waveform-module { display: grid; gap: calc(3 * var(--kp)); }
@@ -669,7 +700,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .jog-wheel { animation: none; }
 :root[data-layout=kit] .app-shell .jog-description { display: grid; gap: calc(2 * var(--kp)); }
 :root[data-layout=kit] .app-shell .jog-description strong { color: var(--k-list-hi); }
-:root[data-layout=kit] .app-shell .jog-description small { font: 12px/1.3 var(--k-body-font); }
+:root[data-layout=kit] .app-shell .jog-description small { font: var(--k-text)/16px var(--k-pixel); }
 
 /* Composer. */
 :root[data-layout=kit] .app-shell .element-panel { display: grid; gap: calc(4 * var(--kp)); padding: 0; background: none; border: 0; }
@@ -722,7 +753,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .step-button.current { outline: var(--kp) solid var(--k-list-hi); outline-offset: 0; z-index: 1; }
 :root[data-layout=kit] .app-shell .step-button:hover { filter: brightness(1.25); }
 :root[data-layout=kit] .app-shell .generate-pattern { padding-left: calc(3 * var(--kp)); padding-right: calc(3 * var(--kp)); }
-:root[data-layout=kit] .app-shell :is(.composer-help, .composer-empty) { font: 11px/1.3 var(--k-body-font); color: var(--k-list-dim); margin: 0; }
+:root[data-layout=kit] .app-shell :is(.composer-help, .composer-empty) { font: var(--k-text)/16px var(--k-pixel); color: var(--k-list-dim); margin: 0; }
 
 /* ---------- the session window ---------- */
 :root[data-layout=kit] .app-shell .session-modules {
@@ -730,14 +761,14 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   padding: calc(20 * var(--kp)) calc(20 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) calc(12 * var(--kp));
   background:
     var(--k-pl-tl-i, var(--k-pl-tl)) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
-    var(--k-pl-tr-i, var(--k-pl-tr)) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-tr-plain-i, var(--k-pl-tr-i, var(--k-pl-tr))) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
     var(--k-pl-t-i, var(--k-pl-t)) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x,
     var(--k-pl-l) left 0 top calc(20 * var(--kp)) / calc(12 * var(--kp)) calc(29 * var(--kp)) repeat-y,
     var(--k-pl-r) right 0 top calc(20 * var(--kp)) / calc(20 * var(--kp)) calc(29 * var(--kp)) repeat-y,
     var(--k-list-bg);
   box-shadow: 0 calc(3 * var(--kp)) 0 #0007;
 }
-:root[data-layout=kit] .app-shell .session-modules:is(:hover, :focus-within) { background-image: var(--k-pl-tl), var(--k-pl-tr), var(--k-pl-t), var(--k-pl-l), var(--k-pl-r); }
+:root[data-layout=kit] .app-shell .session-modules:is(:hover, :focus-within) { background-image: var(--k-pl-tl), var(--k-pl-tr-plain, var(--k-pl-tr)), var(--k-pl-t), var(--k-pl-l), var(--k-pl-r); }
 :root[data-layout=kit] .app-shell .session-modules::before {
   content: 'MIXER' / ''; position: absolute; top: calc(5 * var(--kp)); left: 50%; transform: translateX(-50%); padding: var(--kp) calc(3 * var(--kp));
   font: var(--k-text)/1 var(--k-pixel); color: var(--k-title); background: var(--k-title-bg); box-shadow: 0 0 0 var(--kp) var(--k-title-bg);
@@ -757,29 +788,29 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .panel-heading h2 { font: var(--k-text-big)/1 var(--k-pixel); text-transform: uppercase; color: var(--k-list-hi); letter-spacing: 0; }
 :root[data-layout=kit] .app-shell .coach-panel .panel-heading { margin-bottom: calc(3 * var(--kp)); }
 :root[data-layout=kit] .app-shell .coach-panel .panel-heading h2 { font-size: var(--k-text); line-height: var(--k-text); }
-:root[data-layout=kit] .app-shell .coach-instruction { margin: 0; font: 13px/1.5 var(--k-body-font); color: var(--k-list-fg); }
+:root[data-layout=kit] .app-shell .coach-instruction { margin: 0; font: var(--k-text)/18px var(--k-pixel); color: var(--k-list-fg); }
 :root[data-layout=kit] .app-shell .coach-bottom > .foundation-guide { margin-right: auto; }
-:root[data-layout=kit] .app-shell .coach-stats { font: 12px var(--k-body-font); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .coach-stats { font: var(--k-text)/14px var(--k-pixel); color: var(--k-list-dim); }
 :root[data-layout=kit] .app-shell .mini-badge { margin-left: auto; padding: var(--kp) calc(3 * var(--kp)); border: 0; border-radius: 0; background: var(--k-list-sel); color: var(--k-list-sel-fg); }
 :root[data-layout=kit] .app-shell .lesson-instruction { margin: 0 0 calc(4 * var(--kp)); padding: calc(3 * var(--kp)) calc(5 * var(--kp)); border: 0; border-radius: 0; background: var(--k-lcd-bg); color: var(--k-lcd-fg); box-shadow: var(--k-sunken); }
 :root[data-layout=kit] .app-shell .lesson-instruction strong { font: var(--k-text)/1.4 var(--k-pixel); text-transform: uppercase; color: var(--k-lcd-fg); }
-:root[data-layout=kit] .app-shell .lesson-instruction p { color: var(--k-lcd-dim); font: 13px/1.45 var(--k-body-font); }
+:root[data-layout=kit] .app-shell .lesson-instruction p { color: var(--k-lcd-dim); font: var(--k-text)/18px var(--k-pixel); }
 :root[data-layout=kit] .app-shell .player-module .panel-heading .mini-badge { display: none; }
 :root[data-layout=kit] .app-shell .coach-copy h3 { font: var(--k-text)/1.5 var(--k-pixel); text-transform: uppercase; color: var(--k-list-hi); margin: 0 0 calc(2 * var(--kp)); }
-:root[data-layout=kit] .app-shell .coach-copy p { font: 13px/1.5 var(--k-body-font); }
+:root[data-layout=kit] .app-shell .coach-copy p { font: var(--k-text)/18px var(--k-pixel); }
 :root[data-layout=kit] .app-shell .coach-bottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: calc(4 * var(--kp)) calc(6 * var(--kp)); margin-top: calc(5 * var(--kp)); padding: 0; border: 0; }
-:root[data-layout=kit] .app-shell .coach-bottom > span { font: 12px var(--k-body-font); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .coach-bottom > span { font: var(--k-text)/14px var(--k-pixel); color: var(--k-list-dim); }
 :root[data-layout=kit] .app-shell .match-result { display: flex; align-items: center; gap: calc(8 * var(--kp)); padding: calc(3 * var(--kp)); background: var(--k-lcd-bg); box-shadow: var(--k-sunken); border: 0; border-radius: 0; }
 :root[data-layout=kit] .app-shell .score-circle { display: grid; place-items: center; width: auto; height: auto; padding: calc(3 * var(--kp)) calc(5 * var(--kp)); border: 0; border-radius: 0; background: none; box-shadow: none; }
 :root[data-layout=kit] .app-shell .score-circle strong { font: 48px/1 var(--k-pixel); color: var(--k-num); }
 :root[data-layout=kit] .app-shell .score-circle small { color: var(--k-lcd-dim); }
 :root[data-layout=kit] .app-shell .match-result strong { color: var(--k-lcd-fg); }
 :root[data-layout=kit] .app-shell .match-result p, :root[data-layout=kit] .app-shell .match-result small { color: var(--k-lcd-fg); opacity: .85; }
-:root[data-layout=kit] .app-shell .match-result p { font: 13px/1.45 var(--k-body-font); }
-:root[data-layout=kit] .app-shell .match-result small { font: 12px/1.4 var(--k-body-font); }
-:root[data-layout=kit] .app-shell .match-result strong { font: 600 15px/1.3 var(--k-body-font); }
+:root[data-layout=kit] .app-shell .match-result p { font: var(--k-text)/18px var(--k-pixel); }
+:root[data-layout=kit] .app-shell .match-result small { font: var(--k-text)/18px var(--k-pixel); }
+:root[data-layout=kit] .app-shell .match-result strong { font: var(--k-text)/16px var(--k-pixel); }
 :root[data-layout=kit] .app-shell .mixer-monitor, :root[data-layout=kit] .app-shell .global-module-grid .mixer-monitor { display: flex; justify-content: flex-start; align-items: center; gap: calc(6 * var(--kp)); padding: calc(2 * var(--kp)) 0; background: none; border: 0; }
-:root[data-layout=kit] .app-shell .mixer-monitor small { font: 12px var(--k-body-font); }
+:root[data-layout=kit] .app-shell .mixer-monitor small { font: var(--k-text)/14px var(--k-pixel); }
 :root[data-layout=kit] .app-shell .tap-content { display: flex; gap: calc(6 * var(--kp)); align-items: stretch; }
 :root[data-layout=kit] .app-shell .tap-button { flex-direction: column; flex: 0 0 auto; min-width: calc(64 * var(--kp)); min-height: calc(30 * var(--kp)); padding-left: calc(6 * var(--kp)); padding-right: calc(6 * var(--kp)); }
 :root[data-layout=kit] .app-shell .tap-button strong { font: var(--k-text-big)/1 var(--k-pixel); color: inherit; }
@@ -787,20 +818,20 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .tap-readout { flex: 1; display: grid; align-content: center; gap: var(--kp); padding: calc(3 * var(--kp)) calc(5 * var(--kp)); border: 0; border-radius: 0; background: var(--k-lcd-bg); box-shadow: var(--k-sunken); color: var(--k-lcd-fg); }
 :root[data-layout=kit] .app-shell .tap-readout strong { font: 36px/1 var(--k-pixel); color: var(--k-num); }
 :root[data-layout=kit] .app-shell .tap-readout span { color: var(--k-lcd-dim); }
-:root[data-layout=kit] .app-shell .tap-readout small { font: 11px var(--k-body-font); color: var(--k-lcd-fg); opacity: .8; }
+:root[data-layout=kit] .app-shell .tap-readout small { font: var(--k-text)/14px var(--k-pixel); color: var(--k-lcd-fg); opacity: .8; }
 :root[data-layout=kit] .app-shell .mic-row { display: flex; align-items: center; gap: calc(5 * var(--kp)); margin-top: calc(4 * var(--kp)); }
-:root[data-layout=kit] .app-shell .mic-row small { font: 11px var(--k-body-font); }
+:root[data-layout=kit] .app-shell .mic-row small { font: var(--k-text)/14px var(--k-pixel); }
 :root[data-layout=kit] .app-shell .output-routing { padding: 0; border: 0; background: none; box-shadow: none; }
-:root[data-layout=kit] .app-shell .output-routing :is(p, small) { font: 12px/1.45 var(--k-body-font); max-width: 72ch; }
+:root[data-layout=kit] .app-shell .output-routing :is(p, small) { font: var(--k-text)/18px var(--k-pixel); max-width: 72ch; }
 :root[data-layout=kit] .app-shell .routing-control > span, :root[data-layout=kit] .app-shell .routing-heading small { font: var(--k-text)/1.2 var(--k-pixel); text-transform: uppercase; color: var(--k-list-dim); }
-:root[data-layout=kit] .app-shell .routing-status strong { font: 13px var(--k-body-font); color: var(--k-list-hi); }
-:root[data-layout=kit] .app-shell .external-discovery p { font: 12px/1.45 var(--k-body-font); }
+:root[data-layout=kit] .app-shell .routing-status strong { font: var(--k-text)/14px var(--k-pixel); color: var(--k-list-hi); }
+:root[data-layout=kit] .app-shell .external-discovery p { font: var(--k-text)/18px var(--k-pixel); }
 :root[data-layout=kit] .app-shell .reference-crate { padding: 0; margin: calc(4 * var(--kp)) 0 0; border: 0; background: none; }
 :root[data-layout=kit] .app-shell .reference-tracks { display: grid; gap: 0; background: var(--k-list-bg); }
 :root[data-layout=kit] .app-shell .reference-track { display: flex; gap: calc(4 * var(--kp)); align-items: baseline; padding: var(--kp) calc(3 * var(--kp)); border: 0; border-radius: 0; background: none; color: var(--k-list-fg); text-decoration: none; }
 :root[data-layout=kit] .app-shell .reference-track:hover { background: var(--k-list-sel); color: var(--k-list-sel-fg); }
-:root[data-layout=kit] .app-shell .reference-track strong { font: 13px var(--k-body-font); color: inherit; flex: 1; }
-:root[data-layout=kit] .app-shell .reference-track :is(small, span) { font: 11px var(--k-body-font); color: inherit; opacity: .75; }
+:root[data-layout=kit] .app-shell .reference-track strong { font: var(--k-text)/14px var(--k-pixel); color: inherit; flex: 1; }
+:root[data-layout=kit] .app-shell .reference-track :is(small, span) { font: var(--k-text)/14px var(--k-pixel); color: inherit; opacity: .75; }
 :root[data-layout=kit] .app-shell .crate-pagination { display: flex; align-items: center; justify-content: space-between; gap: calc(4 * var(--kp)); margin-top: calc(3 * var(--kp)); font: var(--k-text)/1 var(--k-pixel); }
 
 /* Pro track pickers: each one a playlist window. */
@@ -809,7 +840,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   padding: calc(20 * var(--kp)) calc(20 * var(--kp)) calc(var(--k-bottom-edge, 6) * var(--kp)) calc(12 * var(--kp));
   background:
     var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
-    var(--k-pl-tr) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-tr-plain, var(--k-pl-tr)) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
     var(--k-pl-t) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x,
     var(--k-pl-l) left 0 top calc(20 * var(--kp)) / calc(12 * var(--kp)) calc(29 * var(--kp)) repeat-y,
     var(--k-pl-r) right 0 top calc(20 * var(--kp)) / calc(20 * var(--kp)) calc(29 * var(--kp)) repeat-y,
@@ -831,12 +862,12 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .track-picker { display: grid; gap: calc(4 * var(--kp)); padding: 0; background: none; border: 0; }
 :root[data-layout=kit] .app-shell .track-picker label { display: grid; gap: calc(2 * var(--kp)); font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; color: var(--k-list-dim); }
 :root[data-layout=kit] .app-shell .track-picker select { width: 100%; }
-:root[data-layout=kit] .app-shell .library-count { font: 11px var(--k-body-font); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .library-count { font: var(--k-text)/14px var(--k-pixel); color: var(--k-list-dim); }
 :root[data-layout=kit] .app-shell .track-picker-actions { display: flex; flex-wrap: wrap; gap: calc(3 * var(--kp)); }
 :root[data-layout=kit] .app-shell .track-picker button { min-height: calc(12 * var(--kp)); font-size: var(--k-text); padding-top: 0; padding-bottom: 0; }
 :root[data-layout=kit] .app-shell .track-picker .picker-current, :root[data-layout=kit] .app-shell .picker-current {
   display: flex; gap: calc(4 * var(--kp)); align-items: baseline; padding: calc(2 * var(--kp)) calc(4 * var(--kp)); border: 0; border-radius: 0;
-  background: var(--k-list-sel); color: var(--k-list-sel-fg); font: 13px var(--k-body-font);
+  background: var(--k-list-sel); color: var(--k-list-sel-fg); font: var(--k-text)/14px var(--k-pixel);
 }
 :root[data-layout=kit] .app-shell .picker-current strong { font: var(--k-text)/1 var(--k-pixel); color: var(--k-list-hi); }
 :root[data-layout=kit] .app-shell .source-settings { display: flex; align-items: end; gap: calc(4 * var(--kp)); flex-wrap: wrap; }
@@ -853,7 +884,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 }
 :root[data-layout=kit] .app-shell .play-both-button:active { box-shadow: inset var(--kp) var(--kp) 0 color-mix(in srgb, var(--k-accent) 50%, #000), 0 0 0 var(--kp) var(--k-edge-dark); transform: translateY(var(--kp)); }
 :root[data-layout=kit] .app-shell .play-both-button small { font: var(--k-text)/var(--k-text) var(--k-pixel); height: calc(8 * var(--kp)); display: inline-flex; align-items: center; padding: 0 calc(2 * var(--kp)); background: color-mix(in srgb, var(--k-accent-text) 22%, transparent); color: inherit; border: 0; border-radius: 0; }
-:root[data-layout=kit] .app-shell .under-decks .muted { font: 12px var(--k-body-font); color: var(--k-desk-dim); }
+:root[data-layout=kit] .app-shell .under-decks .muted { font: var(--k-text)/14px var(--k-pixel); color: var(--k-desk-dim); }
 :root[data-layout=kit] .app-shell .footer { margin-top: calc(10 * var(--kp)); padding: calc(4 * var(--kp)) 0 0; border: 0; border-top: var(--kp) solid color-mix(in srgb, var(--k-list-fg) 14%, transparent); background: none; color: var(--k-desk-dim); }
 :root[data-layout=kit] .app-shell .footer a { color: var(--k-accent); font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; }
 :root[data-layout=kit] .app-shell .footer-separator { opacity: .5; padding: 0 calc(3 * var(--kp)); }
@@ -872,7 +903,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 }
 :root[data-layout=kit] .app-shell :is(.lesson-card, .drill-card, .history-panel, .skin-import-panel, .skin-card, .path-note, .track-library)::after { display: none; }
 :root[data-layout=kit] .app-shell :is(.lesson-card, .drill-card, .skin-import-panel, .path-note) :is(h2, h3) { font: var(--k-text)/1.5 var(--k-pixel); color: var(--k-list-hi); letter-spacing: 0; text-transform: uppercase; margin: 0 0 calc(2 * var(--kp)); }
-:root[data-layout=kit] .app-shell :is(.lesson-card, .drill-card, .history-panel, .skin-import-panel, .skin-card, .path-note) p { font: 13px/1.5 var(--k-body-font); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell :is(.lesson-card, .drill-card, .history-panel, .skin-import-panel, .skin-card, .path-note) p { font: var(--k-text)/18px var(--k-pixel); color: var(--k-list-dim); }
 /* Bar titles: the skin font on its own plate, like a shaded Winamp window. */
 :root[data-layout=kit] .app-shell :is(.lesson-top, .drill-card > .eyebrow, .history-panel > .section-heading, .skin-import-panel .eyebrow, .path-note > strong) {
   position: absolute; top: calc(3 * var(--kp)); left: calc(5 * var(--kp)); right: calc(25 * var(--kp)); margin: 0; z-index: 1;
@@ -929,7 +960,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .history-panel > .section-heading { display: flex; justify-content: space-between; align-items: center; height: calc(8 * var(--kp)); }
 :root[data-layout=kit] .app-shell .history-panel > .section-heading h2 { font: var(--k-text)/var(--k-text) var(--k-pixel); color: var(--k-title); background: var(--k-title-bg); padding: var(--kp) calc(3 * var(--kp)); text-transform: uppercase; }
 :root[data-layout=kit] .app-shell .history-panel > .section-heading .mini-badge { padding: var(--kp) calc(3 * var(--kp)); line-height: var(--k-text); background: var(--k-title-bg); color: var(--k-title-dim); }
-:root[data-layout=kit] .app-shell .empty-state { font: 13px var(--k-body-font); color: var(--k-list-fg); }
+:root[data-layout=kit] .app-shell .empty-state { font: var(--k-text)/14px var(--k-pixel); color: var(--k-list-fg); }
 :root[data-layout=kit] .app-shell .history-bars { display: flex; align-items: flex-end; gap: calc(4 * var(--kp)); padding: calc(4 * var(--kp)); background: var(--k-vis-0); box-shadow: var(--k-sunken); }
 :root[data-layout=kit] .app-shell .history-item { display: grid; justify-items: center; gap: calc(2 * var(--kp)); }
 :root[data-layout=kit] .app-shell .history-item strong { font: var(--k-text)/1 var(--k-pixel); color: var(--k-vis-18); }
@@ -943,7 +974,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   padding: calc(24 * var(--kp)) calc(24 * var(--kp)) calc(calc(var(--k-bottom-edge, 6) + 4) * var(--kp)) calc(16 * var(--kp)); border: 0; border-radius: 0;
   background:
     var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
-    var(--k-pl-tr) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-tr-plain, var(--k-pl-tr)) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
     var(--k-pl-t) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x,
     var(--k-pl-l) left 0 top calc(20 * var(--kp)) / calc(12 * var(--kp)) calc(29 * var(--kp)) repeat-y,
     var(--k-pl-r) right 0 top calc(20 * var(--kp)) / calc(20 * var(--kp)) calc(29 * var(--kp)) repeat-y,
@@ -962,7 +993,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .now-wearing-copy { display: grid; gap: calc(4 * var(--kp)); align-content: start; padding: 0; min-width: 0; }
 :root[data-layout=kit] .app-shell .active-skin { position: absolute; top: calc(5 * var(--kp)); left: 50%; transform: translateX(-50%); display: inline-flex; gap: calc(3 * var(--kp)); align-items: center; padding: var(--kp) calc(3 * var(--kp)); color: var(--k-title); background: var(--k-title-bg); box-shadow: 0 0 0 var(--kp) var(--k-title-bg); }
 :root[data-layout=kit] .app-shell .now-wearing h2 { font: var(--k-text-big)/1.2 var(--k-pixel); text-transform: uppercase; color: var(--k-list-hi); letter-spacing: 0; overflow-wrap: anywhere; }
-:root[data-layout=kit] .app-shell .now-wearing p { font: 14px/1.55 var(--k-body-font); color: var(--k-list-fg); max-width: 520px; }
+:root[data-layout=kit] .app-shell .now-wearing p { font: var(--k-text)/18px var(--k-pixel); color: var(--k-list-fg); max-width: 520px; }
 :root[data-layout=kit] .app-shell .now-wearing-link { font: var(--k-text)/1.4 var(--k-pixel); text-transform: uppercase; color: var(--k-list-hi); }
 :root[data-layout=kit] .app-shell .now-wearing .secondary-button { justify-self: start; }
 /* The skin's DNA: what the decks take from it. */
@@ -1000,36 +1031,36 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .skin-card-copy { display: grid; gap: var(--kp); padding: 0; background: none; }
 :root[data-layout=kit] .app-shell .skin-card-copy strong { position: absolute; top: calc(3 * var(--kp)); left: calc(5 * var(--kp)); font: var(--k-text)/var(--k-text) var(--k-pixel); text-transform: uppercase; color: var(--k-title); background: var(--k-title-bg); padding: var(--kp) calc(3 * var(--kp)); }
 :root[data-layout=kit] .app-shell .skin-card-copy span { font: var(--k-text)/1 var(--k-pixel); color: var(--k-list-hi); }
-:root[data-layout=kit] .app-shell .skin-card-copy p { font: 13px/1.4 var(--k-body-font); }
+:root[data-layout=kit] .app-shell .skin-card-copy p { font: var(--k-text)/18px var(--k-pixel); }
 :root[data-layout=kit] .app-shell .skin-import-panel { display: grid; gap: calc(4 * var(--kp)); margin: 0 0 calc(8 * var(--kp)); }
 :root[data-layout=kit] .app-shell .skin-import-panel:not(.skin-url-panel) { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
 :root[data-layout=kit] .app-shell .skin-import-icon { border: 0; background: var(--k-lcd-bg); box-shadow: var(--k-sunken); }
 :root[data-layout=kit] .app-shell .skin-import-actions { display: grid; gap: calc(3 * var(--kp)); }
-:root[data-layout=kit] .app-shell .skin-import-panel small { font: 12px/1.45 var(--k-body-font); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .skin-import-panel small { font: var(--k-text)/18px var(--k-pixel); color: var(--k-list-dim); }
 :root[data-layout=kit] .app-shell .skin-steps { display: grid; gap: calc(4 * var(--kp)); margin: 0; padding: 0; list-style: none; }
-:root[data-layout=kit] .app-shell .skin-step { display: flex; gap: calc(5 * var(--kp)); align-items: flex-start; font: 13px/1.5 var(--k-body-font); color: var(--k-list-fg); }
+:root[data-layout=kit] .app-shell .skin-step { display: flex; gap: calc(5 * var(--kp)); align-items: flex-start; font: var(--k-text)/18px var(--k-pixel); color: var(--k-list-fg); }
 :root[data-layout=kit] .app-shell .skin-step strong { color: var(--k-list-hi); }
 :root[data-layout=kit] .app-shell .skin-step-number { flex: 0 0 auto; display: grid; place-items: center; width: calc(10 * var(--kp)); height: calc(10 * var(--kp)); border: 0; border-radius: 0; background: var(--k-list-sel); color: var(--k-list-sel-fg); box-shadow: none; }
 :root[data-layout=kit] .app-shell .skin-url-example { display: block; margin-top: calc(2 * var(--kp)); padding: calc(2 * var(--kp)) calc(4 * var(--kp)); border: 0; border-radius: 0; background: var(--k-lcd-bg); color: var(--k-lcd-fg); box-shadow: var(--k-sunken); font: var(--k-text)/1.4 var(--k-pixel); text-transform: uppercase; overflow-wrap: anywhere; }
 :root[data-layout=kit] .app-shell .skin-url-form { display: flex; gap: calc(3 * var(--kp)); }
 :root[data-layout=kit] .app-shell .skin-url-input { flex: 1; min-width: 0; text-transform: none; }
-:root[data-layout=kit] .app-shell .skin-url-result { font: 12px/1.45 var(--k-body-font); color: var(--k-list-dim); }
+:root[data-layout=kit] .app-shell .skin-url-result { font: var(--k-text)/18px var(--k-pixel); color: var(--k-list-dim); }
 :root[data-layout=kit] .app-shell .skin-url-result.ok { color: var(--k-list-hi); }
 :root[data-layout=kit] .app-shell .skin-url-result.bad { color: var(--k-list-sel-fg); background: var(--k-list-sel); padding: calc(2 * var(--kp)) calc(4 * var(--kp)); box-shadow: 0 0 0 var(--kp) var(--k-edge-dark); }
 :root[data-layout=kit] .app-shell .skin-url-result:is(.ok, .bad)::before { content: '✓' / ''; font: var(--k-text)/1 var(--k-pixel); margin-right: calc(3 * var(--kp)); }
 :root[data-layout=kit] .app-shell .skin-url-result.bad::before { content: '✕' / ''; }
 :root[data-layout=kit] .app-shell .skin-url-result small { font: inherit; color: inherit; }
-:root[data-layout=kit] .app-shell .skin-attribution { font: 12px/1.5 var(--k-body-font); color: var(--k-desk-dim); }
+:root[data-layout=kit] .app-shell .skin-attribution { font: var(--k-text)/18px var(--k-pixel); color: var(--k-desk-dim); }
 :root[data-layout=kit] .app-shell .source-bpm input { width: calc(40 * var(--kp)); }
 
 /* Help dialog: a playlist window. */
 :root[data-layout=kit] .modal-backdrop { background: color-mix(in srgb, var(--k-desk) 70%, transparent); backdrop-filter: none; }
 :root[data-layout=kit] .help-modal {
-  position: relative; border: 0; border-radius: 0; color: var(--k-list-fg); font-family: var(--k-body-font); image-rendering: pixelated;
+  position: relative; border: 0; border-radius: 0; color: var(--k-list-fg); font-family: var(--k-pixel); image-rendering: pixelated;
   padding: calc(26 * var(--kp)) calc(26 * var(--kp)) calc(calc(var(--k-bottom-edge, 6) + 8) * var(--kp)) calc(18 * var(--kp));
   background:
     var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
-    var(--k-pl-tr) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-tr-close, var(--k-pl-tr)) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
     var(--k-pl-t) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x,
     var(--k-pl-l) left 0 top calc(20 * var(--kp)) / calc(12 * var(--kp)) calc(29 * var(--kp)) repeat-y,
     var(--k-pl-r) right 0 top calc(20 * var(--kp)) / calc(20 * var(--kp)) calc(29 * var(--kp)) repeat-y,
@@ -1047,11 +1078,11 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .help-modal h2 { font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; color: var(--k-title); background: var(--k-title-bg); padding: var(--kp) calc(3 * var(--kp)); box-shadow: 0 0 0 var(--kp) var(--k-title-bg); letter-spacing: 0; }
 :root[data-layout=kit] .help-modal #help-close { position: absolute; right: calc(-21 * var(--kp)); top: calc(3 * var(--kp)); width: calc(9 * var(--kp)); height: calc(9 * var(--kp)); min-height: 0; padding: 0; border: 0; border-image: none; background: transparent; box-shadow: none; font-size: 0; color: transparent; }
 :root[data-layout=kit] .help-modal #help-close:active { background: var(--k-pl-close-down) 0 0 / 100% 100% no-repeat; }
-:root[data-layout=kit] .help-modal p { font: 13px/1.55 var(--k-body-font); color: var(--k-list-fg); }
+:root[data-layout=kit] .help-modal p { font: var(--k-text)/18px var(--k-pixel); color: var(--k-list-fg); }
 :root[data-layout=kit] .help-modal .shortcut-list { display: grid; gap: 0; margin: calc(4 * var(--kp)) 0; padding: 0; list-style: none; background: var(--k-list-bg); }
-:root[data-layout=kit] .help-modal .shortcut-list li { display: flex; gap: calc(6 * var(--kp)); padding: var(--kp) calc(3 * var(--kp)); border: 0; font: 13px var(--k-body-font); color: var(--k-list-fg); }
+:root[data-layout=kit] .help-modal .shortcut-list li { display: flex; gap: calc(6 * var(--kp)); padding: var(--kp) calc(3 * var(--kp)); border: 0; font: var(--k-text)/16px var(--k-pixel); color: var(--k-list-fg); }
 :root[data-layout=kit] .help-modal .shortcut-list li:nth-child(odd) { background: color-mix(in srgb, var(--k-list-sel) 30%, transparent); }
-:root[data-layout=kit] .help-modal .shortcut-list strong { min-width: calc(40 * var(--kp)); font: var(--k-text)/1.4 var(--k-pixel); color: var(--k-list-hi); }
+:root[data-layout=kit] .help-modal .shortcut-list strong { min-width: calc(40 * var(--kp)); font: var(--k-text)/16px var(--k-pixel); color: var(--k-list-hi); }
 :root[data-layout=kit] .help-modal .primary-button {
   font-family: var(--k-pixel); font-size: var(--k-text); text-transform: uppercase; color: var(--k-face-text); background: var(--k-face); border: 0; border-radius: 0;
   box-shadow: var(--k-bevel), 0 0 0 var(--kp) var(--k-edge-dark); padding: calc(3 * var(--kp)) calc(6 * var(--kp));
@@ -1070,7 +1101,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .session-focus-view .focus-toolbar {
   position: relative; display: flex; align-items: center; justify-content: space-between; gap: calc(6 * var(--kp)); height: calc(20 * var(--kp)); min-height: 0; margin: 0;
   padding: 0 calc(26 * var(--kp)); border: 0; border-radius: 0; box-shadow: 0 calc(2 * var(--kp)) 0 #0006;
-  background: var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat, var(--k-pl-tr) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+  background: var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat, var(--k-pl-tr-plain, var(--k-pl-tr)) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
     var(--k-pl-t) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x, var(--k-frame);
 }
 :root[data-layout=kit] .session-focus-view .focus-toolbar h1, :root[data-layout=kit] .session-focus-view .focus-toolbar small {
@@ -1083,7 +1114,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   padding: calc(24 * var(--kp)) calc(24 * var(--kp)) calc(calc(var(--k-bottom-edge, 6) + 6) * var(--kp)) calc(16 * var(--kp));
   background:
     var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
-    var(--k-pl-tr) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
+    var(--k-pl-tr-plain, var(--k-pl-tr)) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
     var(--k-pl-t) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x,
     var(--k-pl-l) left 0 top calc(20 * var(--kp)) / calc(12 * var(--kp)) calc(29 * var(--kp)) repeat-y,
     var(--k-pl-r) right 0 top calc(20 * var(--kp)) / calc(20 * var(--kp)) calc(29 * var(--kp)) repeat-y,
@@ -1128,7 +1159,7 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .session-focus-view .pitch-ticks { left: auto; right: calc((14 * var(--pz) + 4) * var(--kp)); align-items: flex-end; font: var(--k-text)/1 var(--k-pixel); color: var(--k-list-fg); }
 :root[data-layout=kit] .session-focus-view .pitch-value { font-size: var(--k-text-big); line-height: 1; padding: calc(3 * var(--kp)) 0; }
 :root[data-layout=kit] .session-focus-view .pitch-fine button { width: auto; flex: 1; padding: calc(2 * var(--kp)) 0; }
-:root[data-layout=kit] .session-focus-view .pitch-wheel-hint { font: 11px/1.4 var(--k-body-font); color: var(--k-list-dim); text-align: left; }
+:root[data-layout=kit] .session-focus-view .pitch-wheel-hint { font: var(--k-text)/18px var(--k-pixel); color: var(--k-list-dim); text-align: left; }
 :root[data-layout=kit] .session-focus-view .deck-volume-row { margin-top: auto; padding: calc(3 * var(--kp)) 0 0; width: 100%; max-width: none; border: 0; background: none; }
 :root[data-layout=kit] .session-focus-view .deck-volume-row > label { display: flex; flex-direction: row; align-items: center; font: var(--k-text)/1 var(--k-pixel); }
 :root[data-layout=kit] .session-focus-view .deck-volume-row input { margin: 0 0 0 auto; width: calc(68 * var(--kp)); }
@@ -1202,3 +1233,23 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   :root[data-layout=kit] .app-shell .main-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); justify-items: center; }
   :root[data-layout=kit] .app-shell .nav-item { padding: 0 calc(2 * var(--kp)); }
 }
+
+/* ---------- the look: original pixels, comfort, comfort + HD (skin-enhance.js) ---------- */
+:root[data-layout=kit] .app-shell .look-picker { display: flex; flex-wrap: wrap; align-items: center; gap: calc(3 * var(--kp)); margin: calc(4 * var(--kp)) 0 0; }
+:root[data-layout=kit] .app-shell .look-label { margin-right: calc(2 * var(--kp)); color: var(--k-list-dim); font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; }
+:root[data-layout=kit] .app-shell .look-option.selected { box-shadow: var(--k-bevel-in), 0 0 0 var(--kp) var(--k-edge-dark); background-color: var(--k-list-sel); color: var(--k-list-sel-fg); }
+:root[data-layout=kit][data-kit~=genBtn] .app-shell .look-option.selected { border-image-source: var(--k-gen-btn-down); }
+/* Opening the page with Comfort or HD chosen: it fades in once that look is ready (main.js), and the
+   desk behind it eases into the look's color. */
+:root[data-layout=kit], :root[data-layout=kit] body { transition: background-color .16s ease-out; }
+:root[data-layout=kit] .app-shell { transition: opacity .16s ease-out; }
+:root[data-layout=kit][data-render=preparing] .app-shell { opacity: 0; transition: none; }
+@media (prefers-reduced-motion: reduce) { :root[data-layout=kit], :root[data-layout=kit] body, :root[data-layout=kit] .app-shell { transition: none; } }
+/* The HD look hands over images four times finer than the skin pixels they cover: the browser scales
+   them smoothly (on a 2× screen they land pixel for pixel). */
+:root[data-layout=kit][data-render=hd] .app-shell,
+:root[data-layout=kit][data-render=hd] .app-shell *,
+:root[data-layout=kit][data-render=hd] .app-shell *::before,
+:root[data-layout=kit][data-render=hd] .app-shell *::after { image-rendering: auto !important; }
+/* The skin pictures in Skin studio are the skin as Winamp shows it, at its own pixels in every look. */
+:root[data-layout=kit][data-render=hd] .app-shell :is(.now-wearing-image, .skin-card .skin-preview img) { image-rendering: pixelated !important; }

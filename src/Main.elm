@@ -116,7 +116,7 @@ type alias ModuleLayout =
 
 
 type alias Flags =
-    { basePath : String, kit : Bool }
+    { basePath : String, kit : Bool, render : String }
 
 
 type alias Model =
@@ -145,6 +145,7 @@ type alias Model =
     , skinPreview : String
     , skinSource : String
     , skinKit : Bool
+    , renderMode : String
     , skinUrl : String
     , skinUrlLoading : Bool
     , skinUrlResult : Maybe ( Bool, String )
@@ -229,6 +230,7 @@ type Msg
     | Genre String
     | ReferencePage Int
     | SelectSkin String String
+    | SetRender String
     | ImportSkin
     | ExportSkin
     | SkinUrlInput String
@@ -283,6 +285,7 @@ init flags =
       , skinPreview = ""
       , skinSource = ""
       , skinKit = flags.kit
+      , renderMode = flags.render
       , skinUrl = ""
       , skinUrlLoading = False
       , skinUrlResult = Nothing
@@ -804,6 +807,9 @@ update msg model =
         SelectSkin skin name ->
             ( { model | skin = skin, skinName = name }, send "skin" [ ( "id", E.string skin ) ] )
 
+        SetRender mode ->
+            ( { model | renderMode = mode }, send "render" [ ( "mode", E.string mode ) ] )
+
         ImportSkin ->
             ( model, send "importSkin" [] )
 
@@ -1257,6 +1263,9 @@ receive data model =
 
         "mic" ->
             ( { model | micBpm = field "bpm" D.float 0 data, micActive = field "active" D.bool False data }, Cmd.none )
+
+        "render" ->
+            ( { model | renderMode = field "mode" D.string model.renderMode data }, Cmd.none )
 
         "skin" ->
             ( { model | skin = field "id" D.string model.skin data, skinName = field "name" D.string model.skinName data, skinPreview = field "preview" D.string "" data, skinSource = field "source" D.string "" data, skinKit = field "kit" D.bool False data }, Cmd.none )
@@ -3404,12 +3413,47 @@ nowWearing model =
               else
                 text ""
             , if model.skinKit then
+                lookPicker model.renderMode
+
+              else
+                text ""
+            , if model.skinKit then
                 skinDna
 
               else
                 text ""
             ]
         ]
+
+
+{-| How Winamp skins are drawn: the author's original pixels, "comfort" (gentler contrast, saturation and
+textures) or comfort plus HD (pixel art redrawn 4× finer and smooth lettering). Every skin, automatically.
+-}
+lookPicker : String -> Html Msg
+lookPicker current =
+    div [ class "look-picker", attribute "role" "group", attribute "aria-label" "Skin look" ]
+        (span [ class "look-label" ] [ text "LOOK" ]
+            :: List.map
+                (\( mode, name, hint ) ->
+                    button
+                        [ classList [ ( "small-button", True ), ( "look-option", True ), ( "selected", mode == current ) ]
+                        , onClick (SetRender mode)
+                        , attribute "aria-pressed"
+                            (if mode == current then
+                                "true"
+
+                             else
+                                "false"
+                            )
+                        , title hint
+                        ]
+                        [ text name ]
+                )
+                [ ( "original", "Original pixels", "Exactly as the skin's author drew it" )
+                , ( "comfort", "Comfort", "Gentler contrast, saturation and textures, same pixels" )
+                , ( "hd", "Comfort + HD", "Gentler colors, pixel art redrawn 4× finer, smooth lettering" )
+                ]
+        )
 
 
 {-| What the decks take from a Winamp skin: its colors, lettering, digits and analyser colors.
@@ -3435,7 +3479,7 @@ skinDna =
 
 exampleSkinUrl : String
 exampleSkinUrl =
-    "https://skins.webamp.org/skin/5ea2d974dad5507b83a6ddff7003a8ee/Yufo06.wsz"
+    "https://skins.webamp.org/skin/f240348986b9e19578b033d639b263e5/Excel_Saga.wsz"
 
 
 skinsView : Model -> Html Msg

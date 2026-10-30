@@ -253,6 +253,25 @@ function windowButton(c, x, y, kind, pressed) {
   if (kind === 'close') for (let k = 0; k < 5; k++) { c.set(x + 2 + k, y + 2 + k, ink); c.set(x + 6 - k, y + 2 + k, ink); }
   if (kind === 'menu') { c.rect(x + 2, y + 2, 5, 1, ink); c.rect(x + 2, y + 4, 3, 1, ink); c.rect(x + 2, y + 6, 4, 1, ink); }
 }
+// Winamp's windowshade bar (275 × 14): the title chrome with a mini analyser window, the time display
+// (digits drawn at 130/135 and 145/150), a mini transport and the position groove, where Winamp puts them.
+function shadeStrip(dull = false) {
+  const c = canvas(275, 14), ink = dull ? '#4a5b72' : P.ink;
+  vgrad(c, 0, 0, 275, 14, dull ? CHROME_DULL : [[0, '#e9f1f9'], [0.5, '#b4c4d6'], [1, '#97a9be']]);
+  for (let i = 0; i < 275; i++) { c.set(i, 0, '#ffffff'); c.set(i, 13, '#55667c'); }
+  for (let x = 18; x < 75; x++) { const fade = Math.max(0.25, 1 - (x - 18) / 80); for (const row of [4, 8]) { c.set(x, row, [6, 14, 30, Math.round(200 * fade)]); c.set(x, row + 1, [255, 255, 255, Math.round(150 * fade)]); } }
+  sunken(c, 78, 4, 40, 7, dull ? '#202a3a' : P.lcd);
+  sunken(c, 123, 2, 34, 10, dull ? '#202a3a' : P.lcd);
+  c.set(141, 5, P.frost); c.set(141, 8, P.frost);
+  const icon = (x, rows) => rows.forEach((row, j) => [...row].forEach((px, i) => { if (px === '#') c.set(x + i, 3 + j, ink); }));
+  icon(170, ['#..#', '#.##', '####', '####', '#.##', '#..#']);  // previous
+  icon(178, ['#...', '##..', '###.', '###.', '##..', '#...']);  // play
+  icon(188, ['##.##', '##.##', '##.##', '##.##', '##.##', '##.##']); // pause
+  icon(198, ['.....', '#####', '#####', '#####', '#####', '.....']); // stop
+  icon(207, ['#..#', '##.#', '####', '####', '##.#', '#..#']);  // next
+  icon(217, ['..#..', '.###.', '#####', '.....', '#####', '.....']); // eject
+  return c;
+}
 function titlebar() {
   const c = canvas(344, 87);
   c.rect(0, 0, 344, 87, '#8a9bb0');
@@ -262,7 +281,10 @@ function titlebar() {
   windowButton(c, 0, 18, 'shade', false); windowButton(c, 9, 18, 'shade', true);
   windowButton(c, 0, 27, 'unshade', false); windowButton(c, 9, 27, 'unshade', true);
   const active = titleStrip(false), inactive = titleStrip(true);
-  for (const [strip, y] of [[active, 0], [inactive, 15], [active, 29], [inactive, 42], [active, 57], [inactive, 72]]) c.blit(strip, 0, 0, 275, 14, 27, y);
+  for (const [strip, y] of [[active, 0], [inactive, 15], [shadeStrip(false), 29], [shadeStrip(true), 42], [active, 57], [inactive, 72]]) c.blit(strip, 0, 0, 275, 14, 27, y);
+  // The windowshade position groove and its thumb (at the start, in between, at the end).
+  sunken(c, 0, 36, 17, 7);
+  for (const x of [17, 20, 23]) { vgrad(c, x, 36, 3, 7, CHROME); c.set(x, 36, P.edge); c.set(x, 42, P.edge); }
   // Clutter bar: O A I D V in a slim recessed column, plus its disabled look.
   for (const [x, dim] of [[304, false], [312, true]]) {
     sunken(c, x, 0, 8, 43, dim ? '#3a4a60' : P.navy);

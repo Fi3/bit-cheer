@@ -112,6 +112,9 @@ function numberWidth(bitmap) {
 // ---------- classic Winamp 2 skins (.wsz) ----------
 // The archive becomes a "kit" (see skin-kit.js): pieces, palette, font and window shape.
 const IMAGE_PNG = /^data:image\/png;base64,[a-zA-Z0-9+/=]+$/;
+// Images the look settings prepare on this page (skin-enhance.js): blob URLs of this origin only.
+const ownBlob = v => typeof v === 'string' && typeof location !== 'undefined' && v.startsWith(`blob:${location.origin}/`) && /^blob:[^\s"'()\\]+$/.test(v);
+const kitImage = v => typeof v === 'string' && (IMAGE_PNG.test(v) || ownBlob(v));
 const FONT_DATA = /^data:font\/ttf;base64,[a-zA-Z0-9+/=]+$/;
 export { contrast } from './skin-kit.js';
 
@@ -178,7 +181,7 @@ export async function importSkin(file) {
 }
 
 // Accepts a Winamp Skin Museum link, e.g.
-// https://skins.webamp.org/skin/5ea2d974dad5507b83a6ddff7003a8ee/Yufo06.wsz
+// https://skins.webamp.org/skin/f240348986b9e19578b033d639b263e5/Excel_Saga.wsz
 // The museum page itself is HTML, so we download the .wsz from its file server.
 const MUSEUM_FILES = 'https://r2.webampskins.org/skins/';
 export function museumSkinUrl(input) {
@@ -186,7 +189,7 @@ export function museumSkinUrl(input) {
   try { url = new URL(String(input).trim()); } catch { throw new Error('That doesn’t look like a link. Copy the full address from skins.webamp.org and paste it here.'); }
   const md5 = url.pathname.match(/[a-f0-9]{32}/i)?.[0]?.toLowerCase();
   const museum = /(^|\.)webamp\.org$|(^|\.)webampskins\.org$/i.test(url.hostname);
-  if (!museum || !md5) throw new Error('Paste a skin link from skins.webamp.org, like https://skins.webamp.org/skin/5ea2d974dad5507b83a6ddff7003a8ee/Yufo06.wsz');
+  if (!museum || !md5) throw new Error('Paste a skin link from skins.webamp.org, like https://skins.webamp.org/skin/f240348986b9e19578b033d639b263e5/Excel_Saga.wsz');
   const name = decodeURIComponent(url.pathname.split('/').filter(Boolean).at(-1) || '');
   return { download: `${MUSEUM_FILES}${md5}.wsz`, filename: /\.wsz$/i.test(name) ? name : `${md5}.wsz` };
 }
@@ -266,21 +269,26 @@ function applyKit(root, kit) {
   (Array.isArray(kit.vis) ? kit.vis : []).slice(0, 24).forEach((color, i) => { vars[`--k-vis-${i}`] = HEX_COLOR.test(color) ? color : '#00ff00'; });
   const present = [];
   for (const key of KIT_PART_KEYS) {
-    const value = kit.parts?.[key], ok = typeof value === 'string' && IMAGE_PNG.test(value);
+    const value = kit.parts?.[key], ok = kitImage(value);
     if (ok) present.push(key);
     vars[`--k-${kebab(key)}`] = ok ? `url("${value}")` : 'none';
   }
   for (const name of KIT_SHEET_NAMES) {
-    const value = kit.sheets?.[name], ok = typeof value === 'string' && IMAGE_PNG.test(value);
+    const value = kit.sheets?.[name], ok = kitImage(value);
     if (ok) present.push(`sheet-${name}`);
     vars[`--k-sheet-${kebab(name)}`] = ok ? `url("${value}")` : 'none';
   }
   // Kits from before the cleaned transport sheet keep the plain one.
   if (vars['--k-cb-clean'] === 'none') vars['--k-cb-clean'] = vars['--k-sheet-cbuttons'];
+  // Window corners without the buttons a window can't honour fall back to the skin's own corner.
+  const corner = vars['--k-pl-tr'], cornerI = vars['--k-pl-tr-i'] !== 'none' ? vars['--k-pl-tr-i'] : corner;
+  for (const [key, fallback] of [['--k-pl-tr-plain', corner], ['--k-pl-tr-shade', corner], ['--k-pl-tr-close', corner], ['--k-pl-tr-plain-i', cornerI], ['--k-pl-tr-shade-i', cornerI]]) if (vars[key] === 'none') vars[key] = fallback;
   vars['--k-numbers-w'] = kit.numbersWidth === 108 ? '108' : '99';
   vars['--k-gen-slice'] = String(Number.isInteger(kit.genSlice) && kit.genSlice >= 2 && kit.genSlice <= 8 ? kit.genSlice : 3);
+  // The 9-slice cut is measured in image pixels: finer (HD) images need a proportionally deeper cut.
+  vars['--k-gen-slice-img'] = String(Number(vars['--k-gen-slice']) * ([1, 2, 3, 4].includes(kit.scale) ? kit.scale : 1));
   vars['--k-bottom-edge'] = String(Number.isInteger(kit.bottomEdge) && kit.bottomEdge >= 2 && kit.bottomEdge <= 14 ? kit.bottomEdge : 6);
-  vars['--k-number-sheet'] = kit.sheets?.numbers && IMAGE_PNG.test(kit.sheets.numbers) ? `url("${kit.sheets.numbers}")` : kit.sheets?.nums_ex && IMAGE_PNG.test(kit.sheets.nums_ex) ? `url("${kit.sheets.nums_ex}")` : 'none';
+  vars['--k-number-sheet'] = kitImage(kit.sheets?.numbers) ? `url("${kit.sheets.numbers}")` : kitImage(kit.sheets?.nums_ex) ? `url("${kit.sheets.nums_ex}")` : 'none';
   const font = typeof kit.bodyFont === 'string' && /^[A-Za-z ]{2,40}$/.test(kit.bodyFont) ? `"${kit.bodyFont}", ` : '';
   vars['--k-body-font'] = `${font}Tahoma, Verdana, "DM Sans", Arial, sans-serif`;
   writeKitVars(root, vars);
@@ -310,6 +318,7 @@ export function applySkin(id, custom = null) {
     root.style.setProperty(`--skin-${key}`, urls[key]);
   }
   root.dataset.artwork = artwork.join(' ');
+  root.dataset.render = 'original';
   if (kit) applyKit(root, kit);
   else { writeKitVars(root, null); root.dataset.kit = ''; root.dataset.kitFont = ''; loadKitFont(''); }
   root.style.setProperty('--number-sheet', kit ? 'var(--k-number-sheet)' : urls.numbers);
@@ -317,6 +326,14 @@ export function applySkin(id, custom = null) {
   const width = kit ? (kit.numbersWidth === 108 ? 324 : 297) : custom?.numbersWidth === 297 || custom?.numbersWidth === 324 ? custom.numbersWidth : base === 'bento' ? 324 : 297;
   root.style.setProperty('--numbers-width', `${width}px`);
   return theme.name;
+}
+
+// Shows a kit prepared for the chosen look (skin-enhance.js): the same variables, gentler colors and
+// finer images. The stored kit is untouched, so the original look is always one switch away.
+export function applyRenderedKit(kit, mode) {
+  const root = document.documentElement;
+  applyKit(root, kit);
+  root.dataset.render = mode;
 }
 
 export function skinTemplate() {

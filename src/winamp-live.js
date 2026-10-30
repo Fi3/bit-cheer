@@ -3,7 +3,9 @@
 import { TEXT_GLYPHS } from './pixel-font.js';
 import { KIT_VERSION } from './skin-kit.js';
 
-const SAFE_IMAGE = /^data:image\/png;base64,[a-zA-Z0-9+/=]+$/;
+const PNG_DATA = /^data:image\/png;base64,[a-zA-Z0-9+/=]+$/;
+// Stored sheets are PNG data; the look settings hand over finer copies as blob URLs of this page.
+const SAFE_IMAGE = { test: v => typeof v === 'string' && (PNG_DATA.test(v) || (v.startsWith(`blob:${location.origin}/`) && /^blob:[^\s"'()\\]+$/.test(v))) };
 const HEX = /^#[0-9a-f]{6}$/i;
 
 // Where each button lives on the window, and its sprite in CBUTTONS.BMP.
@@ -20,6 +22,14 @@ const TOGGLES = {
   repeat: { x: 210, y: 89, w: 28, h: 15 },
 };
 const VOLUME = { x: 107, y: 57, w: 68, h: 13 };
+const BALANCE = { x: 177, y: 57, w: 38, h: 13 };
+const SHADE = { x: 254, y: 3, w: 9, h: 9 }; // the title bar's shade button (Winamp's windowshade)
+// Folded to its bar, the window keeps Winamp's mini transport and position bar (painted by the skin).
+const SHADE_BUTTONS = {
+  prev: { x: 169, y: 2, w: 7, h: 10 }, play: { x: 176, y: 2, w: 10, h: 10 }, pause: { x: 186, y: 2, w: 10, h: 10 },
+  stop: { x: 196, y: 2, w: 9, h: 10 }, next: { x: 205, y: 2, w: 10, h: 10 }, eject: { x: 215, y: 2, w: 10, h: 10 },
+};
+const SHADE_SEEK = { x: 226, y: 4, w: 17, h: 7 };
 const POSBAR = { x: 16, y: 72, w: 248, h: 10 };
 const VIS = { x: 24, y: 43, w: 76, h: 16 };
 const TIME = { x: 36, y: 26, w: 63, h: 13 };
@@ -27,15 +37,22 @@ const VIS_MODES = ['bars', 'scope', 'off'];
 const reduceMotion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
 
 export function createWinampLive({ engine, seek, remote, deckState }) {
-  let kit = null, images = {}, vis = [], mask = null;
+  let kit = null, images = {}, vis = [], mask = null, scale = 1;
   const pressed = new Map(); // canvas -> control name
   const peaks = [new Float32Array(19), new Float32Array(19)], bars = [new Float32Array(19), new Float32Array(19)];
   const freq = new Uint8Array(128), wave = new Uint8Array(256);
   let visMode = 'bars', remaining = false, lastDeck = 0;
   try { visMode = VIS_MODES.includes(localStorage.getItem('bit-cheer-vis')) ? localStorage.getItem('bit-cheer-vis') : 'bars'; remaining = localStorage.getItem('bit-cheer-time') === 'remaining'; } catch {}
+  // Windowshade: a deck's main window folded to its title bar (the page lays it out from data-main-shaded).
+  const shaded = new Set();
+  try { for (const d of (localStorage.getItem('bit-cheer-main-shade') || '').split(' ')) if (d === 'a' || d === 'b') shaded.add(d); } catch {}
+  const isShaded = deck => shaded.has(deck ? 'b' : 'a');
+  const showShade = () => { document.documentElement.dataset.mainShaded = [...shaded].join(' '); };
+  showShade();
 
-  function setSkin(custom) {
-    kit = null; images = {}; vis = []; mask = null; grid = null;
+  // scale: how many image pixels make one skin pixel (4 for the HD look, whose sheets are 4× finer).
+  function setSkin(custom, sheetScale = 1) {
+    kit = null; images = {}; vis = []; mask = null; grid = null; patches = null; scale = [1, 2, 3, 4].includes(sheetScale) ? sheetScale : 1;
     const sheets = custom?.kit?.sheets;
     if (custom?.kit?.version !== KIT_VERSION || !sheets || typeof sheets !== 'object' || !SAFE_IMAGE.test(sheets.main || '')) {
       document.documentElement.dataset.winampLive = '';
@@ -68,9 +85,11 @@ export function createWinampLive({ engine, seek, remote, deckState }) {
   const ready = name => images[name]?.complete && images[name].naturalWidth > 0;
   function sprite(ctx, name, sx, sy, w, h, dx, dy) {
     const img = images[name];
-    if (!ready(name) || sx >= img.naturalWidth || sy >= img.naturalHeight) return false;
-    const cw = Math.min(w, img.naturalWidth - sx), ch = Math.min(h, img.naturalHeight - sy);
-    ctx.drawImage(img, sx, sy, cw, ch, dx, dy, cw, ch);
+    if (!ready(name)) return false;
+    const iw = img.naturalWidth / scale, ih = img.naturalHeight / scale;
+    if (sx >= iw || sy >= ih) return false;
+    const cw = Math.min(w, iw - sx), ch = Math.min(h, ih - sy);
+    ctx.drawImage(img, sx * scale, sy * scale, cw * scale, ch * scale, dx, dy, cw, ch);
     return true;
   }
   function text(ctx, str, x, y, maxWidth, offset = 0) {
@@ -83,6 +102,40 @@ export function createWinampLive({ engine, seek, remote, deckState }) {
       sprite(ctx, 'text', pos[1] * 5, pos[0] * 6, 5, 6, dx, y);
     }
     ctx.restore();
+  }
+  // Winamp's title bar carries options, minimize, shade and close buttons, painted into the strip itself.
+  // Only shade does something here, so the other three are painted over: each row of a button blends
+  // from the strip's pixel just left of it to the one just right of it, which hides it on stripes,
+  // gradients and pictures alike. Made once per skin, at the sheet's own resolution.
+  let patches = null;
+  function titlePatches() {
+    if (patches || !ready('titlebar')) return patches;
+    const img = images.titlebar, W = img.naturalWidth, H = img.naturalHeight, n = 9 * scale;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0);
+    const src = g.getImageData(0, 0, W, H).data;
+    patches = {};
+    for (const stripY of [0, 15, 29, 42]) {
+      patches[stripY] = [6, 244, 264].map(x => {
+        const left = (27 + x) * scale - 1, right = (27 + x + 9) * scale, top = (stripY + 3) * scale;
+        if (right >= W || top + n > H) return null;
+        const patch = document.createElement('canvas'); patch.width = n; patch.height = n;
+        const pg = patch.getContext('2d'), out = pg.createImageData(n, n);
+        for (let j = 0; j < n; j++) {
+          const a = ((top + j) * W + left) * 4, b = ((top + j) * W + right) * 4;
+          for (let i = 0; i < n; i++) { const t = (i + 0.5) / n; for (let k = 0; k < 4; k++) out.data[(j * n + i) * 4 + k] = src[a + k] * (1 - t) + src[b + k] * t; }
+        }
+        pg.putImageData(out, 0, 0);
+        return { x, patch };
+      });
+    }
+    return patches;
+  }
+  function titleStrip(ctx, canvas, stripY, shadeButtonY) {
+    if (!sprite(ctx, 'titlebar', 27, stripY, 275, 14, 0, 0)) return false;
+    for (const p of titlePatches()?.[stripY] || []) if (p) ctx.drawImage(p.patch, p.x, 3, 9, 9);
+    sprite(ctx, 'titlebar', pressed.get(canvas) === 'shade' ? 9 : 0, shadeButtonY, 9, 9, SHADE.x, SHADE.y);
+    return true;
   }
   function digit(ctx, n, x, y) {
     if (!sprite(ctx, 'numbers', n * 9, 0, 9, 13, x, y)) sprite(ctx, 'nums_ex', n * 9, 0, 9, 13, x, y);
@@ -137,23 +190,41 @@ export function createWinampLive({ engine, seek, remote, deckState }) {
     const state = engine.state[deck];
     if (!kit || !state || !ready('main')) return;
     const extra = cachedState(deck, now);
+    // The canvas holds the window at the sheets' resolution; everything below draws in skin pixels.
+    const shade = isShaded(deck), height = shade ? 14 : 116;
+    if (canvas.width !== 275 * scale || canvas.height !== height * scale) { canvas.width = 275 * scale; canvas.height = height * scale; }
     const ctx = canvas.getContext('2d');
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
     ctx.imageSmoothingEnabled = false;
     ctx.globalCompositeOperation = 'source-over';
-    ctx.clearRect(0, 0, 275, 116);
-    ctx.drawImage(images.main, 0, 0);
+    ctx.clearRect(0, 0, 275, height);
     // Like Winamp, one window is always the focused one: the deck touched last (A at first).
     const playing = !!state.playing, focused = deck === lastDeck || pressed.has(canvas);
-    sprite(ctx, 'titlebar', 27, focused ? 0 : 15, 275, 14, 0, 0);
-    // Window buttons sit on top of the title strip, as Winamp and Webamp draw them.
-    sprite(ctx, 'titlebar', 0, 0, 9, 9, 6, 3); sprite(ctx, 'titlebar', 9, 0, 9, 9, 244, 3);
-    sprite(ctx, 'titlebar', 0, 18, 9, 9, 254, 3); sprite(ctx, 'titlebar', 18, 0, 9, 9, 264, 3);
-    sprite(ctx, 'titlebar', 304, 0, 8, 43, 10, 22); // clutter bar
+    if (shade) {
+      // Windowshade: the skin's shade bar (or its title bar when it has none) with Winamp's time and
+      // position bar on it; its mini transport is painted by the skin and works like the big one.
+      if (!titleStrip(ctx, canvas, focused ? 29 : 42, 27)) titleStrip(ctx, canvas, focused ? 0 : 15, 18);
+      const duration = Math.max(0, state.duration || 0), position = Math.max(0, state.position || 0), stopped = !playing && position < 0.05;
+      if (!stopped) {
+        const t = Math.floor(remaining ? Math.max(0, duration - position) : position), m = Math.min(99, Math.floor(t / 60)), sec = t % 60;
+        if (remaining) text(ctx, '-', 125, 4, 5);
+        text(ctx, String(m).padStart(2, '0'), 130, 4, 10); text(ctx, String(sec).padStart(2, '0'), 145, 4, 10);
+      }
+      sprite(ctx, 'titlebar', 0, 36, 17, 7, SHADE_SEEK.x, SHADE_SEEK.y);
+      if (duration && !stopped) {
+        const at = Math.round(Math.min(1, position / duration) * (SHADE_SEEK.w - 3));
+        sprite(ctx, 'titlebar', at === 0 ? 17 : at === SHADE_SEEK.w - 3 ? 23 : 20, 36, 3, 7, SHADE_SEEK.x + at, SHADE_SEEK.y);
+      }
+      return;
+    }
+    sprite(ctx, 'main', 0, 0, 275, 116, 0, 0);
+    // The title strip with its one working button (shade). No clutter bar: its options do nothing here.
+    titleStrip(ctx, canvas, focused ? 0 : 15, 18);
 
     // Play / pause / stop indicator and the little "working" light.
     const stopped = !playing && (state.position || 0) < 0.05;
     sprite(ctx, 'playpaus', playing ? 0 : stopped ? 18 : 9, 0, 9, 9, 26, 28);
-    if (images.playpaus?.naturalWidth >= 42) sprite(ctx, 'playpaus', playing ? 39 : 36, 0, 3, 9, 24, 28);
+    if (images.playpaus?.naturalWidth >= 42 * scale) sprite(ctx, 'playpaus', playing ? 39 : 36, 0, 3, 9, 24, 28);
 
     // Time: elapsed, or remaining with a minus sign.
     const duration = Math.max(0, state.duration || 0), position = Math.max(0, state.position || 0);
@@ -185,12 +256,12 @@ export function createWinampLive({ engine, seek, remote, deckState }) {
 
     visualizer(ctx, deck, playing);
 
-    // Volume (live) and balance (centred).
-    const volume = deckVolume(deck);
+    // Volume and balance, both live.
+    const volume = deckVolume(deck), balance = Math.max(-1, Math.min(1, engine.balances?.[deck] || 0));
     sprite(ctx, 'volume', 0, Math.round(volume * 27) * 15, 68, 13, VOLUME.x, VOLUME.y);
     sprite(ctx, 'volume', pressed.get(canvas) === 'volume' ? 0 : 15, 422, 14, 11, VOLUME.x + Math.round(volume * (VOLUME.w - 14)), 58);
-    sprite(ctx, 'balance', 9, 0, 38, 13, 177, 57);
-    sprite(ctx, 'balance', 15, 422, 14, 11, 189, 58);
+    sprite(ctx, 'balance', 9, Math.round(Math.abs(balance) * 27) * 15, 38, 13, BALANCE.x, BALANCE.y);
+    sprite(ctx, 'balance', pressed.get(canvas) === 'balance' ? 0 : 15, 422, 14, 11, BALANCE.x + Math.round((balance + 1) / 2 * (BALANCE.w - 14)), 58);
     sprite(ctx, 'shufrep', 0, extra.eq ? 73 : 61, 23, 12, 219, 58);
     sprite(ctx, 'shufrep', 23, extra.pl ? 73 : 61, 23, 12, 242, 58);
 
@@ -222,15 +293,21 @@ export function createWinampLive({ engine, seek, remote, deckState }) {
   }
   const deckVolume = deck => stateCache[deck]?.volume ?? 0.8;
 
-  function point(canvas, event) {
+  function point(canvas, event, shade = false) {
     const r = canvas.getBoundingClientRect();
-    return { x: (event.clientX - r.left) * 275 / r.width, y: (event.clientY - r.top) * 116 / r.height };
+    return { x: (event.clientX - r.left) * 275 / r.width, y: (event.clientY - r.top) * (shade ? 14 : 116) / r.height };
   }
   const inside = (p, b) => p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h;
-  function hit(p) {
+  function hit(p, shade = false) {
+    if (inside(p, { x: SHADE.x - 1, y: SHADE.y - 1, w: SHADE.w + 2, h: SHADE.h + 2 })) return 'shade';
+    if (shade) {
+      for (const [name, b] of Object.entries(SHADE_BUTTONS)) if (inside(p, b)) return name;
+      return inside(p, SHADE_SEEK) ? 'seek' : null;
+    }
     for (const [name, b] of Object.entries(BUTTONS)) if (inside(p, b)) return name;
     for (const [name, b] of Object.entries(TOGGLES)) if (inside(p, b)) return name;
     if (inside(p, { x: VOLUME.x, y: VOLUME.y - 2, w: VOLUME.w, h: VOLUME.h + 4 })) return 'volume';
+    if (inside(p, { x: BALANCE.x, y: BALANCE.y - 2, w: BALANCE.w, h: BALANCE.h + 4 })) return 'balance';
     if (inside(p, { x: POSBAR.x, y: POSBAR.y - 2, w: POSBAR.w, h: POSBAR.h + 4 })) return 'seek';
     if (inside(p, VIS)) return 'vis';
     if (inside(p, TIME)) return 'time';
@@ -238,16 +315,19 @@ export function createWinampLive({ engine, seek, remote, deckState }) {
     if (inside(p, { x: 242, y: 58, w: 23, h: 12 })) return 'pl';
     return null;
   }
-  function slide(deck, kind, p) {
+  function slide(deck, kind, p, shade = false) {
+    if (kind === 'seek' && shade) { seek(deck, Math.max(0, Math.min(1, (p.x - SHADE_SEEK.x - 1.5) / (SHADE_SEEK.w - 3)))); return; }
     if (kind === 'volume') remote(deck, 'volume', Math.max(0, Math.min(1, (p.x - VOLUME.x - 7) / (VOLUME.w - 14))));
     if (kind === 'seek') seek(deck, Math.max(0, Math.min(1, (p.x - POSBAR.x - 14) / (POSBAR.w - 29))));
+    // Balance pans the deck; like Winamp's, it snaps to the middle.
+    if (kind === 'balance') { const v = Math.max(-1, Math.min(1, ((p.x - BALANCE.x - 7) / (BALANCE.w - 14)) * 2 - 1)); remote(deck, 'balance', Math.abs(v) < 0.1 ? 0 : v); }
   }
   const save = (key, value) => { try { localStorage.setItem(key, value); } catch {} };
 
   document.addEventListener('pointerdown', event => {
     const canvas = event.target.closest?.('.winamp-live canvas');
     if (!canvas || !kit) return;
-    const deck = Number(canvas.parentElement.dataset.deck), p = point(canvas, event), name = hit(p);
+    const deck = Number(canvas.parentElement.dataset.deck), shade = isShaded(deck), p = point(canvas, event, shade), name = hit(p, shade);
     lastDeck = deck === 1 ? 1 : 0;
     if (!name) return;
     event.preventDefault();
@@ -256,15 +336,16 @@ export function createWinampLive({ engine, seek, remote, deckState }) {
     const id = event.pointerId, press = new AbortController(), listen = { signal: press.signal };
     try { canvas.setPointerCapture(id); } catch { /* the pointer is already gone */ }
     pressed.set(canvas, name);
-    slide(deck, name, p);
+    slide(deck, name, p, shade);
     const end = () => { press.abort(); pressed.delete(canvas); };
-    canvas.addEventListener('pointermove', e => { if (e.pointerId === id) slide(deck, name, point(canvas, e)); }, listen);
+    canvas.addEventListener('pointermove', e => { if (e.pointerId === id) slide(deck, name, point(canvas, e, shade), shade); }, listen);
     canvas.addEventListener('pointerup', e => {
       if (e.pointerId !== id) return;
       end();
-      if (hit(point(canvas, e)) !== name) return;
+      if (hit(point(canvas, e, shade), shade) !== name) return;
       const playing = engine.state[deck]?.playing;
-      if (name === 'play') { if (!playing) remote(deck, 'play'); }
+      if (name === 'shade') { const l = deck ? 'b' : 'a'; if (shaded.has(l)) shaded.delete(l); else shaded.add(l); showShade(); save('bit-cheer-main-shade', [...shaded].join(' ')); }
+      else if (name === 'play') { if (!playing) remote(deck, 'play'); }
       else if (name === 'pause') { if (playing) remote(deck, 'play'); }
       else if (name in BUTTONS || name in TOGGLES || name === 'eq' || name === 'pl') remote(deck, name);
     }, listen);

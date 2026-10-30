@@ -60,8 +60,9 @@ export function symbolBits(rows, width = 5, height = 6) {
   return bits;
 }
 
-// glyphs: { char: Uint8Array(w*h) of 0/1 } — all cells share width × height.
-export function buildPixelFont(glyphs, { width = 5, height = 6, family = 'Kit Pixel' } = {}) {
+// glyphs: { char: Uint8Array(w*h) of 0/1 } — all cells share width × height. scale: how many cells
+// make one TEXT.BMP pixel (a smoothed 4× redraw of the lettering has 20 × 24 cells and scale 4).
+export function buildPixelFont(glyphs, { width = 5, height = 6, family = 'Kit Pixel', scale = 1 } = {}) {
   const chars = Object.keys(glyphs).filter(c => c.length === 1 && c.codePointAt(0) <= 0xffff && c !== ' ');
   // Deduplicate identical bitmaps so upper/lower case share a glyph.
   const glyphIds = new Map(), shapes = [[]], keyToId = new Map();
@@ -74,7 +75,7 @@ export function buildPixelFont(glyphs, { width = 5, height = 6, family = 'Kit Pi
   glyphIds.set(32, 1); glyphIds.set(0xa0, 1);
   // The bottom row hangs below the baseline: TEXT.BMP letters stand on the row above it, as in
   // ordinary type, so pixel lettering lines up with other fonts and with itself at other sizes.
-  const advance = width * UNIT, descent = height > 1 ? UNIT : 0, ascent = height * UNIT - descent;
+  const advance = width * UNIT, descent = height > 1 ? UNIT * scale : 0, ascent = height * UNIT - descent;
   const glyf = [], loca = [0];
   let maxPoints = 0, maxContours = 0, offset = 0;
   for (const rects of shapes) {

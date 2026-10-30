@@ -9,12 +9,13 @@ import './kit.css';
 import { AudioEngine } from './audio.js';
 import { assetUrl, BASE_PATH } from './assets.js';
 import { clamp, tapTempo, matchScore, estimateTempo, STAR, createStar, stepDrift, stepScore, starStats, starResult } from './training.js';
-import { applySkin, importSkin, importSkinFromUrl, downloadTemplate, skinPicture, validKit, prepareBuiltinSkins, builtinKit, SELECTABLE_SKINS, DEFAULT_SKIN } from './skins.js';
+import { applySkin, applyRenderedKit, importSkin, importSkinFromUrl, downloadTemplate, skinPicture, validKit, prepareBuiltinSkins, builtinKit, SELECTABLE_SKINS, DEFAULT_SKIN } from './skins.js';
 import { SessionLibrary, DeckSelections } from './library.js';
 import { pickFolder, AUDIO_EXTENSIONS } from './folder-browser.js';
 import { adjustedPitch, wheelPitchDelta, keyPitchDelta, pitchSensitivity } from './pitch-control.js';
 import { validateLayout } from './layout.js';
 import { createWinampLive } from './winamp-live.js';
+import { enhanceKit, RENDER_MODES } from './skin-enhance.js';
 
 // Apply the saved skin before Elm mounts, so the first app frame has its final theme.
 // Skins that are no longer offered fall back to the default.
@@ -28,7 +29,17 @@ let startupSkinName;
 try { startupSkinName = applySkin(startupSkin?.id || DEFAULT_SKIN, startupSkin?.custom); }
 catch { startupSkinName = applySkin(DEFAULT_SKIN); }
 
-const app = Elm.Main.init({ node: document.getElementById('app'), flags: { basePath: BASE_PATH, kit: document.documentElement.dataset.layout === 'kit' } });
+// The look: the skin's original pixels, "comfort" (gentler colors and textures) or "hd" (comfort plus
+// 4× pixel art and smooth lettering). Prepared from the stored kit each time a skin is shown.
+let renderMode = 'hd';
+{ const stored = restore('bit-cheer-render'); if (RENDER_MODES.includes(stored)) renderMode = stored; }
+// With Comfort or HD chosen, the first frame waits for that look (a fraction of a second) instead of
+// showing the original pixels and then changing color; after 1.5 s it shows the original anyway.
+if (renderMode !== 'original' && document.documentElement.dataset.layout === 'kit') {
+  document.documentElement.dataset.render = 'preparing';
+  setTimeout(() => { if (document.documentElement.dataset.render === 'preparing') document.documentElement.dataset.render = 'original'; }, 1500);
+}
+const app = Elm.Main.init({ node: document.getElementById('app'), flags: { basePath: BASE_PATH, kit: document.documentElement.dataset.layout === 'kit', render: renderMode } });
 let telemetry = [], recent = [], lastStart = performance.now(), mode = 'foundation', catalog = {tracks:[]}, taps = [], zoom = [1,1], mic = null, drill = '', configVersion = 0, micEpoch = 0, micPending = false, focusActive = false, wasFullscreen = false, activeLesson = 1, transition = null;
 const send = event => {
   if(event.type==='telemetry') {
@@ -59,7 +70,7 @@ const deckState = deck => {
     hideBpm: !!document.querySelector(`[data-testid="bpm-${deck ? 'b' : 'a'}"][aria-label="BPM hidden"]`),
   };
 };
-const live = createWinampLive({ engine, deckState, seek: (deck, fraction) => seekWave(deck, fraction), remote: (deck, action, value) => action === 'pl' ? toggleConsole(deck) : send({ type: 'remote', deck, action, value }) });
+const live = createWinampLive({ engine, deckState, seek: (deck, fraction) => seekWave(deck, fraction), remote: (deck, action, value) => action === 'pl' ? toggleConsole(deck) : action === 'balance' ? engine.balance(deck, value).catch(fail) : send({ type: 'remote', deck, action, value }) });
 const library = new SessionLibrary(), selections = new DeckSelections();
 let sensitivities = [.05,.05], pendingProCatalog = false;
 let folder=null;
@@ -77,7 +88,21 @@ function publishLibrary(){catalog.tracks=library.list();send({type:'catalog',tra
 function beginSelection(deck){engine.loadVersions[deck]++;return selections.begin(deck);}
 const notice=message=>send({type:'notice',message});
 let skinStamp=0;
-const skinChanged=(id,name,custom)=>{skinStamp++;const dressed=id==='custom'?custom:builtinKit(id);live.setSkin(dressed);send({type:'skin',id,name,kit:document.documentElement.dataset.layout==='kit',preview:skinPicture(id,custom),source:custom?.source&&/^https:\/\/skins\.webamp\.org\//.test(custom.source)?custom.source:''});};
+let renderEpoch=0,renderDispose=null,shownSkin=null;
+// Shows the current skin in the chosen look. The original kit is already on screen; the prepared one
+// replaces it when ready, and the images of the previous look are freed only after that.
+async function refineSkin(dressed){
+  const epoch=++renderEpoch;shownSkin=dressed;
+  const done=dispose=>{renderDispose?.();renderDispose=dispose;};
+  const shown=()=>{if(document.documentElement.dataset.render==='preparing')document.documentElement.dataset.render='original';};
+  if(renderMode==='original'||!dressed?.kit||document.documentElement.dataset.layout!=='kit'){done(null);shown();return;}
+  try{
+    const {kit,dispose}=await enhanceKit(dressed.kit,{hd:renderMode==='hd'});
+    if(epoch!==renderEpoch){dispose();return;}
+    applyRenderedKit(kit,renderMode);live.setSkin({...dressed,kit},kit.scale);skinStamp++;done(dispose);
+  }catch(error){if(epoch===renderEpoch){done(null);shown();}console.warn('The skin look could not be prepared; showing the original pixels.',error);}
+}
+const skinChanged=(id,name,custom)=>{skinStamp++;const dressed=id==='custom'?custom:builtinKit(id);live.setSkin(dressed);refineSkin(dressed);send({type:'skin',id,name,kit:document.documentElement.dataset.layout==='kit',preview:skinPicture(id,custom),source:custom?.source&&/^https:\/\/skins\.webamp\.org\//.test(custom.source)?custom.source:''});};
 const fail=error=>{if(engine.context)engine.emitRouting();send({type:'error',message:error instanceof Error?error.message:String(error)});};
 function chooseFile(accept,handle) {
   const input=document.createElement('input'); input.type='file';input.accept=accept;input.style.display='none';document.body.append(input);
@@ -259,6 +284,14 @@ async function handle(command) {
         send({type:'skinUrlResult',ok:true,message:`Loaded “${name}”. Enjoy the view!`});
       } catch(error) { send({type:'skinUrlResult',ok:false,message:error instanceof Error?error.message:String(error)}); }
       break;
+    }
+    case 'render': {
+      if(!RENDER_MODES.includes(command.mode)||command.mode===renderMode)break;
+      renderMode=command.mode;store('bit-cheer-render',renderMode);
+      // Back to the stored kit first, then (for comfort or HD) its prepared look.
+      const id=document.documentElement.dataset.skin;
+      applySkin(id,id==='custom'?shownSkin:undefined);skinStamp++;live.setSkin(shownSkin);refineSkin(shownSkin);
+      send({type:'render',mode:renderMode});break;
     }
     case 'exportSkin': downloadTemplate();notice('Your skin kit is downloaded. Edit skin.toml, add optional images, then import the ZIP.');break;
     case 'persist': store('bit-cheer-progress',{progress:command.progress,history:command.history});break;
