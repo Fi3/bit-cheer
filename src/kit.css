@@ -133,32 +133,26 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   background-position: right calc(3 * var(--kp)) top calc(50% - 2 * var(--kp)), right calc(4 * var(--kp)) top calc(50% - var(--kp)), right calc(5 * var(--kp)) top 50%, right calc(6 * var(--kp)) top calc(50% + var(--kp));
 }
 :root[data-layout=kit] .app-shell select option { font-family: var(--k-pixel); text-transform: none; background: var(--k-list-bg); color: var(--k-list-fg); }
-/* The open list: a little playlist in the skin's colors, frame and lettering, the chosen entry lit,
-   the one under the pointer on the selection bar. Browsers that let a page draw a select's list
-   (customizable select) show it in full; the others show their own list in the skin's colors. */
-@supports (appearance: base-select) {
-  :root[data-layout=kit] .app-shell select, :root[data-layout=kit] .app-shell select::picker(select) { appearance: base-select; }
-  :root[data-layout=kit] .app-shell select::picker-icon { display: none; } /* the field draws its own arrow */
-  :root[data-layout=kit] .app-shell select:open { box-shadow: var(--k-sunken), 0 0 0 var(--kp) var(--k-accent); }
-  :root[data-layout=kit] .app-shell select::picker(select) {
-    margin: var(--kp) 0; padding: var(--kp); border: var(--kp) solid var(--k-edge-dark); border-radius: 0;
-    background: var(--k-list-bg); color: var(--k-list-fg); font: var(--k-text)/16px var(--k-pixel);
-    box-shadow: inset var(--kp) var(--kp) 0 color-mix(in srgb, var(--k-frame-light) 45%, transparent), 0 calc(3 * var(--kp)) 0 #0008;
-    max-height: min(60vh, calc(180 * var(--kp))); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--k-face) var(--k-list-bg);
-  }
-  :root[data-layout=kit] .app-shell select option {
-    display: flex; align-items: center; gap: calc(2 * var(--kp)); min-height: 16px; padding: var(--kp) calc(4 * var(--kp));
-    font: var(--k-text)/16px var(--k-pixel); text-transform: uppercase; white-space: nowrap;
-    background: transparent; color: var(--k-list-fg); border: 0; border-radius: 0; outline: 0; cursor: pointer;
-  }
-  :root[data-layout=kit] .app-shell select option::checkmark { content: '▸'; color: var(--k-list-hi); }
-  :root[data-layout=kit] .app-shell select option:not(:checked)::checkmark { visibility: hidden; }
-  :root[data-layout=kit] .app-shell select option:checked { color: var(--k-list-hi); }
-  :root[data-layout=kit] .app-shell select option:is(:hover, :focus-visible):not(:disabled) { background: var(--k-list-sel); color: var(--k-list-sel-fg); }
-  :root[data-layout=kit] .app-shell select option:is(:hover, :focus-visible):not(:disabled)::checkmark { color: var(--k-list-sel-fg); }
-  :root[data-layout=kit] .app-shell select option:disabled { color: var(--k-list-dim); cursor: default; }
-  :root[data-layout=kit] .app-shell select optgroup { font: var(--k-text)/16px var(--k-pixel); color: var(--k-list-dim); text-transform: uppercase; }
+/* The open list (skin-select.js): a little playlist in the skin's colors, frame and lettering, the
+   chosen entry lit and the one under the pointer or the keyboard on the selection bar. The page draws
+   it itself, so it looks the same in every browser. */
+.skin-select-list:not(:popover-open):not(.open) { display: none; }
+:root[data-layout=kit] .skin-select-list {
+  position: fixed; inset: auto; z-index: 1000; box-sizing: border-box; margin: 0; padding: var(--kp);
+  border: var(--kp) solid var(--k-edge-dark); border-radius: 0; outline: 0;
+  background: var(--k-list-bg); color: var(--k-list-fg); font: var(--k-text)/16px var(--k-pixel); font-synthesis: none;
+  box-shadow: inset var(--kp) var(--kp) 0 color-mix(in srgb, var(--k-frame-light) 45%, transparent), 0 calc(3 * var(--kp)) 0 #0008;
+  overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--k-face) var(--k-list-bg);
 }
+:root[data-layout=kit] .skin-select-option { display: flex; align-items: center; gap: calc(2 * var(--kp)); min-height: 16px; padding: var(--kp) calc(4 * var(--kp)); white-space: nowrap; text-transform: uppercase; cursor: pointer; }
+:root[data-layout=kit] .skin-select-option::before { content: '▸'; visibility: hidden; color: var(--k-list-hi); }
+:root[data-layout=kit] .skin-select-option[aria-selected=true] { color: var(--k-list-hi); }
+:root[data-layout=kit] .skin-select-option[aria-selected=true]::before { visibility: visible; }
+:root[data-layout=kit] .skin-select-option.active:not([aria-disabled=true]) { background: var(--k-list-sel); color: var(--k-list-sel-fg); }
+:root[data-layout=kit] .skin-select-option.active::before { color: var(--k-list-sel-fg); }
+:root[data-layout=kit] .skin-select-option[aria-disabled=true] { color: var(--k-list-dim); cursor: default; }
+:root[data-layout=kit] .skin-select-group { padding: var(--kp) calc(3 * var(--kp)); color: var(--k-list-dim); text-transform: uppercase; }
+:root[data-layout=kit] .app-shell select[aria-expanded=true] { box-shadow: var(--k-sunken), 0 0 0 var(--kp) var(--k-accent); }
 :root[data-layout=kit] .app-shell input[type=url]::placeholder { color: var(--k-lcd-dim); }
 
 /* Toggles light the skin's equalizer ON button. */

@@ -16,6 +16,7 @@ import { adjustedPitch, wheelPitchDelta, keyPitchDelta, pitchSensitivity } from 
 import { validateLayout } from './layout.js';
 import { createWinampLive } from './winamp-live.js';
 import { enhanceKit, RENDER_MODES } from './skin-enhance.js';
+import { installSkinSelect } from './skin-select.js';
 
 // Apply the saved skin before Elm mounts, so the first app frame has its final theme.
 // Skins that are no longer offered fall back to the default.
@@ -39,6 +40,8 @@ if (renderMode !== 'original' && document.documentElement.dataset.layout === 'ki
   document.documentElement.dataset.render = 'preparing';
   setTimeout(() => { if (document.documentElement.dataset.render === 'preparing') document.documentElement.dataset.render = 'original'; }, 1500);
 }
+// Dropdowns open the skin's own list (kit layout), the same in every browser.
+installSkinSelect();
 const app = Elm.Main.init({ node: document.getElementById('app'), flags: { basePath: BASE_PATH, kit: document.documentElement.dataset.layout === 'kit', render: renderMode } });
 let telemetry = [], recent = [], lastStart = performance.now(), mode = 'foundation', catalog = {tracks:[]}, taps = [], zoom = [1,1], mic = null, drill = '', configVersion = 0, micEpoch = 0, micPending = false, focusActive = false, wasFullscreen = false, activeLesson = 1, transition = null;
 const send = event => {

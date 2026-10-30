@@ -391,8 +391,50 @@ test('every word in a skinned page is set in the skin\'s lettering, dropdown lis
     expect(await offenders(), `${name}: text outside the skin's lettering`).toEqual([]);
   }
   await page.getByRole('button', { name: 'Practice', exact: true }).click();
-  const option = await page.getByLabel('Add module to deck A', { exact: true }).locator('option').first().evaluate(o => getComputedStyle(o).fontFamily);
-  expect(option, 'Dropdown entries use the skin lettering too').toMatch(/^"?Kit Pixel/);
+  await page.getByLabel('Add module to deck A', { exact: true }).click();
+  const list = page.getByRole('listbox', { name: 'Add module to deck A choices' });
+  await expect(list).toBeVisible();
+  expect(await list.getByRole('option').first().evaluate(o => getComputedStyle(o).fontFamily), 'Dropdown entries use the skin lettering too').toMatch(/^"?Kit Pixel/);
+});
+
+test('dropdowns open the skin\'s own list in every browser, by pointer and by keyboard', async ({ page }) => {
+  const list = page.getByRole('listbox');
+  // Pointer: the field opens the skin's list; choosing an entry is the same as choosing it in the browser's.
+  await page.getByLabel('Add module to deck A', { exact: true }).click();
+  await expect(list).toBeVisible();
+  await expect(list.getByRole('option', { name: 'Waveform', exact: true })).toBeVisible();
+  await list.getByRole('option', { name: 'Waveform', exact: true }).click();
+  await expect(list).toBeHidden();
+  await expect(moduleElement(page, 'waveform', 'A')).toBeVisible();
+  // Keyboard: Enter opens, arrows move, Enter chooses; the field keeps the focus afterwards.
+  const range = page.getByLabel('Deck A pitch range', { exact: true });
+  await range.focus();
+  await page.keyboard.press('Enter');
+  await expect(list).toBeVisible();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(range).toHaveValue('16');
+  await expect(range).toBeFocused();
+  // Space opens the list (and doesn't start the decks); Escape leaves the value as it was.
+  await page.keyboard.press('Space');
+  await expect(list).toBeVisible();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Escape');
+  await expect(list).toBeHidden();
+  await expect(range).toHaveValue('16');
+  expect(await page.evaluate(() => window.bitCheer.audio.state.some(deck => deck.playing))).toBe(false);
+  // Typing jumps to an entry; a press outside closes the list without a change.
+  const sensitivity = page.getByLabel('Deck A pitch sensitivity', { exact: true });
+  await sensitivity.focus();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.type('c');
+  await page.keyboard.press('Enter');
+  await expect(sensitivity).toHaveValue('0.25');
+  await sensitivity.click();
+  await expect(list).toBeVisible();
+  await page.mouse.click(4, 300);
+  await expect(list).toBeHidden();
+  await expect(sensitivity).toHaveValue('0.25');
 });
 
 test('a custom TOML and graphic ZIP applies colors and image assets and survives reload', async ({ page }) => {
