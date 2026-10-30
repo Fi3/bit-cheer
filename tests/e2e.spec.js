@@ -152,16 +152,227 @@ test('desktop renders real waveform canvases and accessible two-deck controls', 
   await expect(page.getByRole('button', { name: 'Keyboard shortcuts and help', exact: true })).toBeFocused();
 });
 
-test('browser modifier shortcuts do not start playback but plain A still plays deck A', async ({ page }) => {
+test('browser modifier shortcuts do not start playback but plain F still plays deck A', async ({ page }) => {
   await page.getByRole('heading', { name: 'Find your rhythm.' }).click();
-  await page.keyboard.press('Control+a');
-  await page.keyboard.press('Meta+a');
+  await page.keyboard.press('Control+f');
+  await page.keyboard.press('Meta+f');
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   expect(await page.evaluate(() => window.bitCheer.audio.context)).toBeNull();
   await expect(page.getByRole('button', { name: 'Play deck A', exact: true })).toBeVisible();
-  await page.keyboard.press('a');
+  await page.keyboard.press('f');
   await expect.poll(() => page.evaluate(() => window.bitCheer.telemetry[0]?.playing)).toBe(true);
   expect(await page.evaluate(() => window.bitCheer.telemetry[1].playing)).toBe(false);
+});
+
+// Records what the page asks of the audio engine, so tests can see nudges and bends.
+async function spyEngine(page) {
+  await page.evaluate(() => {
+    const audio = window.bitCheer.audio, set = audio.set.bind(audio);
+    window.__engineCalls = [];
+    audio.set = (deck, param, value) => { window.__engineCalls.push([deck, param, value]); return set(deck, param, value); };
+  });
+  return {
+    calls: () => page.evaluate(() => window.__engineCalls),
+    clear: () => page.evaluate(() => { window.__engineCalls = []; }),
+  };
+}
+const enginePitch = (page, deck) => page.evaluate(index => window.bitCheer.audio.state[index].pitch, deck);
+
+test('keyboard control: each hand plays, pitches, nudges and mixes its own deck', async ({ page }) => {
+  // docs/KEYBOARD.md, section 5: deck A under the left hand, deck B under the right.
+  const engine = await spyEngine(page);
+  await page.keyboard.press('j');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[1].playing)).toBe(true);
+  expect(await page.evaluate(() => window.bitCheer.audio.state[0].playing)).toBe(false);
+  await page.keyboard.press('f');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].playing)).toBe(true);
+  // Pitch: one step is the Wheel / keys setting (Normal, 0.05%), the outer keys ten steps, Shift 0.01%.
+  for (const [key, expected] of [['o', .05], ['p', .55], ['Shift+I', .54], ['ArrowUp', .59], ['ArrowDown', .54], ['u', .04]]) {
+    await page.keyboard.press(key);
+    await expect.poll(() => enginePitch(page, 1)).toBeCloseTo(expected, 6);
+  }
+  await expect(page.locator('.pitch-section[data-deck="1"] .pitch-value')).toHaveText('+0.04%');
+  await page.keyboard.press('w');
+  await page.keyboard.press('r');
+  await expect.poll(() => enginePitch(page, 0)).toBeCloseTo(.45, 6);
+  await page.keyboard.press('Slash');
+  await page.keyboard.press('z');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.map(deck => deck.pitch))).toEqual([0, 0]);
+  // Holding a pitch key keeps going, and past the fader's end the range widens instead of sticking.
+  await page.keyboard.down('KeyP');
+  for (let i = 0; i < 20; i++) await page.keyboard.down('KeyP');
+  await page.keyboard.up('KeyP');
+  await expect.poll(() => enginePitch(page, 1)).toBeCloseTo(10.5, 6);
+  await expect(page.getByLabel('Deck B pitch range', { exact: true })).toHaveValue('16');
+  // Volume.
+  await page.keyboard.press('Comma');
+  await page.keyboard.press('Shift+Period');
+  await page.keyboard.press('c');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.volumes)).toEqual([.85, .76]);
+  // Nudge: a tap moves the beat; a hold bends the speed until the key comes up.
+  await engine.clear();
+  await page.keyboard.press('l');
+  await expect.poll(engine.calls).toContainEqual([1, 'nudge', .04]);
+  await page.keyboard.press('Shift+S');
+  await expect.poll(engine.calls).toContainEqual([0, 'nudge', -.01]);
+  expect((await engine.calls()).filter(([, param]) => param === 'bend')).toEqual([]);
+  await page.keyboard.down('k');
+  await expect.poll(engine.calls).toContainEqual([1, 'bend', -4]);
+  await page.keyboard.up('k');
+  await expect.poll(async () => (await engine.calls()).at(-1)).toEqual([1, 'bend', 0]);
+  // Cue and set cue.
+  await engine.clear();
+  await page.keyboard.press('Shift+Semicolon');
+  await expect.poll(engine.calls).toContainEqual([1, 'setCue', 1]);
+  await page.keyboard.press('Semicolon');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[1].playing)).toBe(false);
+  // The crossfader glides while G / H are held and Y centres it.
+  const crossfade = () => page.evaluate(() => window.bitCheer.audio.crossfade);
+  await page.keyboard.down('h');
+  await page.waitForTimeout(500);
+  await page.keyboard.up('h');
+  await expect.poll(crossfade).toBeGreaterThan(.65);
+  expect(await crossfade()).toBeLessThan(1);
+  // The slider shows the glide snapped to its 0.01 step; the mixer keeps the exact value.
+  await expect.poll(async () => Number(await page.getByRole('slider', { name: 'Crossfader', exact: true }).inputValue())).toBeCloseTo(await crossfade(), 2);
+  await page.keyboard.press('y');
+  await expect.poll(crossfade).toBe(.5);
+  // Space pauses both while either plays; Enter checks the match, with the button's own notice.
+  await page.keyboard.press('Space');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.some(deck => deck.playing))).toBe(false);
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('status').filter({ hasText: 'Play both decks, match the pitch, then check your mix.' })).toBeVisible();
+});
+
+test('keyboard control: clicking a control never steals the keys, Tab and Space still press buttons', async ({ page }) => {
+  // docs/KEYBOARD.md, section 4.
+  const randomize = page.getByRole('button', { name: 'Randomize tempo deck A', exact: true });
+  await randomize.click();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[0].bpm)).not.toBe(120);
+  const bpm = await page.evaluate(() => window.bitCheer.audio.state[0].bpm);
+  await expect(randomize).toBeFocused();
+  await page.keyboard.press('Space');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(deck => deck.playing))).toBe(true);
+  expect(await page.evaluate(() => window.bitCheer.audio.state[0].bpm), 'Space played the decks instead of pressing the clicked button again').toBe(bpm);
+  // A slider keeps its arrows, but letters still reach the decks; Esc lets go of it.
+  const volume = page.getByRole('slider', { name: 'Deck B volume', exact: true });
+  await volume.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(volume).toHaveValue('0.81');
+  expect(await enginePitch(page, 1)).toBe(0);
+  await page.keyboard.press('o');
+  await expect.poll(() => enginePitch(page, 1)).toBeCloseTo(.05, 6);
+  await page.keyboard.press('Escape');
+  await expect(volume).not.toBeFocused();
+  await page.keyboard.press('ArrowUp');
+  await expect.poll(() => enginePitch(page, 1)).toBeCloseTo(.1, 6);
+  // A button reached with Tab is pressed by Space as usual (and the decks keep playing).
+  const change = page.getByRole('button', { name: 'Change track deck B', exact: true });
+  const name = await page.evaluate(() => window.bitCheer.audio.state[1].name);
+  await change.focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await expect(change).toBeFocused();
+  await page.keyboard.press('Space');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[1].name)).not.toBe(name);
+  expect(await page.evaluate(() => window.bitCheer.audio.state.every(deck => deck.playing))).toBe(true);
+  // A dropdown keeps every key: typing in it never pauses a deck.
+  await page.getByLabel('Deck A pitch sensitivity', { exact: true }).focus();
+  await page.keyboard.press('f');
+  await page.waitForTimeout(150);
+  expect(await page.evaluate(() => window.bitCheer.audio.state[0].playing)).toBe(true);
+});
+
+test('keyboard control: digits switch views, ` and Esc enter and leave Focus session, ? shows the keys', async ({ page }) => {
+  // docs/KEYBOARD.md, sections 6 and 7.
+  await page.keyboard.press('2');
+  await expect(page.getByRole('heading', { name: 'Build your groove.' })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.map(deck => deck.name).join())).toMatch(/RHYTHM STUDY.*RHYTHM STUDY/);
+  const names = await page.evaluate(() => window.bitCheer.audio.state.map(deck => deck.name));
+  await page.keyboard.press('2');
+  await page.waitForTimeout(200);
+  expect(await page.evaluate(() => window.bitCheer.audio.state.map(deck => deck.name)), 'the current mode\'s digit doesn\'t start over').toEqual(names);
+  // = adds an element to both decks; N deals a new challenge; B shows the BPM in By ear.
+  const elements = await page.locator('.voice-row').count();
+  await page.keyboard.press('Equal');
+  await expect(page.locator('.voice-row')).toHaveCount(elements + 2);
+  await page.keyboard.press('n');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.map(deck => deck.name))).not.toEqual(names);
+  await page.keyboard.press('3');
+  await expect(page.getByTestId('bpm-a')).toHaveAttribute('aria-label', 'BPM hidden');
+  await page.keyboard.press('b');
+  await expect(page.getByTestId('bpm-a')).not.toHaveAttribute('aria-label', 'BPM hidden');
+  // The help shows the keys of the view you're in.
+  await page.keyboard.press('Shift+Slash');
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('group', { name: 'Deck A keys' })).toContainText('Tempo');
+  await expect(dialog).toContainText('Add an element to both decks');
+  await page.keyboard.press('f');
+  await page.waitForTimeout(150);
+  expect(await page.evaluate(() => window.bitCheer.audio.state[0].playing), 'deck keys rest while the help is open').toBe(false);
+  await page.keyboard.press('Shift+Slash');
+  await expect(dialog).toHaveCount(0);
+  // Pro decks: the track key reads Next.
+  await page.keyboard.press('5');
+  await expect(page.getByRole('heading', { name: 'Make the mix yours.' })).toBeVisible();
+  await page.keyboard.press('Shift+Slash');
+  await expect(dialog.getByRole('group', { name: 'Deck B keys' })).toContainText('Next');
+  await expect(dialog).toContainText('Start or stop a ★ Star run');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  // Focus session: deck keys and Space work, the practice-only keys rest, ` or Esc leave.
+  await page.keyboard.press('Backquote');
+  await expect(page.locator('.focus-channel')).toHaveCount(2);
+  await page.keyboard.press('j');
+  await expect(page.getByRole('button', { name: 'Pause deck B', exact: true })).toBeEnabled();
+  await page.keyboard.press('1');
+  await expect(page.locator('.focus-channel')).toHaveCount(2);
+  expect(await page.evaluate(() => window.bitCheer.mode)).toBe('pro');
+  await page.keyboard.press('Shift+Slash');
+  await expect(dialog).toContainText('Leave Focus session');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.focus-channel')).toHaveCount(2);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.deck')).toHaveCount(2);
+  await page.keyboard.press('Backquote');
+  await expect(page.locator('.focus-channel')).toHaveCount(2);
+  await page.keyboard.press('Backquote');
+  await expect(page.locator('.deck')).toHaveCount(2);
+  await page.keyboard.press('Space');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.some(deck => deck.playing))).toBe(false);
+  // Learning path, Training and Skin studio have no deck keys; digits bring you back, but not while typing.
+  await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
+  const link = page.getByLabel('Winamp Skin Museum link', { exact: true });
+  await link.fill('');
+  await link.pressSequentially('https://skins.webamp.org/skin/12345 f');
+  await expect(link).toHaveValue('https://skins.webamp.org/skin/12345 f');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('j');
+  await page.waitForTimeout(150);
+  expect(await page.evaluate(() => window.bitCheer.audio.state[1].playing)).toBe(false);
+  await page.keyboard.press('5');
+  await expect(page.getByRole('heading', { name: 'Make the mix yours.' })).toBeVisible();
+});
+
+test('keyboard control: N and Enter follow Star mode\'s rules', async ({ page }) => {
+  await page.keyboard.press('4');
+  await expect(page.getByRole('heading', { name: 'Hold it together.' })).toBeVisible();
+  await page.keyboard.press('Space');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.every(deck => deck.playing))).toBe(true);
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('status').filter({ hasText: 'at least 10 seconds' })).toBeVisible();
+  // The track key's tempo change is refused, as the button is; Shift changes the loop instead.
+  await page.keyboard.press('m');
+  await expect(page.getByRole('status').filter({ hasText: 'keeps tempos equal' })).toBeVisible();
+  const before = await page.evaluate(() => window.bitCheer.audio.state[1].name);
+  await page.keyboard.press('Shift+M');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state[1].name)).not.toBe(before);
+  const names = await page.evaluate(() => window.bitCheer.audio.state.map(deck => deck.name));
+  await page.keyboard.press('n');
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.map(deck => deck.name))).not.toEqual(names);
+  await expect.poll(() => page.evaluate(() => window.bitCheer.audio.state.some(deck => deck.playing)), 'a new run starts from stopped decks').toBe(false);
 });
 
 test('Rust audio produces samples, pitch changes tempo, instruments and mixer are wired', async ({ page }) => {

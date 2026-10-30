@@ -1082,6 +1082,27 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   box-shadow: var(--k-bevel), 0 0 0 var(--kp) var(--k-edge-dark); padding: calc(3 * var(--kp)) calc(6 * var(--kp));
 }
 
+/* The keyboard map: the skin's own buttons as key caps, the skin's lettering on them (docs/KEYBOARD.md). */
+:root[data-layout=kit] .help-modal { width: 100%; max-width: min(calc(100vw - 40px), calc(440 * var(--kp))); max-height: calc(100vh - 40px); display: flex; flex-direction: column; }
+:root[data-layout=kit] .help-modal .help-body { overflow-y: auto; min-height: 0; padding-right: calc(3 * var(--kp)); }
+:root[data-layout=kit] .help-modal .keyboard-map { display: flex; justify-content: center; gap: calc(8 * var(--kp)); margin: calc(5 * var(--kp)) 0 calc(6 * var(--kp)); }
+:root[data-layout=kit] .help-modal .key-block { display: grid; gap: calc(2 * var(--kp)); align-content: start; }
+:root[data-layout=kit] .help-modal .key-block-title { font: var(--k-text)/16px var(--k-pixel); text-transform: uppercase; color: var(--k-list-dim); text-align: center; }
+:root[data-layout=kit] .help-modal .key-row { display: flex; gap: calc(2 * var(--kp)); }
+:root[data-layout=kit] .help-modal .keycap {
+  width: calc(28 * var(--kp)); display: flex; flex-direction: column; align-items: center; gap: var(--kp); padding: calc(2 * var(--kp)) 0;
+  background: var(--k-face); color: var(--k-face-text); box-shadow: var(--k-bevel), 0 0 0 var(--kp) var(--k-edge-dark);
+}
+:root[data-layout=kit] .help-modal .keycap strong { font: calc(1.5 * var(--k-text))/18px var(--k-pixel); text-transform: uppercase; color: inherit; }
+:root[data-layout=kit] .help-modal .keycap small { font: var(--k-text)/12px var(--k-pixel); text-transform: uppercase; color: inherit; white-space: nowrap; min-height: 12px; }
+:root[data-layout=kit] .help-modal .keycap.is-idle { opacity: .45; }
+:root[data-layout=kit] .help-modal .help-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(170 * var(--kp)), 1fr)); gap: 0 calc(8 * var(--kp)); }
+:root[data-layout=kit] .help-modal h3 { font: var(--k-text)/16px var(--k-pixel); text-transform: uppercase; color: var(--k-list-dim); letter-spacing: 0; }
+:root[data-layout=kit] .help-modal .help-column .shortcut-list strong { min-width: calc(48 * var(--kp)); flex-shrink: 0; }
+:root[data-layout=kit] .help-modal > .primary-button { align-self: center; margin-top: calc(2 * var(--kp)); }
+/* A key just used: its control glows for a moment, like a keyboard focus ring. */
+:root[data-layout=kit] [data-key-flash] { outline: var(--kp) solid var(--k-accent); outline-offset: var(--kp); }
+
 /* Page scrollbars wear the playlist's scroll handle. */
 :root[data-layout=kit] { scrollbar-color: var(--k-face) var(--k-desk); }
 :root[data-layout=kit] .app-shell .composer-rack::-webkit-scrollbar { width: calc(8 * var(--kp)); }

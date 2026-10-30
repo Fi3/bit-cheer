@@ -64,6 +64,9 @@ export const SYMBOL_GLYPHS = {
   '☼': ['#.#.#', '.###.', '##.##', '.###.', '#.#.#'],
   'ϟ': ['..##.', '.##..', '#####', '..##.', '.##..'],
   '↟': ['..#..', '.#.#.', '..#..', '.#.#.', '..#..'],
+  // Key caps in the keyboard help: TEXT.BMP has neither, and borrowing ':' and "'" would mislabel the keys.
+  ';': ['.....', '..#..', '.....', '..#..', '.#...'],
+  '`': ['.#...', '..#..', '.....', '.....', '.....'],
 };
 export function symbolBits(rows, width = 5, height = 6) {
   const bits = new Uint8Array(width * height);

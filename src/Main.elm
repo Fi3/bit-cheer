@@ -3,7 +3,6 @@ port module Main exposing (main)
 import Bitwise
 import Browser
 import Browser.Dom
-import Browser.Events
 import Dict exposing (Dict)
 import Html exposing (Html, a, article, aside, br, button, canvas, div, footer, h1, h2, h3, header, img, input, label, li, main_, nav, option, p, section, select, small, span, strong, text, ul)
 import Html.Attributes as A exposing (alt, attribute, checked, class, classList, disabled, href, id, selected, src, step, style, target, title, type_, value)
@@ -179,6 +178,7 @@ type Msg
     | Nudge Int Float
     | Pitch Int String
     | PitchStep Int Float
+    | PitchKey Int Float
     | Range Int String
     | SourceBpm Int String
     | Loop Int Bool
@@ -243,7 +243,6 @@ type Msg
     | ToggleHelp
     | FocusHelp String
     | Receive D.Value
-    | Key String
     | DismissNotice
     | NoOp
 
@@ -431,6 +430,14 @@ update msg model =
 
         PitchStep deck amount ->
             update (Pitch deck (String.fromFloat ((getDeck deck model).pitch + amount))) model
+
+        PitchKey deck amount ->
+            -- Keys never get stuck at the end of the fader: past it, the range widens (±8 → ±16 → ±32 → ±50).
+            let
+                pitch =
+                    clamp -50 50 (toFloat (round (((getDeck deck model).pitch + amount) * 1000000)) / 1000000)
+            in
+            ( mapDeck deck (\d -> { d | pitch = pitch, range = fitPitchRange d.range pitch }) model, set deck "pitch" pitch )
 
         Range deck raw ->
             let
@@ -888,36 +895,6 @@ update msg model =
         Receive data ->
             receive data model
 
-        Key key ->
-            case String.toLower key of
-                "escape" ->
-                    if model.focused then
-                        update (FocusSession False) model
-
-                    else
-                        ( { model | help = False }, Task.attempt (\_ -> NoOp) (Browser.Dom.focus "help-open") )
-
-                " " ->
-                    update PlayBoth model
-
-                "t" ->
-                    update Tap model
-
-                "a" ->
-                    update (Play 0) model
-
-                "b" ->
-                    update (Play 1) model
-
-                "arrowleft" ->
-                    update (Nudge 1 -0.04) model
-
-                "arrowright" ->
-                    update (Nudge 1 0.04) model
-
-                _ ->
-                    ( model, Cmd.none )
-
         DismissNotice ->
             ( { model | notice = "" }, Cmd.none )
 
@@ -1024,6 +1001,9 @@ receive data model =
     case field "type" D.string "" data of
         "ready" ->
             ( { model | ready = True }, Cmd.none )
+
+        "key" ->
+            keyAction data model
 
         "notice" ->
             ( { model | notice = field "message" D.string "" data, error = False }, Cmd.none )
@@ -1331,6 +1311,251 @@ receive data model =
             ( model, Cmd.none )
 
 
+{-| Where the keyboard is, for src/keyboard.js (the app shell's data-keys attribute). See docs/KEYBOARD.md.
+-}
+keyContext : Model -> String
+keyContext model =
+    if model.help then
+        "help"
+
+    else if model.focused then
+        "focus"
+
+    else if model.page == Practice then
+        "practice"
+
+    else
+        "page"
+
+
+practiceModes : List String
+practiceModes =
+    [ "foundation", "builder", "blind", "star", "pro" ]
+
+
+{-| A key from the keyboard control mode, already resolved by src/keyboard.js (docs/KEYBOARD.md).
+Each key does what its button does, so the app's own rules (a drill's fixed tempo, a run's ten
+seconds, the notices) still apply.
+-}
+keyAction : D.Value -> Model -> ( Model, Cmd Msg )
+keyAction data model =
+    let
+        context =
+            keyContext model
+
+        deck =
+            field "deck" D.int -1 data
+
+        shift =
+            field "shift" D.bool False data
+
+        dir =
+            field "dir" D.float 0 data
+
+        ignore =
+            ( model, Cmd.none )
+
+        -- Deck keys work on the practice page and in Focus session.
+        onDeck toMsg =
+            if (deck == 0 || deck == 1) && (context == "practice" || context == "focus") then
+                update (toMsg deck) model
+
+            else
+                ignore
+
+        onDecks msg =
+            if context == "practice" || context == "focus" then
+                update msg model
+
+            else
+                ignore
+
+        onPractice msg =
+            if context == "practice" then
+                update msg model
+
+            else
+                ignore
+
+        mixing toMsg =
+            if model.routing.mode == "mix" then
+                onDecks (toMsg model.crossfade)
+
+            else
+                ignore
+    in
+    case field "action" D.string "" data of
+        "help" ->
+            update ToggleHelp model
+
+        "escape" ->
+            if model.help then
+                update ToggleHelp model
+
+            else if model.focused then
+                update (FocusSession False) model
+
+            else
+                ignore
+
+        "mode" ->
+            case List.head (List.drop (field "value" D.int 0 data - 1) practiceModes) of
+                Just mode ->
+                    if context /= "practice" && context /= "page" then
+                        ignore
+
+                    else if mode /= model.mode then
+                        update (SetMode mode) model
+
+                    else if model.page /= Practice then
+                        -- The mode you're in: just show its decks again, without starting over.
+                        update (Navigate Practice) model
+
+                    else
+                        ignore
+
+                Nothing ->
+                    ignore
+
+        "playBoth" ->
+            onDecks PlayBoth
+
+        "play" ->
+            onDeck Play
+
+        "cue" ->
+            onDeck
+                (if shift then
+                    SetCue
+
+                 else
+                    Cue
+                )
+
+        "pitch" ->
+            onDeck
+                (\number ->
+                    let
+                        step =
+                            if shift then
+                                0.01
+
+                            else if field "big" D.bool False data then
+                                10 * (getDeck number model).sensitivity
+
+                            else
+                                (getDeck number model).sensitivity
+                    in
+                    PitchKey number (dir * step)
+                )
+
+        "pitchZero" ->
+            onDeck (\number -> Pitch number "0")
+
+        "nudge" ->
+            onDeck
+                (\number ->
+                    Nudge number
+                        (dir
+                            * (if shift then
+                                0.01
+
+                               else
+                                0.04
+                              )
+                        )
+                )
+
+        "volume" ->
+            onDeck
+                (\number ->
+                    let
+                        step =
+                            if shift then
+                                0.01
+
+                            else
+                                0.05
+                    in
+                    DeckValue number "volume" (String.fromFloat (clamp 0 1 (toFloat (round (((getDeck number model).volume + dir * step) * 100)) / 100)))
+                )
+
+        "track" ->
+            if context == "practice" then
+                onDeck
+                    (\number ->
+                        if model.mode == "pro" then
+                            if shift then
+                                PreviousTrack number
+
+                            else
+                                NextTrack number
+
+                        else if shift then
+                            ChangeTrack number
+
+                        else
+                            RandomizeTempo number
+                    )
+
+            else
+                ignore
+
+        "crossfade" ->
+            mixing (\current -> Mixer "crossfade" (String.fromFloat (clamp 0 1 (current + field "value" D.float 0 data))))
+
+        "crossfadeCenter" ->
+            mixing (\_ -> Mixer "crossfade" "0.5")
+
+        "focus" ->
+            onDecks (FocusSession (not model.focused))
+
+        "check" ->
+            onPractice Check
+
+        "new" ->
+            onPractice (newRound model)
+
+        "hideBpm" ->
+            onPractice (HideBpm (not model.hideBpm))
+
+        "tap" ->
+            onPractice Tap
+
+        "addElement" ->
+            if context /= "practice" then
+                ignore
+
+            else if model.mode == "foundation" then
+                ( { model | notice = "Foundation keeps to two kicks. Press 2 for the Loop builder to add elements.", error = False }, Cmd.none )
+
+            else if model.mode /= "pro" && model.a.source == "generated" && model.b.source == "generated" && not (List.length model.a.elements == 20 && List.length model.b.elements == 20) then
+                update AddBothElements model
+
+            else
+                ignore
+
+        _ ->
+            ignore
+
+
+{-| N starts the view's next round: the drill's New challenge, Star mode's New run, a Star run in
+Pro decks, and fresh loops and tempos elsewhere.
+-}
+newRound : Model -> Msg
+newRound model =
+    if model.mode == "pro" && String.isEmpty model.drill then
+        case model.star of
+            Just run ->
+                ToggleStarRun run.done
+
+            Nothing ->
+                ToggleStarRun True
+
+    else
+        NewChallenge
+
+
 trackDecoder : D.Decoder Track
 trackDecoder =
     D.map6 Track
@@ -1353,62 +1578,9 @@ referenceDecoder =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.batch
-        [ incoming Receive
-        , Browser.Events.onKeyDown
-            (D.map3 (\ctrl meta altKey -> ctrl || meta || altKey)
-                (D.field "ctrlKey" D.bool)
-                (D.field "metaKey" D.bool)
-                (D.field "altKey" D.bool)
-                |> D.andThen
-                    (\modified ->
-                        if modified then
-                            D.fail "Browser shortcut"
-
-                        else if model.help then
-                            D.field "key" D.string
-                                |> D.andThen
-                                    (\key ->
-                                        if key == "Escape" then
-                                            D.succeed (Key key)
-
-                                        else
-                                            D.fail "Dialog handles keyboard"
-                                    )
-
-                        else
-                            D.field "key" D.string
-                                |> D.andThen
-                                    (\key ->
-                                        if key == "Escape" && model.focused then
-                                            D.succeed (Key key)
-
-                                        else
-                                            D.field "target" (D.map2 Tuple.pair (D.field "tagName" D.string) (D.oneOf [ D.field "role" D.string, D.succeed "" ]))
-                                                |> D.andThen
-                                                    (\( tag, role ) ->
-                                                        if model.focused && key == " " && tag == "INPUT" then
-                                                            D.at [ "target", "type" ] D.string
-                                                                |> D.andThen
-                                                                    (\inputType ->
-                                                                        if inputType == "range" then
-                                                                            D.succeed (Key key)
-
-                                                                        else
-                                                                            D.fail "Native control handles keyboard"
-                                                                    )
-
-                                                        else if List.member tag [ "INPUT", "SELECT", "TEXTAREA", "BUTTON" ] || role == "slider" then
-                                                            D.fail "Native control handles keyboard"
-
-                                                        else
-                                                            D.field "key" D.string |> D.map Key
-                                                    )
-                                    )
-                    )
-            )
-        ]
+subscriptions _ =
+    -- Keys arrive through the port too: src/keyboard.js resolves them (see keyAction).
+    incoming Receive
 
 
 view : Model -> Html Msg
@@ -1422,10 +1594,10 @@ view model =
 
 focusView : Model -> Html Msg
 focusView model =
-    div [ class "app-shell session-focus-view", attribute "data-mode" model.mode ]
+    div [ class "app-shell session-focus-view", attribute "data-mode" model.mode, attribute "data-keys" (keyContext model) ]
         [ header [ class "focus-toolbar" ]
             [ h1 [] [ text "BIT.CHEER // FOCUS SESSION" ]
-            , small [] [ text "SPACE PLAYS BOTH · ESC EXITS" ]
+            , small [] [ text "SPACE PLAYS BOTH · ? KEYS · ESC EXITS" ]
             , button [ class "exit-focus-button", onClick (FocusSession False), attribute "aria-label" "Exit session focus" ] [ text "Exit focus ✕" ]
             ]
         , if model.error && not (String.isEmpty model.notice) then
@@ -1455,12 +1627,17 @@ focusView model =
                 )
                 [ 0, 1 ]
             )
+        , if model.help then
+            helpView model
+
+          else
+            text ""
         ]
 
 
 normalView : Model -> Html Msg
 normalView model =
-    div [ class "app-shell", attribute "data-mode" model.mode ]
+    div [ class "app-shell", attribute "data-mode" model.mode, attribute "data-keys" (keyContext model) ]
         [ topbar model
         , div [ class "workspace" ]
             [ sidebar model
@@ -1485,7 +1662,7 @@ normalView model =
             , span [] [ text "ELM + RUST / WASM", span [ class "footer-separator" ] [ text "·" ], text "BIT.CHEER v1.0", span [ class "footer-separator" ] [ text "·" ], a [ href (model.basePath ++ "credits.html"), target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Credits & sources ↗" ] ]
             ]
         , if model.help then
-            helpView
+            helpView model
 
           else
             text ""
@@ -3586,16 +3763,139 @@ skinsView model =
         ]
 
 
-helpView : Html Msg
-helpView =
+{-| The keyboard help (? key): the letter keys as the hands see them (deck A, the mixer keys, deck B),
+then what the other keys do in the view you're in. The full specification is docs/KEYBOARD.md.
+-}
+helpView : Model -> Html Msg
+helpView model =
+    let
+        keyList entries =
+            ul [ class "shortcut-list" ] (List.map (\( key, action ) -> li [] [ strong [] [ text key ], span [] [ text action ] ]) entries)
+
+        notes =
+            [ ( "Shift", "Finer: 0.01% pitch, a smaller nudge, 1% volume" )
+            , ( "−1 +1", "One step of the deck's Wheel / keys setting" )
+            , ( "Back Fwd", "Tap to nudge, hold to bend the speed" )
+            , ( "Shift Cue", "Save the cue here" )
+            ]
+                ++ (if model.focused then
+                        []
+
+                    else if model.mode == "pro" then
+                        [ ( "Next", "Next track. Shift: previous track" ) ]
+
+                    else
+                        [ ( "Tempo", "Randomize tempo. Shift: change track" ) ]
+                   )
+
+        viewKeys =
+            if model.focused then
+                [ ( "Space", "Play / pause both decks" )
+                , ( "↑ ↓ ← →", "Deck B: pitch and nudge" )
+                , ( "G H · Y", "Crossfader: hold to glide · center" )
+                , ( "` · Esc", "Leave Focus session" )
+                , ( "?", "Open or close this help" )
+                ]
+
+            else
+                [ ( "Space", "Play / pause both decks" )
+                , ( "↑ ↓ ← →", "Deck B: pitch and nudge" )
+                , ( "Enter"
+                  , if starRunning model then
+                        "Finish the run"
+
+                    else
+                        "Check my match"
+                  )
+                , ( "N"
+                  , if not (String.isEmpty model.drill) then
+                        "New challenge"
+
+                    else if model.mode == "star" then
+                        "New run"
+
+                    else if model.mode == "pro" then
+                        "Start or stop a ★ Star run"
+
+                    else
+                        "New challenge: fresh loops and tempos"
+                  )
+                , ( "G H · Y", "Crossfader: hold to glide · center" )
+                ]
+                    ++ (if List.member model.mode [ "builder", "blind", "star" ] then
+                            [ ( "=", "Add an element to both decks" ) ]
+
+                        else
+                            []
+                       )
+                    ++ [ ( "`", "Focus session" )
+                       , ( "1 – 5", "Practice mode: Foundation … Pro decks" )
+                       , ( "?", "Open or close this help" )
+                       , ( "Esc", "Close this help · let go of a control" )
+                       ]
+    in
     div [ class "modal-backdrop" ]
         [ section [ class "help-modal", attribute "role" "dialog", attribute "aria-modal" "true", attribute "aria-labelledby" "help-title", custom "keydown" helpKeyDecoder ]
             [ div [ class "section-heading" ] [ h2 [ id "help-title" ] [ text "Hands on. Ears open." ], button [ id "help-close", class "help-button", onClick ToggleHelp, attribute "aria-label" "Close help" ] [ text "×" ] ]
-            , p [] [ text "Match the tempo with pitch, then align the beats with nudge. Cue returns a deck to its saved starting point." ]
-            , ul [ class "shortcut-list" ] (List.map (\( key, action ) -> li [] [ strong [] [ text key ], span [] [ text action ] ]) [ ( "SPACE", "Play / pause both decks (also in focus)" ), ( "A / B", "Play / pause one deck" ), ( "← / →", "Nudge deck B" ), ( "T", "Tap tempo" ) ])
-            , p [] [ text "Pitch changes playback speed and musical pitch, just like a classic turntable. Split cue sends deck A left and deck B right. Waveforms support dragging and wheel zoom." ]
+            , div [ class "help-body" ]
+                [ p [] [ text "Left hand plays deck A, right hand plays deck B, the mixer sits in between. Index fingers on F and J play. Match the tempo with pitch, then line up the beats with nudge." ]
+                , keyboardMap model
+                , div [ class "help-columns" ]
+                    [ div [ class "help-column" ] [ h3 [] [ text "Deck keys" ], keyList notes ]
+                    , div [ class "help-column" ]
+                        [ h3 []
+                            [ text
+                                (if model.focused then
+                                    "Focus session"
+
+                                 else
+                                    "This view"
+                                )
+                            ]
+                        , keyList viewKeys
+                        ]
+                    ]
+                , p [] [ text "Keys go by position, so they sit in the same place on any keyboard. A field you type in keeps its keys; Esc lets go of it." ]
+                ]
             , button [ id "help-return", class "primary-button", onClick ToggleHelp ] [ text "Back to the groove" ]
             ]
+        ]
+
+
+{-| The three letter rows as key caps. Keys that do nothing in this view keep an empty cap. -}
+keyboardMap : Model -> Html Msg
+keyboardMap model =
+    let
+        practice =
+            not model.focused
+
+        only on name =
+            if on then
+                name
+
+            else
+                ""
+
+        cap ( key, name ) =
+            span [ classList [ ( "keycap", True ), ( "is-idle", String.isEmpty name ) ] ] [ strong [] [ text key ], small [] [ text name ] ]
+
+        block title rows =
+            div [ class "key-block", attribute "role" "group", attribute "aria-label" (title ++ " keys") ]
+                (small [ class "key-block-title" ] [ text title ] :: List.map (\row -> div [ class "key-row" ] (List.map cap row)) rows)
+
+        track =
+            only practice
+                (if model.mode == "pro" then
+                    "Next"
+
+                 else
+                    "Tempo"
+                )
+    in
+    div [ class "keyboard-map" ]
+        [ block "Deck A" [ [ ( "Q", "−10" ), ( "W", "−1" ), ( "E", "+1" ), ( "R", "+10" ) ], [ ( "A", "Cue" ), ( "S", "Back" ), ( "D", "Fwd" ), ( "F", "Play" ) ], [ ( "Z", "0%" ), ( "X", "Vol−" ), ( "C", "Vol+" ), ( "V", track ) ] ]
+        , block "Mix" [ [ ( "T", only practice "Tap" ), ( "Y", "Mid" ) ], [ ( "G", "◀ A" ), ( "H", "B ▶" ) ], [ ( "B", only practice "BPM" ), ( "N", only practice "New" ) ] ]
+        , block "Deck B" [ [ ( "U", "−10" ), ( "I", "−1" ), ( "O", "+1" ), ( "P", "+10" ) ], [ ( "J", "Play" ), ( "K", "Back" ), ( "L", "Fwd" ), ( ";", "Cue" ) ], [ ( "M", track ), ( ",", "Vol−" ), ( ".", "Vol+" ), ( "/", "0%" ) ] ]
         ]
 
 
