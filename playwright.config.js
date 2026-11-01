@@ -27,9 +27,12 @@ export default defineConfig({
   testMatch: 'e2e.spec.js',
   fullyParallel: false,
   workers: 1,
+  // In CI: no stray test.only, one retry (a test that passes on retry is reported as flaky).
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 1 : 0,
   timeout: 35000,
   expect: { timeout: 8000 },
-  reporter: 'list',
+  reporter: process.env.CI ? [['github'], ['list']] : 'list',
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:5173',
     viewport,
