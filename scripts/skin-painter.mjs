@@ -74,7 +74,6 @@ export function paintSkin(theme = {}) {
   const CHROME_DULL = [[0, K('#c9d3de')], [0.46, K('#8e9cad')], [0.5, K('#56677d')], [1, K('#a3b0bf')]];
   const PRESSED = [[0, K('#2a63a3')], [0.55, K('#0b2a55')], [1, K('#1a4277')]];
   const BODY = [[0, K('#dfe8f2')], [0.18, K('#c5d3e2')], [0.62, K('#a8b9cc')], [1, K('#93a6bc')]];
-  const BODY_DULL = [[0, K('#b6c1cd')], [0.5, K('#98a6b6')], [1, K('#86959f')]];
 
   // Deterministic brushed-metal streaks.
   let seed = 7;
@@ -146,7 +145,6 @@ export function paintSkin(theme = {}) {
   Object.assign(TEXT_MAP, { '…': [1, 10], '.': [1, 11], ':': [1, 12], '(': [1, 13], ')': [1, 14], '-': [1, 15], "'": [1, 16], '!': [1, 17], _: [1, 18], '+': [1, 19], '\\': [1, 20], '/': [1, 21], '[': [1, 22], ']': [1, 23], '^': [1, 24], '&': [1, 25], '%': [1, 26], ',': [1, 27], '=': [1, 28], $: [1, 29], '#': [1, 30], Å: [2, 0], Ö: [2, 1], Ä: [2, 2], '?': [2, 3], '*': [2, 4] });
 
   const CONDENSED = { C: ['###', '#..', '#..', '#..', '###'], S: ['###', '#..', '###', '..#', '###'], E: ['###', '#..', '##.', '#..', '###'], R: ['##.', '#.#', '##.', '#.#', '#.#'], O: ['###', '#.#', '#.#', '#.#', '###'], N: ['#..#', '##.#', '#.##', '#..#', '#..#'] };
-  function glyphWidth(ch) { return (GLYPHS[ch] || GLYPHS[' '])[0].length; }
   // Proportional label text (used inside the artwork), with an optional 1px shadow.
   function label(c, str, x, y, color, shadow = null, condensed = false) {
     let cx = x;

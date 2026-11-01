@@ -79,7 +79,7 @@ export function readArchive(bytes) {
     } });
   } catch (error) {
     // fflate's own errors carry a numeric code ("invalid zip data"…); ours above already read well.
-    if (typeof error?.code === 'number') throw new Error('This file isn’t a readable skin archive: it may be damaged or only partly downloaded. Skins are .wsz (ZIP) files.');
+    if (typeof error?.code === 'number') throw new Error('This file isn’t a readable skin archive: it may be damaged or only partly downloaded. Skins are .wsz (ZIP) files.', { cause: error });
     throw error;
   }
 }

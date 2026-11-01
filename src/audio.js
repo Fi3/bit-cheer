@@ -256,7 +256,7 @@ export class AudioEngine {
       graph?.disconnect();
       if (!graph && previous.mode !== 'mix') detachMix();
       for (const [key, value] of Object.entries(settings)) try { destination[key] = value; } catch {}
-      throw new Error(`Output routing could not be changed: ${error.message}`);
+      throw new Error(`Output routing could not be changed: ${error.message}`, { cause: error });
     }
     if (oldGraph) oldGraph.disconnect(); else detachMix();
     this.routing = next; this.hardwareGraph = graph;

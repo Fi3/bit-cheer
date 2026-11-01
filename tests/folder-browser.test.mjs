@@ -55,7 +55,7 @@ test('folder tracks may exceed the 100 MB import cap but are size-checked before
   const MB = 1024 * 1024;
   assert.equal(new SessionLibrary().folderLimit, 300 * MB);
   const library = new SessionLibrary({ folderLimit: 300 * MB });
-  let read = false;
+  let read;
   const file = size => async () => ({ size, arrayBuffer: async () => { read = true; return new Uint8Array([1]).buffer; } });
   library.addLinked('1/hires.flac', 'hires.flac', file(150 * MB));
   assert.equal((await library.audioBytes('folder:1/hires.flac')).byteLength, 1);

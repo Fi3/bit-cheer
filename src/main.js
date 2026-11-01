@@ -382,7 +382,7 @@ document.addEventListener('wheel',event=>{
   const jog=jogDeck(event.target);
   if(!jog){const pitch=event.target.closest?.('.vertical-fader')||document.activeElement?.matches?.('.vertical-fader')&&document.activeElement;
     if(pitch){event.preventDefault();const index=pitchDeck(pitch),sensitivity=pitch.getAttribute('data-pitch-sensitivity')||sensitivities[index];applyPitch(pitch,wheelPitchDelta(event,sensitivity));return;}
-    const canvas=event.target.closest?.('canvas[id^=\"waveform-\"]');if(canvas){event.preventDefault();const deck=canvas.id==='waveform-b'?1:0;zoom[deck]=clamp(zoom[deck]*(event.deltaY<0?1.25:.8),1,16);}return;}event.preventDefault();
+    const canvas=event.target.closest?.('canvas[id^="waveform-"]');if(canvas){event.preventDefault();const deck=canvas.id==='waveform-b'?1:0;zoom[deck]=clamp(zoom[deck]*(event.deltaY<0?1.25:.8),1,16);}return;}event.preventDefault();
   const amount=clamp(-event.deltaY*(event.deltaMode===1?1:.06),-16,16);
   clearTimeout(bendTimers[jog.deck]);engine.set(jog.deck,'bend',amount).catch(fail);
   jog.element.classList.add('jogging');

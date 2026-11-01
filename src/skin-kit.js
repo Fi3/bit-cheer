@@ -83,7 +83,7 @@ class Sheet {
   }
   get data() {
     if (this._data === undefined) {
-      let data = null;
+      let data;
       try { data = this.ctx.getImageData(0, 0, this.width, this.height).data; } catch { data = null; }
       this._data = data && data.length >= this.width * this.height * 4 ? data : null; // test doubles: no pixels
     }
@@ -515,7 +515,7 @@ function transportSheet(sheets, c, gen) {
   });
   const share = icons.slice(0, 5).map(icon => icon.share).sort((p, q) => p - q)[2];
   // How plain the main window is around the icons: a flat plate (labels on buttons) or a picture (Excel Saga).
-  const plate = TRANSPORT.slice(0, 5).map(([x, w, h, mx, my], i) => {
+  const plate = TRANSPORT.slice(0, 5).map(([, w, h, mx, my], i) => {
     let flat = 0, pairs = 0;
     for (let y = 0; y < h; y++) for (let k = 0; k + 1 < w; k++) {
       if (icons[i].mask[y * w + k] || icons[i].mask[y * w + k + 1]) continue;
@@ -705,7 +705,7 @@ function jogPlatter(c) {
   const rimLight = mix(c.face, '#ffffff', 0.45), rimDark = mix(c.face, '#000000', 0.45), label = c.listSel, labelEdge = mix(c.listSel, '#000000', 0.45);
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
     const dx = x + 0.5 - r, dy = y + 0.5 - r, d = Math.hypot(dx, dy), light = (-dx - dy) / (d || 1); // lit from the top left
-    let color = null;
+    let color;
     if (d > r) continue;
     else if (d > r - 1.5) color = c.frameDark;
     else if (d > r - 4) color = light > 0.35 ? rimLight : light < -0.35 ? rimDark : c.face;
