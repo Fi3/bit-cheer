@@ -45,18 +45,18 @@ Contents
 
 ## 2. Opening the app
 
-**On a computer**, the app opens straight on the Practice page in Foundation mode (01), with two kick drums ready: deck A at 120 BPM playing the kick **Velvet**, deck B at 124 BPM playing **Club Punch**. Nothing plays until you press a play button.
+**On a computer**, the app opens straight on the Practice page in Foundation mode (01), with two kick drums ready: deck A at 120 BPM playing the kick **Velvet**, deck B at 124 BPM playing **Club Punch**. Nothing plays until you press a play button. Lesson 1 is already under way: the coach shows its instruction, and a check scoring 85 or more completes it.
 
 The browser only allows sound after a click or key press, so the audio engine starts with your first action that needs it (usually the first play). Until then the top bar says **CLICK PLAY TO START**; after that, **ENGINE READY**.
 
-**On a phone or small touch tablet**, the app shows a retro "PC only" screen instead of the decks, because two decks and a crossfader don't fit next to your thumbs:
+**On a phone or tablet** (except the larger iPads), the app shows a retro "PC only" screen instead of the decks, because two decks and a crossfader don't fit next to your thumbs:
 
 | Control | Does |
 | --- | --- |
 | The phone picture | Click or tap it (or press `Enter` / `Space`) to play **Snake** on its little screen. It plays itself until you take over. |
-| Phone keypad `2` `4` `6` `8` | Steer the snake up, left, right, down. `5` starts a new game. On a keyboard the arrows, `W` `A` `S` `D` and the number keys work too; `Esc` leaves the game. |
+| Phone keypad `2` `4` `6` `8` | Steer the snake up, left, right, down (swiping steers too). After a game over, `5` or a tap on the phone starts a new game. On a keyboard the arrows, `W` `A` `S` `D` and the number keys work too, `Space` or `Enter` start a new game after a game over, and `Esc` leaves the game. |
 | **Play Snake** / **Back to the message** | Start the game / go back to the text. |
-| **OK, I'll get my PC** | Answers with a different joke each press. After five presses a third button appears. |
+| **OK, I’ll get my PC** | Answers with a joke: a new one for each of the first five presses, then the fifth again. After five presses a third button appears. |
 | **Load anyway (no refunds)** | Opens the real app on this device. The choice lasts until the browser tab or window is closed. |
 
 The best Snake score is kept on the device. Adding `?mobile=0` to the address skips this screen; `?mobile=1` shows it on a computer.
@@ -101,11 +101,6 @@ The selected mode's card is marked. Entering a mode:
 - in Foundation, also sets the equalizer flat and the kick's level and pan to their defaults;
 - keeps deck volumes, pitch ranges, the crossfader and the master volume as they were.
 
-**Classic look only:** below the cards, the mode bar also has
-
-- a learning-path card: **Your learning path** with *n*/8 lessons complete, a progress bar, an encouraging line, and **Continue learning →** (goes to the Learning path page);
-- a **Headphones on.** card with **⌨ Keyboard shortcuts** (opens the keyboard help).
-
 ### 3.3 Notice bar
 
 Short messages appear in a bar above the page: confirmations ("Cue point saved…"), refusals ("Let both decks run together…"), lesson and drill instructions, loading progress and errors. A message stays until another replaces it or you press its **×**. Errors are marked as alerts. The full list is in [section 14](#14-messages). In Focus session, only errors are shown.
@@ -117,7 +112,7 @@ Short messages appear in a bar above the page: confirmations ("Cue point saved�
 | **Manual ↗** | Opens the user manual in a new tab. |
 | **Credits & sources ↗** | Opens the credits page (track licenses, skin and font sources) in a new tab. |
 
-The rest of the footer is text: "Built for the ears. Inspired by the era." and the app's version.
+The rest of the footer is text: "Built for the ears. Inspired by the era.", what the app is built with (Elm and Rust/WASM) and its version.
 
 ## 4. Practice page
 
@@ -147,7 +142,7 @@ Controls in the heading:
 **Hide BPM** on:
 
 - each deck screen shows `---.--` instead of the BPM, and **LISTEN. DON'T LOOK.** instead of the source BPM;
-- the live Winamp window shows `---` in its BPM slot;
+- the live Winamp window shows `---` in its BPM slot (as long as the deck's Screen module is open);
 - the **SOURCE BPM** field in Pro decks disappears.
 
 The pitch percentage stays visible. Hide BPM switches on by itself in By ear and in lessons 6 and 8.
@@ -173,7 +168,7 @@ Each deck shows the skin's Winamp main window, live and clickable. It shows:
 
 - **Title**, scrolling: the deck number, the track or loop name, its length, and the pitch when it isn't 0 (for example `2. LOW TIDE (0:16) +1.2%`).
 - **Time**: elapsed time, blinking while paused, empty while stopped at the start.
-- **BPM** (where Winamp shows kbps) and **pitch** rounded to whole percent (where Winamp shows kHz). The BPM shows `---` while Hide BPM is on.
+- **BPM** rounded to a whole number (where Winamp shows kbps) and **pitch** rounded to whole percent (where Winamp shows kHz; from 10% up without its sign). The BPM shows `---` while Hide BPM is on, as long as the deck's Screen module is open.
 - **Spectrum analyser** drawn from the deck's own sound, the play/pause/stop indicator, and the STEREO light while playing.
 
 Every part you can click works:
@@ -183,10 +178,10 @@ Every part you can click works:
 | Time display | Switches between elapsed and remaining time (shown with a minus). |
 | Analyser | Cycles bars → oscilloscope → off. |
 | Volume slider | Sets this deck's volume (the same as its Volume module). |
-| Balance slider | Pans this deck left or right. It snaps to the middle near the centre. |
-| Position bar | Click or drag to jump to that point of the track. |
+| Balance slider | Pans this deck left or right. It snaps to the middle near the centre, and has no effect while **Split cue** or separate outputs are on. |
+| Position bar | Click or drag to jump to that point of the track. While the deck's waveform is zoomed in, the bar spans only the stretch the waveform shows. |
 | ⏮ Previous | Nudges back (as the transport's **−**). |
-| ▶ Play | Starts the deck if it's paused. |
+| ▶ Play | Starts the deck if it isn't playing. |
 | ⏸ Pause | Pauses the deck if it's playing. |
 | ⏹ Stop | Stops and returns to the cue point (as **CUE**). |
 | ⏭ Next | Nudges forward (as the transport's **+**). |
@@ -194,14 +189,14 @@ Every part you can click works:
 | Shuffle | **Randomize tempo** of this deck. Does nothing in the phase and phrase drills. |
 | Repeat | Turns **Loop** on or off. Lit while Loop is on. |
 | EQ | Shows or folds this deck's **Equalizer** module, adding it if it isn't there. Lit while the equalizer is open. |
-| PL | Shows or hides this deck's console (everything below the window). Lit while the console shows. |
+| PL | Shows or hides this deck's console below its title: the modules and the add-module menu. Lit while the console shows. |
 | Title-bar shade button | Folds the window to a one-line bar (Winamp's windowshade) or unfolds it. The bar keeps the time, a mini transport (previous, play, pause, stop, next, eject: same jobs as above) and a tiny position bar. |
 
 Winamp's options, minimize and close buttons have no job here and aren't shown. The window last clicked is drawn as the active one.
 
 #### Console title
 
-- **DECK A · REFERENCE** or **DECK B · MATCH THIS**, and the deck state: **PLAYING** or **READY**.
+- **DECK A** with **REFERENCE**, or **DECK B** with **MATCH THIS**, and the deck state: **PLAYING**, or **READY** whenever it isn't playing.
 - A small fold button (Winamp look only) that shows or hides the console, the same as the window's **PL** button.
 
 #### Transport (always there)
@@ -250,13 +245,15 @@ Each deck module has a title bar with two buttons: **Hide** / **Open** (fold or 
 
 Deck names: Foundation names the kick (`KICK STUDY · VELVET`); fresh loops at the start of a mode, lesson, drill or challenge are `RHYTHM STUDY · nn`; named loops carry their name (`LOW TIDE`); CHAOS! arrangements are `CHAOS STUDY · nnnnn`; recordings show "Title — Artist" or the file name.
 
+With a classic-look skin built on the `alien` base, the screen's artwork also hides five buttons: two that stop the deck at its cue point, play / pause, nudge forward and Focus session.
+
 #### Pitch fader (title: Pitch)
 
 | Control | Does |
 | --- | --- |
 | Fader | Drag to set the pitch anywhere in the range. The top end is fastest (+), the bottom slowest (−), the middle is 0%. |
 | `Shift` + drag | Fine drag: the fader moves ten times less than the pointer, in 0.01% steps. |
-| Mouse wheel over the fader | One step per wheel notch (see **Wheel / keys**); `Shift` makes it 0.01%. Trackpads move smoothly. |
+| Mouse wheel over the fader | One step per wheel notch (see **Wheel / keys**); `Shift` makes it 0.01%. Trackpads move smoothly. While the fader has the focus (after you click or drag it), the wheel moves it from anywhere on the page except a jog wheel. |
 | Arrow keys on the focused fader | One step. `Page Up` / `Page Down`: ten steps. `Home` / `End`: bottom / top of the range. |
 | Pitch value | The pitch in percent, such as **+0.35%**. In the Winamp look it's hidden while the Screen module shows (the screen shows it). |
 | **−** / **+** | 0.01% slower / faster. |
@@ -342,7 +339,7 @@ The two track pickers sit side by side below the decks, titled **Deck A — Trac
 | **Load** | Loads the chosen track: paused, at the start, at pitch 0%. |
 | **◀ Previous** / **Next ▶** | Loads the previous / next track in the genre (wrapping round). The deck keeps playing or stays paused; pitch goes to 0%. Keys: `Shift`+`V` / `V` (deck A), `Shift`+`M` / `M` (deck B). |
 | **Change track** | Loads a random other track from the genre, keeping play state; pitch goes to 0%. |
-| **↥ Import** | Opens your computer's file dialog; the chosen audio file joins this session's library under **Local files** and loads into the deck, paused. Up to 100 MB. |
+| **↥ Import** | Opens your computer's file dialog; the chosen audio file joins this session's library under **Local files** and loads into the deck, paused. Up to 100 MB a file; the session library holds 256 MB in all. |
 | **📁 Browse folder** | Opens the folder browser in the picker (below). |
 | **LOADED** | The name of the deck's current track. |
 | **SOURCE BPM** | The recording's tempo, 40 to 300, with two decimals. Type a better value and leave the field (or press `Enter`) to correct it. Hidden while Hide BPM is on. |
@@ -375,7 +372,7 @@ Below the decks in the generated modes, **Deck A — Track picker** and **Deck B
 | Count | "24 loops made by the rhythm model". |
 | Vibe | One line about the chosen loop ("Dub techno, washed out and slow"). |
 | **Load** | Loads the chosen loop: paused, from its start, at pitch 0%, at its home tempo (in the phase and phrase drills and Star mode, at the deck's tempo). Its instruments, sounds and mix replace the deck's. |
-| **◀ Previous** / **Next ▶** | Loads the neighbouring loop in the list, keeping play state. From a study loop, Next starts at the first loop and Previous at the last. |
+| **◀ Previous** / **Next ▶** | Loads the neighbouring loop in the list, keeping play state; tempo and pitch as with **Load**. From a study loop, Next starts at the first loop and Previous at the last. |
 | **LOADED** | The deck's current loop name. |
 
 ### 4.4 Under the decks
@@ -402,7 +399,7 @@ A slider from **A** to **B** (default: centre). At the A end only deck A is hear
 
 #### Monitor
 
-**Split cue** (off by default): deck A plays in the left ear only and deck B in the right ("A → left / B → right"), so on headphones you can hear each deck separately. Disabled while separate outputs are in use ("External output routing active").
+**Split cue** (off by default): deck A plays in the left ear only and deck B in the right ("A → left / B → right"), so on headphones you can hear each deck separately. While it's on, the crossfader has no effect: each deck plays at its own volume. Disabled while separate outputs are in use ("External output routing active").
 
 #### Audio outputs
 
@@ -426,7 +423,7 @@ Where the browser can't choose devices, the module says to pick the interface in
 The coach guides and scores. Its parts:
 
 - **Heading:** the lesson ("Lesson 3 · Find the pocket"), **★ Star run** during a run, the drill ("tempo drill"), **Find the downbeat.** in Pro decks, or **Listen for the double hit.**
-- **Body:** the latest result ([section 6](#6-checking-a-match)), else the Star run meter ([section 7](#7-star-runs)), else the instruction for the lesson, drill or mode.
+- **Body:** the latest result ([section 6](#6-checking-a-match)), else the Star run meter ([section 7](#7-star-runs)), else the lesson's or drill's instruction, or outside them "Play both decks, then move deck B's pitch fader until the beats stop drifting. Nudge them into place."
 - **Foundation steps** (Foundation only): **1 Listen**, **2 Match tempo**, **3 Nudge & check**. Pointing at a step shows its detail.
 - **Stats:** "*n* checks · *m* avg. score" once you have checked a match.
 - **Check my match ↗**: scores your match. During a Star run it reads **Finish the run**. Key: `Enter`.
@@ -441,7 +438,7 @@ The coach guides and scores. Its parts:
 
 #### External track discovery
 
-Added folded by default. It links to 574 tracks of the original Beatmatch PRO catalog, on their artists' sites; they don't play inside the app.
+Added folded by default. It links to 574 tracks of the original Beatmatch PRO catalog on Bandcamp; they don't play inside the app.
 
 | Control | Does |
 | --- | --- |
@@ -489,10 +486,10 @@ All five modes use the same desk. This section lists what each one starts with a
 
 ### 5.2 Loop builder (02)
 
-- **Material:** a study loop on each deck with kick and closed hat, each instrument with a random sound and the two kicks different; tempos 100–130 BPM, 2–8 BPM apart.
+- **Material:** a study loop on each deck with kick and closed hat, each instrument with a random sound and the two kicks different; deck A between 100 and 130 BPM, deck B 2–8 BPM away.
 - **Composer** on both decks, **loop pickers** below them, **+ Add an element to both decks** under the desk.
 - **Randomize tempo:** within ±8%. **Change track:** a named loop.
-- **New challenge** (`N` only): fresh study loops and tempos, with as many instruments as deck A has now.
+- **New challenge** (`N` only): fresh study loops and tempos, both decks with the instruments deck A has now.
 
 ### 5.3 By ear (03)
 
@@ -543,13 +540,13 @@ The coach then shows the score, **That's the pocket.** (85 or more) or **You're 
 
 Every score goes into your history: the last 50 are kept on this device, for the coach's stats and the Training page. In a lesson, 85 or more completes the lesson.
 
-A result stays in the coach until the next check, a new round, a lesson, drill or mode change, or a Randomize tempo, Change track, loop or CHAOS! change on either deck.
+A result stays in the coach until the next check, a new round, a lesson, drill or mode change, or a Randomize tempo, Change track, ◀ Previous / Next ▶, loop or CHAOS! change on either deck.
 
 ## 7. Star runs
 
 A Star run is a 60-second endurance test. Like real turntables, each deck's speed wanders on its own, up to ±1%, changing direction every few seconds; the wobble starts small and grows during the first half. The drift is **not shown**: neither the BPM screen nor the pitch fader moves. You hear it as the kicks start to flam.
 
-- **Where:** Star mode runs one all the time; in Pro decks, **★ Star run** starts one on the loaded tracks.
+- **Where:** Star mode starts one when you enter it and with every **New run**; in Pro decks, **★ Star run** starts one on the loaded tracks.
 - **Clock:** counts only while both decks play. Pausing a deck pauses the clock and the drift.
 - **In sync** means the beats are within 25 ms and the tempos within 0.3 BPM.
 
@@ -583,7 +580,7 @@ Each card has its number, badge (**✓ COMPLETE** once done), name, a one-line d
 | --- | --- | --- |
 | **Start lesson ↗** | Unlocked, not complete | Starts the lesson: switches to its mode with its material, shows the Practice page, and puts the lesson's instruction in the notice bar and the coach. |
 | **Practice again ↗** | Complete | The same. |
-| **Complete lesson *n*** | Locked | Disabled. A lesson unlocks when the one before it is complete. |
+| **Complete lesson *n*** | Locked | Disabled; *n* is the lesson before. A lesson unlocks when the one before it is complete. |
 
 A lesson is complete when **Check my match** scores 85 or more while it runs. **Lesson 8** also needs a handover: while both decks play, move the crossfader from one end (the last 10%) to the other, taking at least 3 seconds (hold `Shift`+`H` or `Shift`+`G`, which glides end to end in 6 s).
 
@@ -626,7 +623,7 @@ The top line reminds you: "SPACE PLAYS BOTH · ? KEYS · ESC EXITS". Leaving res
 
 ## 11. Keyboard help
 
-**?** (top bar, `?` key, or **⌨ Keyboard shortcuts** in the classic look) opens a dialog titled **Hands on. Ears open.** It first shows the five things a first beatmatch needs.
+**?** (top bar, or the `?` key) opens a dialog titled **Hands on. Ears open.** It first shows the five things a first beatmatch needs.
 
 | Control | Does |
 | --- | --- |
@@ -668,7 +665,7 @@ Three numbered steps explain how to borrow any skin from [skins.webamp.org](http
 | **Use this example** | Fills the field with the first example link (cuteamp). |
 | **Or this one** | Fills the field with the second example link (tricorder). |
 
-A line under the field says how it went ("Loaded “*name*”. Enjoy the view!" or what went wrong).
+A line under the field says how it went ("Loaded “*name*”. Enjoy the view!" or what went wrong). Before that, it says that classic Winamp 2 skins (.wsz) work and that the skin stays on this device.
 
 ### 12.4 Make a skin of your own
 
@@ -684,7 +681,7 @@ A chosen skin is remembered on this device; a museum or imported skin is kept wi
 
 ## 13. Dropdown lists
 
-Every dropdown (pitch range, Wheel / keys, genre, track, loop, sound, add module, add instrument, output mode…) opens a list in the skin's own style. Click an entry to choose it. From the keyboard: `Enter`, `Space`, `↑` or `↓` open the list; arrows, `Home` / `End` and `Page Up` / `Page Down` move; typing jumps to a matching entry; `Enter` or `Space` choose; `Esc` or `Tab` leave without choosing.
+In the Winamp look, every dropdown (pitch range, Wheel / keys, genre, track, loop, sound, add module, add instrument, output mode…) opens a list in the skin's own style; in the classic look, the browser's own list opens. Click an entry to choose it. From the keyboard: `Enter`, `Space`, `↑`, `↓` or `F4` open the list; `↑` / `↓`, `Home` / `End` and `Page Up` / `Page Down` (eight entries) move; typing jumps to an entry that starts with what you type; `Enter` or `Space` choose; `Esc` or `Tab` close the list without choosing, and the focus stays on the dropdown.
 
 ## 14. Messages
 
@@ -699,7 +696,7 @@ What the notice bar says, and when. Errors are marked *(error)*.
 | "No other playable track in this genre. Import another file or choose another genre." | Previous, Next or Change track with nothing else in the genre |
 | "The playable library is loading. You can also import your own files." | Pro decks before the library has arrived |
 | "Loading *track*…", then "*track* loaded. Use CUE to find your first downbeat." | Loading a bundled recording |
-| "Adding *file* to this session…", then "*file* loaded. BPM estimated *x*; correct it with the track BPM field if needed." | Importing or loading your own file |
+| "Adding *file* to this session…" (imports only), "Loading *file*…", then "*file* loaded. BPM estimated *x*; correct it with the track BPM field if needed." | Importing a file, or loading one from your music folder |
 | "Import accepts files up to 100 MB…" *(error)* | Import of a larger file |
 | "Choose a track shorter than *n* minutes at this audio sample rate…" *(error)* | A file too long to load |
 | "Play both decks, match the pitch, then check your mix." and the other check refusals | See [section 6](#6-checking-a-match) |
@@ -719,13 +716,13 @@ On this device (in the browser's storage), across visits:
 
 - the skin (including a museum or imported skin) and its look;
 - each mode's module arrangement, and each deck's **Wheel / keys** step;
-- folded consoles, folded (windowshade) Winamp windows, the analyser style and the elapsed/remaining time choice;
+- each deck's folded console and folded (windowshade) Winamp window, and the live windows' analyser style and elapsed/remaining time choice (one setting for both decks);
 - completed lessons and the last 50 scores;
 - the best Snake score (phone screen).
 
 For this visit only: imported tracks, the chosen music folder, and "Load anyway" on the phone screen (until the tab is closed).
 
-Not remembered: what's on the decks, tempos, pitch, volumes, EQ, composer edits, crossfader, master volume, outputs.
+Not remembered: what's on the decks, tempos, pitch, volumes, balance, EQ, composer edits, crossfader, master volume, split cue, outputs.
 
 ## 16. Known gaps
 
@@ -739,4 +736,6 @@ Places where the interface doesn't quite agree with itself, found while writing 
 6. **Hide BPM and the pitch.** Hide BPM hides tempos but not the pitch percentage, from which the tempo can be worked out.
 7. **By ear and the live window.** In By ear the console hides the waveform, beat lights and time, but the live Winamp window still shows the time and the analyser.
 8. **Shuffle in fixed-tempo drills.** The live window's Shuffle does nothing in the phase and phrase drills, without the hint or notice the button and key give.
-9. **Star runs in lesson 7.** A ★ Star run scoring 85 or more during lesson 7 completes the lesson, like a check.
+9. **Star runs in lessons 7 and 8.** A ★ Star run scoring 85 or more during lesson 7 or 8 completes the lesson, like a check; in lesson 8 it skips the crossfader handover.
+10. **Split cue and the crossfader.** While split cue is on, the crossfader does nothing, yet it stays enabled; with separate outputs it is disabled and reads **EXTERNAL MIX**.
+11. **Checks after a Pro Star run.** Once a ★ Star run has ended in Pro decks, **Check my match** only says the run is over, until another run, mode, lesson or drill starts.

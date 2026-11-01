@@ -154,13 +154,13 @@
 
   <h3>What you need</h3>
   <ul>
-    <li><strong>A computer</strong> with a recent browser (Chrome, Edge, Firefox or Safari). On a phone you get a retro "PC only" screen and a game of Snake instead. It's a whole bit. If you really insist, press <strong>OK, I'll get my PC</strong> five times and a secret button appears.</li>
+    <li><strong>A computer</strong> with a recent browser (Chrome, Edge, Firefox or Safari). On a phone you get a retro "PC only" screen and a game of Snake instead. It's a whole bit. If you really insist, press <strong>OK, I’ll get my PC</strong> five times and a secret button appears.</li>
     <li><strong>Headphones.</strong> Laptop speakers smear the beat; headphones make the drift easy to hear.</li>
     <li><strong>Five quiet minutes.</strong> That's enough for your first match.</li>
   </ul>
   <div class="note heads">
     <span class="note-label">Heads-up</span>
-    <p>Browsers only allow sound after you click something, so the audio engine wakes up with your first press of play. Until then the top bar says <strong>CLICK PLAY TO START</strong>; after that, <strong>ENGINE READY</strong>.</p>
+    <p>Browsers only allow sound after you click something, so the audio engine wakes up with your first action that needs it, usually your first press of play. Until then the top bar says <strong>CLICK PLAY TO START</strong>; after that, <strong>ENGINE READY</strong>.</p>
   </div>
 
   <!-- ─────────────────────────────────────────────── -->
@@ -176,7 +176,7 @@
     <div class="win"><b>Deck B window</b>the live Winamp player</div>
     <div><span class="n">5</span><b>Deck A console</b>screen · transport · pitch · volume</div>
     <div><b>Deck B console</b>screen · transport · pitch · volume</div>
-    <div class="wide"><span class="n">6</span>Track or loop pickers (from mode 02 on)</div>
+    <div class="wide"><span class="n">6</span>Track or loop pickers (Loop builder and Pro decks)</div>
     <div class="wide"><span class="n">7</span>Crossfader · Master volume · Coach</div>
   </div>
   <ol class="legend">
@@ -185,7 +185,7 @@
     <li><strong>The heading.</strong> Start and stop both decks together, open Focus session, hide the tempo numbers, and (in some modes) start a new round.</li>
     <li><strong>Deck windows.</strong> Each deck is a real, clickable Winamp player: its buttons work, its little analyser dances to the deck's own sound. More in <a href="#winamp">chapter 4</a>.</li>
     <li><strong>Deck consoles.</strong> The controls you'll use the most. <strong>Deck A</strong> on the left is the <em>reference</em>; <strong>deck B</strong> on the right says <em>match this</em>. Both work the same way.</li>
-    <li><strong>Pickers.</strong> Choose named loops or real tracks for each deck.</li>
+    <li><strong>Pickers.</strong> Choose named loops or real tracks for each deck. By ear and Star mode keep them tucked away: add them from the deck's <strong>+ Add module…</strong> menu.</li>
     <li><strong>Shared modules.</strong> The crossfader blends the decks, master volume sets the overall level, and the <strong>coach</strong> gives instructions and scores your match.</li>
   </ol>
   <p>Above the page, a <strong>notice bar</strong> pops up with short messages ("Cue point saved", "Let both decks run together…"). Press its <strong>×</strong> to clear it. At the very bottom, the footer links to this manual and to the credits.</p>
@@ -193,11 +193,11 @@
   <!-- ─────────────────────────────────────────────── -->
   <div class="eyebrow" id="first">Chapter 03</div>
   <h2>Your first beatmatch</h2>
-  <p>Start in <strong>01 Foundation</strong>: two kick drums and nothing else. Deck A plays a kick called <em>Velvet</em> at 120 BPM, deck B a punchier one called <em>Club Punch</em> at 124 BPM. Different sounds, so you can tell them apart. Different speeds, so there's work to do.</p>
+  <p>Start in <strong>01 Foundation</strong>, where the app opens: two kick drums and nothing else. Deck A plays a kick called <em>Velvet</em> at 120 BPM, deck B a punchier one called <em>Club Punch</em> at 124 BPM. Different sounds, so you can tell them apart. Different speeds, so there's work to do.</p>
   <ol class="steps">
     <li><strong>Press play on both.</strong> Click <strong>▶ Play both decks</strong> at the top (or press <kbd>Space</kbd>). You'll hear two kicks, and they won't agree for long.</li>
     <li><strong>Listen for the drift.</strong> Two kicks close together sound like a "flam": <em>ba-dum</em>. Listen for a few seconds. Does the gap grow? Shrink? Slide all the way round? That slide is the tempo difference. The <strong>BPM</strong> on each deck's screen shows it too: 120.00 versus 124.00.</li>
-    <li><strong>Match the tempo.</strong> Move deck B's <strong>pitch fader</strong>. Drag it, or put the mouse over it and roll the wheel for small, tidy steps. Up is faster, down is slower. Deck B is faster here, so bring it down until its BPM reads 120.00. Now the flam should stop sliding: whatever gap is left, it stays put.</li>
+    <li><strong>Match the tempo.</strong> Move deck B's <strong>pitch fader</strong>. Drag it, or put the mouse over it and roll the wheel for small, tidy steps. Up is faster, down is slower. Deck B is faster here, so bring it down until its BPM reads 120 (119.99 or 120.01 is as close as the steps go, and plenty close). Now the flam should stop sliding: whatever gap is left, it stays put.</li>
     <li><strong>Line up the hits.</strong> Use deck B's <strong>NUDGE −</strong> and <strong>+</strong> buttons. Each press shifts the deck a tiny bit back or forward. Keep tapping until the two kicks fuse into one fat kick. If the flam gets wider, you're going the wrong way: tap the other button.</li>
     <li><strong>Check your match.</strong> Let it play for a few seconds, then press <strong>Check my match</strong> in the coach (or <kbd>Enter</kbd>). You get a score out of 100. <strong>85 or more</strong> is <em>"That's the pocket."</em></li>
     <li><strong>Go again.</strong> Press <kbd>N</kbd> for a fresh pair of kicks at new tempos. Feeling good? Click <strong>Ready for more? Build a layered loop →</strong> under the decks.</li>
@@ -231,12 +231,12 @@
     <tr><td>CUE</td><td>Stop and jump back to the cue point (the start, until you save another).</td></tr>
     <tr><td>SET</td><td>Save the current position as the cue point. Perfect for marking the first kick of a track.</td></tr>
     <tr><td>NUDGE − / +</td><td>Shift the deck a hair back or forward (0.04 of a beat). For lining up beats, not for speed.</td></tr>
-    <tr><td>Randomize tempo</td><td>Give this deck a new tempo, a few BPM away from the other. Instant new challenge, one deck at a time.</td></tr>
+    <tr><td>Randomize tempo</td><td>Give this deck a new tempo, somewhere near the other deck's. Instant new challenge, one deck at a time.</td></tr>
     <tr><td>Change track</td><td>New material on this deck: another kick in Foundation, another named loop in the loop modes. (In Pro decks this lives in the track picker.)</td></tr>
   </table></div>
 
   <h3>The pitch fader</h3>
-  <p>Your main tool. It speeds the deck up or slows it down; like a real turntable, the music's pitch moves with the tempo.</p>
+  <p>Your main tool. It speeds the deck up or slows it down. On real tracks the music's pitch moves with the tempo, like on a real turntable; the app's own kicks and loops just change speed.</p>
   <ul>
     <li><strong>Drag</strong> it for big moves. Hold <kbd>Shift</kbd> while dragging for slow, precise moves.</li>
     <li><strong>Roll the mouse wheel</strong> over it: one small step per notch. <kbd>Shift</kbd> + wheel is the finest step there is, 0.01%.</li>
@@ -271,7 +271,7 @@
     <tr><td>Shuffle</td><td>randomizes this deck's tempo.</td></tr>
     <tr><td>Repeat</td><td>turns Loop on or off.</td></tr>
     <tr><td>EQ</td><td>opens or folds the deck's equalizer.</td></tr>
-    <tr><td>PL</td><td>shows or hides the deck's console (the controls below the window).</td></tr>
+    <tr><td>PL</td><td>shows or hides the deck's console below its title (its modules and the add-module menu).</td></tr>
     <tr><td>Volume / balance sliders</td><td>set the deck's volume, or pan it left and right.</td></tr>
     <tr><td>Position bar</td><td>jumps to that point in the track.</td></tr>
     <tr><td>The time</td><td>switches between elapsed and remaining time.</td></tr>
@@ -320,6 +320,7 @@
     <li>The 60-second clock only runs while <em>both</em> decks play.</li>
     <li>The coach shows <strong>LOCKED IN</strong> or <strong>DRIFTING…</strong>, the seconds left, and how long you've stayed in sync.</li>
     <li><strong>Finish the run</strong> ends it early (after 10 seconds); <strong>New run</strong> starts over with fresh loops.</li>
+    <li><strong>Randomize tempo</strong> sits this one out: both decks share one tempo, and the drift is the challenge.</li>
   </ul>
   <div class="note">
     <span class="note-label">Tip</span>
@@ -351,14 +352,14 @@
   <h2>How scoring works</h2>
   <p><strong>Check my match</strong> looks at the last few seconds of both decks playing together, so a lucky moment doesn't count; a steady match does. Before it scores, it needs:</p>
   <ul>
-    <li>both decks playing, together, for at least 3 seconds since your last change (pitch, nudge, cue, new track…);</li>
+    <li>both decks playing, together, for at least 3 seconds since your last change (pitch, cue, a jump in the track, new track…);</li>
     <li>at least one instrument on each deck;</li>
     <li>in Pro decks, a real track on both decks.</li>
   </ul>
   <p>If something's missing, the notice bar tells you what. The score starts at 100 and loses points for two things:</p>
   <ul>
     <li><strong>Tempo gap</strong>: 16 points for every BPM the decks are apart.</li>
-    <li><strong>Beat gap</strong>: a quarter of a point for every millisecond the kicks are apart, on average.</li>
+    <li><strong>Beat gap</strong>: 0.24 of a point (about a quarter) for every millisecond the kicks are apart, on average.</li>
   </ul>
   <p>So a perfect tempo with kicks 20 ms apart scores about 95; half a BPM off with perfect kicks scores 92. <strong>85 and up</strong> is the pocket and completes a lesson. The coach adds a hint (adjust the pitch, or nudge the late deck) and the exact gaps.</p>
   <p>Every score lands in your history (the last 50 stay on this computer). You'll find your average and personal best on the <strong>Training</strong> page.</p>
@@ -385,13 +386,13 @@
   <p>Click <strong>Start lesson</strong> on a card (or <strong>Practice again</strong> on one you've finished). Locked cards say which lesson to finish first.</p>
   <div class="note why">
     <span class="note-label">The lesson 8 handover</span>
-    <p>Lesson 8 wants a real DJ move: while both decks play matched, slide the crossfader from one end all the way to the other, taking at least 3 seconds, then check. The easy way: hold <kbd>Shift</kbd> + <kbd>H</kbd> (toward deck B) and the crossfader glides end to end in 6 smooth seconds.</p>
+    <p>Lesson 8 wants a real DJ move: while both decks play matched, slide the crossfader from one end all the way to the other, taking at least 3 seconds, then check. The easy way: park it on deck A's end (hold <kbd>G</kbd>), then hold <kbd>Shift</kbd> + <kbd>H</kbd> (toward deck B) and the crossfader glides end to end in 6 smooth seconds.</p>
   </div>
 
   <!-- ─────────────────────────────────────────────── -->
   <div class="eyebrow" id="drills">Chapter 08</div>
   <h2>Training drills</h2>
-  <p>The <strong>Training</strong> page is the gym: one skill at a time, as many reps as you like. At the top you'll see your total checks, average score, personal best and lessons done; at the bottom, your last 12 scores as bars.</p>
+  <p>The <strong>Training</strong> page is the gym: one skill at a time, as many reps as you like. At the top you'll see your checks, average score and personal best (from the last 50 scores kept) and lessons done; at the bottom, your last 12 scores as bars.</p>
   <div class="table"><table>
     <tr><th>Drill</th><th>What happens</th></tr>
     <tr><td><strong>Catch the tempo</strong></td><td>Two loops, two speeds. Only the tempo is scored, so focus on the pitch.</td></tr>
@@ -466,7 +467,7 @@
     <li><strong>Shift is finer.</strong> Hold <kbd>Shift</kbd> and every move becomes tiny (0.01% pitch). On the cue keys, <kbd>Shift</kbd> saves the cue instead (like SET).</li>
     <li><strong>Hold to keep going.</strong> Pitch and volume keys repeat; nudge keys held longer than a quarter second bend the deck's speed until you let go; <kbd>G</kbd> and <kbd>H</kbd> glide the crossfader.</li>
   </ul>
-  <p>More: <kbd>V</kbd> / <kbd>M</kbd> randomize a deck's tempo (with <kbd>Shift</kbd>: change track; in Pro decks they step to the next track), <kbd>=</kbd> adds an element to both decks, <kbd>`</kbd> toggles Focus session, <kbd>1</kbd>–<kbd>5</kbd> switch modes, and <kbd>Esc</kbd> closes things. Keys work by position, so the shapes stay the same on AZERTY, QWERTZ and Italian keyboards.</p>
+  <p>More: <kbd>V</kbd> / <kbd>M</kbd> randomize a deck's tempo (with <kbd>Shift</kbd>: change track; in Pro decks they step to the next track, or with <kbd>Shift</kbd> the previous one), <kbd>=</kbd> adds an element to both decks, <kbd>`</kbd> toggles Focus session, <kbd>1</kbd>–<kbd>5</kbd> switch modes, and <kbd>Esc</kbd> closes things. Keys work by position, so the shapes stay the same on AZERTY, QWERTZ and Italian keyboards.</p>
   <div class="note">
     <span class="note-label">Tip</span>
     <p>Press <kbd>?</kbd> any time for the keyboard help. It opens on the essentials; <strong>Show more</strong> reveals the full map with the real step sizes. Each key also makes its on-screen button glow, so you learn the map just by playing.</p>
@@ -488,11 +489,11 @@
     <li><strong>Copy the link</strong> from your browser's address bar.</li>
     <li><strong>Paste it</strong> in Skin studio and press <strong>Load skin</strong> (or <kbd>Enter</kbd>). Not sure? <strong>Use this example</strong> fills in a cute one, and <strong>Or this one</strong> a sci-fi tricorder.</li>
   </ol>
-  <p><strong>↺ Back to Millennium Chrome</strong> takes you home whenever you like.</p>
+  <p>With a museum or imported skin on, <strong>↺ Back to Millennium Chrome</strong> takes you home whenever you like.</p>
   <h3>Pick a look</h3>
   <p>Old skins can be loud. Under <strong>LOOK</strong>, choose <strong>Original pixels</strong> (exactly as drawn), <strong>Comfort</strong> (gentler colors and textures) or <strong>Comfort + HD</strong> (the default: gentler, and redrawn four times sharper with smooth lettering).</p>
   <h3>Make your own</h3>
-  <p>Press <strong>↓ Download template</strong>, change the colors in <code>skin.toml</code> (and add your own images if you like), zip it up and press <strong>↥ Import a skin file</strong>. You can import a <code>.wsz</code> Winamp skin you already have the same way. The <a href="skin-guide.html">skin guide</a> walks you through it.</p>
+  <p>Press <strong>↓ Download template</strong>, change the colors in <code>skin.toml</code> (and add your own images if you like), zip it up and press <strong>↥ Import a skin file</strong>. You can import a <code>.wsz</code> Winamp skin you already have the same way. The <a href="skin-guide.html">skin guide</a> walks you through it. A template skin dresses the classic desk in your colors and pictures; the live Winamp windows and the <strong>LOOK</strong> choice come with Winamp (<code>.wsz</code>) skins.</p>
 
   <!-- ─────────────────────────────────────────────── -->
   <div class="eyebrow" id="gear">Chapter 12</div>
@@ -519,7 +520,7 @@
   </details>
   <details>
     <summary>Check my match won't give me a score.</summary>
-    <p>Read the notice bar: it says what's missing. Usually both decks need to play together for 3 seconds after your last change. Any pitch move, nudge, cue or new track restarts that count, so let it settle, then check.</p>
+    <p>Read the notice bar: it says what's missing. Usually both decks need to play together for 3 seconds after your last change. Any pitch move, cue, jump in the track or new track restarts that count, so let it settle, then check.</p>
   </details>
   <details>
     <summary>It sounds matched, but my score is low.</summary>
@@ -543,7 +544,7 @@
   </details>
   <details>
     <summary>My imported tracks disappeared.</summary>
-    <p>Imported tracks and the chosen folder last for the current visit only. After a reload, import them again (with a folder, it's one click).</p>
+    <p>Imported tracks and the chosen folder last for the current visit only. After a reload, import them again (with a folder, just choose it again and its tracks are all back).</p>
   </details>
   <details>
     <summary>A museum skin won't load.</summary>
@@ -551,7 +552,7 @@
   </details>
   <details>
     <summary>I'm on a phone and only get Snake.</summary>
-    <p>bit.cheer needs a computer: two decks and a crossfader don't fit next to your thumbs. Enjoy the Snake! (Press <strong>OK, I'll get my PC</strong> five times if you want to try anyway.)</p>
+    <p>bit.cheer needs a computer: two decks and a crossfader don't fit next to your thumbs. Enjoy the Snake! (Press <strong>OK, I’ll get my PC</strong> five times if you want to try anyway.)</p>
   </details>
 
   <!-- ─────────────────────────────────────────────── -->
@@ -559,7 +560,7 @@
   <h2>What stays on your computer</h2>
   <p>bit.cheer has no account and no server. Everything happens in your browser.</p>
   <ul>
-    <li><strong>Remembered</strong> on this computer: your skin and look, how you arranged each mode, each deck's wheel step, the Winamp window settings, completed lessons and your last 50 scores.</li>
+    <li><strong>Remembered</strong> on this computer: your skin and look, how you arranged each mode, each deck's wheel step, the Winamp window settings, completed lessons, your last 50 scores and, on a phone, your best Snake score.</li>
     <li><strong>For this visit only:</strong> imported tracks and the music folder you opened.</li>
     <li><strong>Never leaves your computer:</strong> your music and the microphone's sound. Nothing is uploaded.</li>
   </ul>
@@ -570,7 +571,7 @@
   <h2>Little DJ dictionary</h2>
   <dl class="glossary">
     <dt>BPM</dt><dd>Beats per minute: how fast the music goes.</dd>
-    <dt>Pitch</dt><dd>How much faster or slower than normal a deck plays, in percent. On a turntable, the tempo and the musical pitch move together, and it's the same here.</dd>
+    <dt>Pitch</dt><dd>How much faster or slower than normal a deck plays, in percent. On a turntable, the tempo and the musical pitch move together; here they do on real tracks, while the app's own loops just change speed.</dd>
     <dt>Drift</dt><dd>Two beats sliding apart because the tempos don't quite match.</dd>
     <dt>Flam</dt><dd>Two hits almost together, "ba-dum". The sound of a match that's close but not there.</dd>
     <dt>Phase</dt><dd>Whether the beats land at the same moment. Same tempo, wrong phase: steady flam.</dd>
