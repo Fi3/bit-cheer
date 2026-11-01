@@ -79,7 +79,7 @@ One module. `Model` holds the page (`Page`: Practice, Learning, Training, Skins)
 
 ### The ports
 
-Elm sends JSON commands on `command`; `handle(command)` in `src/main.js` switches on `type` (`set`, `cue`, `nudge`, `mode`, `lesson`, `drill`, `changeTrack`, `loadTrack`, `loadLoop`, `voice`, `chaos`, `check`, `skin`, `importSkin`, `routing`, `layout`, `persist`, …). The bridge sends events on `incoming` through `send({ type, … })`: `telemetry`, `deckChanged`, `track`, `randomized`, `voices`, `catalog`, `referenceCatalog`, `folderListing`, `result`, `star`, `skin`, `notice`, `error`, `key`, and so on; `receive` in Elm decodes each one. When you add a message, add both sides in the same change; when you remove one, remove both. A few old types have only one side and do nothing: Elm's `init` and `visuals` commands, the bridge's `seek`, `trackGenre`, `focusDeck` and `fullscreen` cases, and the bridge's `skins` event.
+Elm sends JSON commands on `command`; `handle(command)` in `src/main.js` switches on `type` (`set`, `cue`, `nudge`, `mode`, `lesson`, `drill`, `changeTrack`, `loadTrack`, `loadLoop`, `voice`, `chaos`, `check`, `skin`, `importSkin`, `routing`, `layout`, `persist`, …). The bridge sends events on `incoming` through `send({ type, … })`: `telemetry`, `deckChanged`, `track`, `randomized`, `voices`, `catalog`, `referenceCatalog`, `folderListing`, `result`, `star`, `skin`, `notice`, `error`, `key`, and so on; `receive` in Elm decodes each one. Every type has exactly one sender and one reader: when you add a message, add both sides in the same change; when you remove one, remove both.
 
 ### JavaScript bridge: `src/main.js` and its modules
 

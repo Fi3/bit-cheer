@@ -344,7 +344,7 @@ init flags =
       , loops = flags.loops
       , layouts = Dict.fromList (List.map (\mode -> ( mode, defaultModuleLayout mode )) [ "foundation", "builder", "blind", "star", "pro" ])
       }
-    , send "init" []
+    , Cmd.none
     )
 
 
@@ -818,7 +818,7 @@ update msg model =
             ( model, send "pickOutput" [] )
 
         HideBpm enabled ->
-            ( { model | hideBpm = enabled }, send "visuals" [ ( "hidden", E.bool enabled ) ] )
+            ( { model | hideBpm = enabled }, Cmd.none )
 
         Tap ->
             ( model, send "tap" [] )

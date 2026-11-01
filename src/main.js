@@ -470,11 +470,6 @@ async function handle(command) {
     case 'nudge':
       await engine.set(deck, 'nudge', value);
       break;
-    case 'seek':
-      await engine.set(deck, 'seek', clamp(value, 0, 1) * engine.state[deck].duration);
-      recent = [];
-      lastStart = performance.now();
-      break;
     case 'zoom':
       zoom[deck] = clamp(zoom[deck] * value, 1, 16);
       break;
@@ -523,8 +518,6 @@ async function handle(command) {
         lastStart = performance.now();
       }
       break;
-    case 'trackGenre':
-      break;
     case 'voice':
       if (mode !== 'foundation') await engine.setVoice(deck, command.voice, param, value);
       break;
@@ -541,12 +534,6 @@ async function handle(command) {
       break;
     case 'focusSession':
       focusSession(!!command.active, command.fullscreen !== false);
-      break;
-    case 'focusDeck':
-      focusSession(command.deck >= 0, command.fullscreen !== false);
-      break;
-    case 'fullscreen':
-      focusSession(focusActive, !!command.active);
       break;
     case 'newChallenge':
       stopStar();
@@ -1371,14 +1358,6 @@ queueMicrotask(async () => {
     catalog = await response.json();
     library.setBundled(catalog.tracks);
     publishLibrary();
-    send({
-      type: 'skins',
-      skins: (catalog.skins || []).map(skin => ({
-        ...skin,
-        preview: skin.preview ? assetUrl(skin.preview) : '',
-        archive: skin.archive ? assetUrl(skin.archive) : '',
-      })),
-    });
     send({
       type: 'referenceCatalog',
       tracks: (catalog.referenceTracks || []).map(t => ({

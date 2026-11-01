@@ -247,7 +247,7 @@ export class AudioEngine {
             });
             return { ...s, bpm: data.bpms[i] };
           });
-          this.send({ type: 'telemetry', decks, cpu: data.cpu || 0, latency: (context.baseLatency || 0) * 1000 });
+          this.send({ type: 'telemetry', decks });
         } else this.send(data);
       };
       this.node.onprocessorerror = () => {
