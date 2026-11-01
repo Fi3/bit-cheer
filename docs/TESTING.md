@@ -9,6 +9,7 @@ How bit.cheer is checked, what each suite covers, and what the checks can't prov
 | `npm run lint` | rustfmt and clippy (native and wasm32, warnings are errors), elm-format and elm-review, Prettier and ESLint. |
 | `npm test` | The rhythm-model check, the WASM build, the Rust tests, and every Node test (`tests/*.test.mjs`, `engine/tests/*.test.cjs`). |
 | `npm run test:e2e` | The browser suite (`tests/e2e.spec.js`) in Chromium. It builds WASM and Elm first and starts the dev server on port 5173 unless one is already running there. |
+| `npm run test:e2e:firefox` | The same suite in Firefox, run locally (CI doesn't run it, see below). Install it once with `npx playwright install firefox`. Firefox's Web Audio needs a sound server, which every desktop has; its output is scaled to near silence. |
 | `npm run check` | `lint`, then `test`. |
 
 One at a time:
@@ -16,7 +17,7 @@ One at a time:
 ```sh
 node --test tests/keyboard.test.mjs                        # one Node test file
 cargo test --manifest-path engine/Cargo.toml phrase        # Rust tests whose names contain "phrase"
-npx playwright test -g "keyboard control"                  # browser tests whose titles match
+npm run test:e2e -- -g "keyboard control"                  # browser tests whose titles match
 ```
 
 The browser suite runs against any server when `PLAYWRIGHT_BASE_URL` is set, for example a production build served under a GitHub Pages subpath:
@@ -24,14 +25,14 @@ The browser suite runs against any server when `PLAYWRIGHT_BASE_URL` is set, for
 ```sh
 VITE_BASE_PATH=/bit-cheer/ npm run build
 VITE_BASE_PATH=/bit-cheer/ npm run preview -- --port 4174
-PLAYWRIGHT_BASE_URL=http://127.0.0.1:4174/bit-cheer/ npx playwright test
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:4174/bit-cheer/ npx playwright test --project=chromium
 ```
 
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` picks a specific Chromium; otherwise `playwright.config.js` uses Playwright's own, or the newest one in `~/.cache/ms-playwright`. Install it with `npx playwright install chromium`. If Chromium crashes ("Target crashed"), point `TMPDIR` to a folder on disk: a full temp folder is the usual cause.
 
 ## In CI
 
-`.github/workflows/ci.yml` runs on every pull request, with two jobs: **Lint and unit tests** (`npm run lint`, `npm test`) and **Browser tests** (`npm run test:e2e` in Chromium; screenshots and traces of failures are kept as an artifact for a week). Every push to `main` runs the same workflow again inside `.github/workflows/deploy.yml`, and the site deploys only when it passes. In CI, Playwright retries a failed browser test once and reports it as flaky if the retry passes.
+`.github/workflows/ci.yml` runs on every pull request, with two jobs: **Lint and unit tests** (`npm run lint`, `npm test`) and **Browser tests (Chromium)** (`npm run test:e2e`; screenshots and traces of failures are kept as an artifact for a week). Firefox isn't in CI: a CI machine has no sound server, and with a PulseAudio null sink Firefox's AudioContext sometimes never starts, so a few tests time out waiting for playback (Chromium falls back to a silent output by itself). Every push to `main` runs the same workflow again inside `.github/workflows/deploy.yml`, and the site deploys only when it passes. In CI, Playwright retries a failed browser test once and reports it as flaky if the retry passes.
 
 ## The suites
 
@@ -78,7 +79,7 @@ Each module's logic runs under `node:test` without a browser, with small fakes f
 
 ### Browser suite
 
-`tests/e2e.spec.js` drives the real app in Chromium (`playwright.config.js`: one worker, 1440 × 1100, autoplay allowed) and listens to real audio through the app's telemetry. `window.bitCheer` gives the tests read-only access to the engine state, telemetry, mode, library and Focus state; `deckSnapshots` compares both decks so every action can prove it left the other deck alone. It covers:
+`tests/e2e.spec.js` drives the real app in Chromium, and locally in Firefox (the `chromium` and `firefox` projects in `playwright.config.js`: one worker, 1440 × 1100, autoplay allowed) and listens to real audio through the app's telemetry. Where the browsers differ, the tests check each one's own path: Firefox has no Keyboard Lock (so Esc in fullscreen leaves Focus session at once), no output-device picker, and no folder picker (so folders come in through the upload fallback). `window.bitCheer` gives the tests read-only access to the engine state, telemetry, mode, library and Focus state; `deckSnapshots` compares both decks so every action can prove it left the other deck alone. It covers:
 
 - rendering, waveforms and accessible controls; no horizontal scrolling;
 - keyboard control: both hands, focus rules, digits, Focus session and the help;
@@ -98,4 +99,4 @@ Each module's logic runs under `node:test` without a browser, with small fakes f
 - **Codecs and tempo estimates.** Decoding follows the browser. Bundled BPMs and beat grids are estimates, flagged in `public/catalog.json` where a manual grid is recommended.
 - **Looks.** Tests check measurable rules (the skin font everywhere, sprite offsets, no overflow, real images in every artwork slot), not taste. Visual changes still need a look with human eyes.
 - **Speed.** Benchmarks measure this machine, not every device.
-- **Other browsers.** CI runs Chromium only, so behavior specific to Firefox or Safari is checked by hand.
+- **Other browsers.** CI runs Chromium; Firefox runs locally with `npm run test:e2e:firefox`. WebKit, Safari's engine, isn't run, so Safari-specific behavior is checked by hand.

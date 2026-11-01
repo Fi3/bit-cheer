@@ -7,7 +7,7 @@ Bit Cheer builds to a static `dist/` directory. GitHub Pages serves the Elm fron
 | **CI** (`.github/workflows/ci.yml`) | every pull request; also callable | **Lint and unit tests**: `npm run lint` and `npm test`. **Browser tests (Chromium)**: `npm run test:e2e`, keeping screenshots and traces of failures for a week. |
 | **Deploy Bit Cheer to GitHub Pages** (`.github/workflows/deploy.yml`) | every push to `main` (a merged pull request), or by hand | Runs CI, then builds the site for the Pages base path, then publishes it. |
 
-A failing check stops the deploy, so the live site keeps its last good version. To make GitHub refuse merges until CI passes, add a branch protection rule for `main` under **Settings → Branches** that requires the **Lint and unit tests** and **Browser tests (Chromium)** status checks.
+A failing check stops the deploy, so the live site keeps its last good version. Dependabot (`.github/dependabot.yml`) opens one grouped update pull request a month for the pinned GitHub Actions and one for npm, and CI checks them like any other. To make GitHub refuse merges until CI passes, add a branch protection rule for `main` under **Settings → Branches** that requires the **Lint and unit tests** and **Browser tests (Chromium)** status checks.
 
 ## Enable deployment
 

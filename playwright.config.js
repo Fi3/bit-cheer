@@ -17,9 +17,9 @@ function executablePath() {
     .find(file => existsSync(file));
 }
 
-// Headless Chromium's screen is its --window-size (800 × 600 unless set). Fullscreen (Focus session)
-// shrinks the window to that screen while the page stays laid out at the viewport, and wheel input
-// outside the window never reaches the page, so the screen must be as large as the viewport.
+// A headless browser's screen is 800 × 600 (Chromium) or 1366 × 768 (Firefox) unless set. Fullscreen (Focus
+// session) shrinks the window to that screen while the page stays laid out at the viewport, and wheel input
+// outside the window never reaches the page, so each browser's screen is made as large as the viewport.
 const viewport = { width: 1440, height: 1100 };
 
 export default defineConfig({
@@ -39,11 +39,37 @@ export default defineConfig({
     headless: true,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    launchOptions: {
-      executablePath: executablePath(),
-      args: ['--autoplay-policy=no-user-gesture-required', `--window-size=${viewport.width},${viewport.height}`],
-    },
   },
+  // `npm run test:e2e` runs Chromium (as CI does) and `npm run test:e2e:firefox` Firefox.
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        browserName: 'chromium',
+        launchOptions: {
+          executablePath: executablePath(),
+          args: ['--autoplay-policy=no-user-gesture-required', `--window-size=${viewport.width},${viewport.height}`],
+        },
+      },
+    },
+    {
+      name: 'firefox',
+      use: {
+        browserName: 'firefox',
+        launchOptions: {
+          firefoxUserPrefs: {
+            // Web Audio may start without a click, as with Chromium's autoplay flag.
+            'media.autoplay.default': 0,
+            'media.autoplay.blocking_policy': 0,
+            // Near-silent output: the audio graph runs, but its stream is scaled to (almost) zero.
+            'media.volume_scale': '0.0',
+          },
+          // Firefox's AudioContext only starts with a sound server, which a desktop has and a CI machine lacks.
+          env: { ...process.env, MOZ_HEADLESS_WIDTH: `${viewport.width}`, MOZ_HEADLESS_HEIGHT: `${viewport.height}` },
+        },
+      },
+    },
+  ],
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {

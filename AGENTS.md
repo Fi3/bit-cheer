@@ -27,6 +27,7 @@ Node.js 22.12+ (CI uses 22), Python 3, and rustup. rustup reads `rust-toolchain.
 | `npm run lint` | `lint:rust` (rustfmt check, clippy for native and wasm32 with warnings denied), `lint:elm` (elm-format check, elm-review), `lint:js` (Prettier check, ESLint). |
 | `npm test` | Rhythm-model check, WASM build, Rust tests, and the Node unit tests, including the docs checks. |
 | `npm run test:e2e` | The Playwright suite in Chromium against the dev server. |
+| `npm run test:e2e:firefox` | The same suite in Firefox, locally only (install it once with `npx playwright install firefox`). |
 | `npm run check` | `lint` and `test` together: the gate for every commit. |
 | `npm run train:rhythms` | Retrain `engine/src/rhythm_weights.rs` from `docs/rhythm-corpus.json`. |
 
@@ -139,13 +140,15 @@ Keys are matched by position (`KeyboardEvent.code`). The `keydown` handler in `s
 ### Build, CI and deployment
 
 - `npm run build:wasm` compiles the engine for `wasm32-unknown-unknown` and `scripts/copy-wasm.mjs` copies it to `public/engine.wasm`; `npm run build:elm` writes `public/elm.js`; Vite bundles `src/` and copies `public/` into `dist/`. `vite.config.js` reads `VITE_BASE_PATH` and `BUILD_OUT_DIR`.
-- `.github/workflows/ci.yml` runs on every pull request: `npm run lint` and `npm test` in one job, the Playwright suite in another.
+- `.github/workflows/ci.yml` runs on every pull request: `npm run lint` and `npm test` in one job, the Playwright suite in Chromium in another. Firefox runs locally only (docs/TESTING.md explains why).
 - `.github/workflows/deploy.yml` runs on every push to `main` (a merged pull request): it calls the same CI, builds the site for the Pages base path, and deploys it to GitHub Pages. A failing check stops the deploy. `.github/workflows/pages-diagnostics.yml` is a manual check of the custom domain's DNS and HTTPS.
+- `.github/dependabot.yml` opens one grouped update pull request a month for the GitHub Actions and one for npm; CI checks them like any other.
+- `.editorconfig` gives editors the formatters' basics (UTF-8, LF, final newline, 2 spaces, 4 for Elm, Rust and Python). `.git-blame-ignore-revs` lets `git blame` skip the Prettier formatting commit; run `git config blame.ignoreRevsFile .git-blame-ignore-revs` once to use it locally.
 - Tool configuration: `rust-toolchain.toml`, `engine/Cargo.toml` (release profile: LTO, `panic = "abort"`), `eslint.config.js`, `.prettierrc.json`, `review/src/ReviewConfig.elm` (elm-review rules), `elm.json`, `package.json`, `playwright.config.js`.
 
 ### Tests
 
-[docs/TESTING.md](docs/TESTING.md) lists every suite and what it covers. In short: Rust unit tests at the bottom of `engine/src/lib.rs`; Node tests for each module in `tests/*.test.mjs` and for the compiled WASM in `engine/tests/*.test.cjs`; `tests/docs.test.mjs` for the docs; and `tests/e2e.spec.js`, which drives the real app with real audio in Chromium.
+[docs/TESTING.md](docs/TESTING.md) lists every suite and what it covers. In short: Rust unit tests at the bottom of `engine/src/lib.rs`; Node tests for each module in `tests/*.test.mjs` and for the compiled WASM in `engine/tests/*.test.cjs`; `tests/docs.test.mjs` for the docs; and `tests/e2e.spec.js`, which drives the real app with real audio in Chromium (and in Firefox on request).
 
 ## Where to change what
 

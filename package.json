@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build:elm": "elm make src/Main.elm --optimize --output=public/elm.js",
@@ -18,10 +21,12 @@
     "lint:elm": "elm-format --validate src review/src && elm-review",
     "lint:js": "prettier --check --log-level warn \"{src,public,scripts,tests,engine/tests}/**/*.{js,mjs,cjs}\" \"*.config.js\" && eslint src public scripts tests engine/tests \"*.config.js\"",
     "test": "python3 scripts/train-rhythm-model.py --check && npm run build:wasm && cargo test --manifest-path engine/Cargo.toml && node --test tests/*.test.mjs engine/tests/*.test.cjs",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --project=chromium",
+    "test:e2e:firefox": "playwright test --project=firefox",
     "check": "npm run lint && npm test",
     "predev": "npm run build:wasm && npm run build:elm",
     "pretest:e2e": "npm run build:wasm && npm run build:elm",
+    "pretest:e2e:firefox": "npm run build:wasm && npm run build:elm",
     "train:rhythms": "python3 scripts/train-rhythm-model.py"
   },
   "dependencies": {

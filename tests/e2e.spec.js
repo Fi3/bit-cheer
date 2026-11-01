@@ -5,6 +5,7 @@ import path from 'node:path';
 import { assetUrl } from '../src/assets.js';
 import { LOOPS } from '../src/loops.js';
 import { INSTRUMENTS } from '../src/instruments.js';
+import { tapTempo } from '../src/training.js';
 
 const root = process.cwd();
 const asset = name => path.join(root, 'public', name);
@@ -122,8 +123,10 @@ async function seekPausedDeck(page, letter, fraction) {
 
 async function assertLcdSprites(page) {
   await expect(page.locator('.lcd-digit').first()).toBeVisible();
-  const digits = await page.locator('.lcd-digit').evaluateAll(elements =>
-    elements.map(element => {
+  // One evaluate: locator.evaluateAll finds the digits and reads them in two protocol calls, and a re-render
+  // in between detaches the found digits, whose computed style is then empty.
+  const digits = await page.evaluate(() =>
+    [...document.querySelectorAll('.lcd-digit')].map(element => {
       const style = getComputedStyle(element);
       return {
         digit: Number(element.textContent),
@@ -447,7 +450,10 @@ test('keyboard control: digits switch views, ` and Esc enter and leave Focus ses
   await page.keyboard.press('Shift+Slash');
   await more();
   await expect(dialog).toContainText('Leave Focus session');
-  await page.keyboard.press('Escape');
+  // In fullscreen only Chromium's Keyboard Lock lends Esc to the page, so Esc can close the help first. Elsewhere
+  // (Firefox) the browser keeps Esc to leave fullscreen, and so Focus session; ? closes the help there.
+  const keyboardLock = await page.evaluate(() => typeof navigator.keyboard?.lock === 'function');
+  await page.keyboard.press(keyboardLock ? 'Escape' : 'Shift+Slash');
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('.focus-channel')).toHaveCount(2);
   await page.keyboard.press('Escape');
@@ -1396,12 +1402,29 @@ test('tap tempo measures human tapping and mobile layout remains usable', async 
   await page.screenshot({ path: testInfo.outputPath('mobile-390.png'), fullPage: true });
   await openModule(page, 'tap');
   const tap = page.getByRole('button', { name: 'Tap tempo', exact: true });
+  // Each click adds its own delivery time to the 500 ms wait (more in Firefox, and on a busy machine), so
+  // the reading is checked against the spacing the taps really had.
+  await page.evaluate(() => {
+    window.__taps = [];
+    document.addEventListener(
+      'click',
+      event => {
+        if (event.target.closest?.('.tap-button')) window.__taps.push(performance.now());
+      },
+      true,
+    );
+  });
   for (let i = 0; i < 5; i++) {
     await tap.click();
     if (i < 4) await page.waitForTimeout(500);
   }
   const bpm = Number(await page.locator('.tap-readout strong').textContent());
-  expect(bpm).toBeGreaterThan(100);
+  const taps = await page.evaluate(() => window.__taps);
+  expect(taps).toHaveLength(5);
+  // The app stamps a tap after Elm hands it over, a few milliseconds after the click itself.
+  const measured = taps.reduce((result, time) => tapTempo(result.times, time), { times: [] });
+  expect(Math.abs(bpm - measured.bpm)).toBeLessThan(2);
+  expect(bpm).toBeGreaterThan(80);
   expect(bpm).toBeLessThan(125);
   await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -2435,6 +2458,8 @@ test('configured hosting path serves the actual engine catalog skin bitmaps and 
       .click();
     await expect(page.locator('html')).toHaveAttribute('data-skin', id);
     await page.getByRole('button', { name: 'Practice', exact: true }).click();
+    // The skin studio shows sample digits too: check the decks' own, once Practice is on screen.
+    await expect(page.locator('.deck')).toHaveCount(2);
     await assertLcdSprites(page);
     await page.getByRole('button', { name: 'Skin studio', exact: true }).click();
   }
