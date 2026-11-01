@@ -12,7 +12,7 @@ Two decks, a crossfader, and a coach that tells you when your kicks sit together
 - **Skins:** Millennium Chrome and the very cute Strawberry Mochi built in, any classic skin from the [Winamp Skin Museum](https://skins.webamp.org/) one paste away, or one you make yourself.
 - **Real gear:** send each deck to its own output channels and mix on a hardware mixer.
 
-New here? The [manual](public/manual.html), also linked in the app's footer, is the friendly way in.
+New here? The [video tutorial](https://www.youtube.com/watch?v=SLSok7xQwCY) (the app's top bar links it too) and the [manual](public/manual.html) (linked in the app's footer) are the friendly ways in.
 
 ## Run it locally
 

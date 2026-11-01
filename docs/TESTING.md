@@ -81,7 +81,7 @@ Each module's logic runs under `node:test` without a browser, with small fakes f
 
 `tests/e2e.spec.js` drives the real app in Chromium, and locally in Firefox (the `chromium` and `firefox` projects in `playwright.config.js`: one worker, 1440 × 1100, autoplay allowed) and listens to real audio through the app's telemetry. Where the browsers differ, the tests check each one's own path: Firefox has no Keyboard Lock (so Esc in fullscreen leaves Focus session at once), no output-device picker, and no folder picker (so folders come in through the upload fallback). `window.bitCheer` gives the tests read-only access to the engine state, telemetry, mode, library and Focus state; `deckSnapshots` compares both decks so every action can prove it left the other deck alone. It covers:
 
-- rendering, waveforms and accessible controls; no horizontal scrolling;
+- rendering, waveforms and accessible controls; no horizontal scrolling; the top bar's video tutorial link on every page, opening YouTube in a new tab only when clicked;
 - keyboard control: both hands, focus rules, digits, Focus session and the help;
 - real audio: samples, pitch changing tempo, instruments and the mixer; jog, scrubbing and CUE;
 - skins: Skin studio, TOML, ZIP and WSZ imports, invalid skins, skins with controls painted on a picture, the three looks (with the skin's own pixels and Winamp windows on screen before the chosen look is ready), and every word in the skin's lettering;

@@ -200,7 +200,8 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   background: var(--k-pl-tl) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat, var(--k-pl-tr-plain, var(--k-pl-tr)) right top / calc(25 * var(--kp)) calc(20 * var(--kp)) no-repeat,
     var(--k-pl-t) left top / calc(25 * var(--kp)) calc(20 * var(--kp)) repeat-x, var(--k-frame);
 }
-:root[data-layout=kit] .app-shell .brand { justify-self: start; gap: calc(3 * var(--kp)); padding: 0 calc(3 * var(--kp)); height: calc(10 * var(--kp)); background: var(--k-title-bg); box-shadow: 0 0 0 var(--kp) var(--k-title-bg); color: var(--k-title); }
+:root[data-layout=kit] .app-shell .topbar-start { justify-self: start; display: flex; align-items: center; gap: calc(4 * var(--kp)); min-width: 0; }
+:root[data-layout=kit] .app-shell .brand { gap: calc(3 * var(--kp)); padding: 0 calc(3 * var(--kp)); height: calc(10 * var(--kp)); background: var(--k-title-bg); box-shadow: 0 0 0 var(--kp) var(--k-title-bg); color: var(--k-title); }
 :root[data-layout=kit] .app-shell .brand .brand-mark { display: none; }
 :root[data-layout=kit] .app-shell .brand-mark { width: auto; height: auto; padding: 0 var(--kp); background: var(--k-accent); color: var(--k-accent-text); font: var(--k-text)/1 var(--k-pixel); border-radius: 0; transform: none; box-shadow: none; }
 :root[data-layout=kit] .app-shell .brand-word { font: var(--k-text)/1 var(--k-pixel); letter-spacing: 0; color: var(--k-title); text-transform: uppercase; }
@@ -223,6 +224,14 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   width: calc(10 * var(--kp)); height: calc(10 * var(--kp)); min-width: 0; min-height: 0; padding: 0; border: 0; border-image: none;
   background: var(--k-face); color: var(--k-face-text); box-shadow: var(--k-bevel), 0 0 0 var(--kp) var(--k-edge-dark); line-height: 1;
 }
+/* The video tutorial sits beside the brand and wears the skin's button face, so it reads as a button on every skin. */
+:root[data-layout=kit] .app-shell .topbar .tutorial-link {
+  display: inline-flex; align-items: center; gap: calc(3 * var(--kp)); height: calc(10 * var(--kp)); padding: 0 calc(4 * var(--kp));
+  font: var(--k-text)/1 var(--k-pixel); letter-spacing: 0; text-transform: uppercase; text-decoration: none; white-space: nowrap;
+  color: var(--k-face-text); background: var(--k-face); border: 0; border-radius: 0; box-shadow: var(--k-bevel), 0 0 0 var(--kp) var(--k-edge-dark);
+}
+:root[data-layout=kit] .app-shell .topbar .tutorial-link:hover { background-color: color-mix(in srgb, var(--k-face) 88%, var(--k-face-light)); }
+:root[data-layout=kit] .app-shell .topbar .tutorial-link:active { box-shadow: var(--k-bevel-in), 0 0 0 var(--kp) var(--k-edge-dark); background-color: color-mix(in srgb, var(--k-face) 82%, var(--k-face-dark)); }
 
 /* ---------- practice modes: entries of a playlist ---------- */
 :root[data-layout=kit] .app-shell .workspace { display: block; min-height: 0; }
@@ -1201,9 +1210,10 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
   :root[data-layout=kit] .app-shell:not(.session-focus-view) { max-width: calc(var(--deck-w) + 40px); }
   :root[data-layout=kit] .app-shell :is(.decks, .track-pickers) { grid-template-columns: var(--deck-w); justify-content: center; }
   :root[data-layout=kit] .app-shell .mode-list { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  :root[data-layout=kit] .app-shell .topbar { grid-template-columns: auto minmax(0, 1fr); height: auto; row-gap: calc(3 * var(--kp)); padding-bottom: calc(3 * var(--kp)); background-color: var(--k-frame); }
-  :root[data-layout=kit] .app-shell .topbar > .brand { grid-column: 1; grid-row: 1; margin-top: calc(5 * var(--kp)); }
-  :root[data-layout=kit] .app-shell .topbar-right { grid-column: 2; grid-row: 1; justify-self: end; margin: calc(5 * var(--kp)) 0 0; min-width: 0; }
+  /* The status keeps its width; when the brand's side runs short, Tutorial drops under the brand. */
+  :root[data-layout=kit] .app-shell .topbar { grid-template-columns: minmax(0, 1fr) auto; height: auto; row-gap: calc(3 * var(--kp)); padding-bottom: calc(3 * var(--kp)); background-color: var(--k-frame); }
+  :root[data-layout=kit] .app-shell .topbar-start { grid-column: 1; grid-row: 1; margin-top: calc(5 * var(--kp)); flex-wrap: wrap; row-gap: calc(3 * var(--kp)); }
+  :root[data-layout=kit] .app-shell .topbar-right { grid-column: 2; grid-row: 1; justify-self: end; align-self: start; margin: calc(5 * var(--kp)) 0 0; min-width: 0; }
   :root[data-layout=kit] .app-shell .main-nav { grid-column: 1 / -1; grid-row: 2; min-width: 0; flex-wrap: wrap; justify-content: flex-start; justify-self: stretch; margin: 0; }
   :root[data-layout=kit] .app-shell .page-heading { flex-direction: column; align-items: stretch; }
   :root[data-layout=kit] .app-shell .heading-actions { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }

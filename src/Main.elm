@@ -1766,10 +1766,13 @@ topbar : Model -> Html Msg
 topbar model =
     header [ class "topbar" ]
         [ a [ class "skip-link", href "#main-content" ] [ text "Skip to practice" ]
-        , button [ class "brand", onClick (Navigate Practice), attribute "aria-label" "Bit Cheer home" ]
-            [ span [ class "brand-mark" ] [ text "ϟ" ]
-            , span [ class "brand-word" ] [ text "bit", span [] [ text "." ], text "cheer" ]
-            , span [ class "brand-tag" ] [ text "BEATMATCH LAB" ]
+        , div [ class "topbar-start" ]
+            [ button [ class "brand", onClick (Navigate Practice), attribute "aria-label" "Bit Cheer home" ]
+                [ span [ class "brand-mark" ] [ text "ϟ" ]
+                , span [ class "brand-word" ] [ text "bit", span [] [ text "." ], text "cheer" ]
+                , span [ class "brand-tag" ] [ text "BEATMATCH LAB" ]
+                ]
+            , a [ class "tutorial-link", href "https://www.youtube.com/watch?v=SLSok7xQwCY", target "_blank", attribute "rel" "noopener noreferrer", attribute "aria-label" "Video tutorial on YouTube", title "Watch the bit.cheer video tutorial on YouTube (opens a new tab)" ] [ text "▶ Tutorial" ]
             ]
         , nav [ class "main-nav", attribute "aria-label" "Main navigation" ]
             (List.map
