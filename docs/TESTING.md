@@ -70,7 +70,7 @@ Each module's logic runs under `node:test` without a browser, with small fakes f
 | `tests/loops.test.mjs` | Every named loop is complete, playable and unique; sound names are unique per instrument and kick names title the Foundation decks. |
 | `tests/mic-worklet.test.mjs` | Continuous, silent microphone capture, its true sample rate, a 120 BPM pulse, and releasing the microphone. |
 | `tests/output-routing.test.mjs` | Hardware route validation, the discrete multichannel graph, mono downmix, bypassing the crossfader in hardware modes, rollback on errors, device loss, and the device picker. |
-| `tests/pitch-control.test.mjs` | Wheel and key pitch steps for every sensitivity and wheel unit, Shift + wheel, fractional trackpad motion, and clamping. |
+| `tests/pitch-control.test.mjs` | Wheel and key pitch steps for every sensitivity and wheel unit, Shift + wheel (including sideways scrolling), fractional trackpad motion, and clamping. |
 | `tests/pixel-font.test.mjs` | Every character the app writes has a glyph in the skin's pixel font, including symbols such as 📁. |
 | `tests/skin-enhance.test.mjs` | The HD redraw (smooth diagonals, sharp corners, lettering, gradients, seamless tiles) and Comfort (no pure black or white, calmer loud colors, readable text). |
 | `tests/skins.test.mjs` | Skin bases and palettes, the artwork contract, built-in kits, safe skin switching, ZIP and WSZ imports, kit building from odd skins, text-file parsing, import limits, museum links, and safe kit images. |

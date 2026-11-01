@@ -16,6 +16,14 @@ test('fine, normal and coarse wheel steps agree across pixel, line and page unit
   assert.equal(pitchSensitivity('unsafe'), 0.05);
 });
 
+test('Shift + mouse wheel moves 0.01 even when the browser reports it as sideways scrolling', () => {
+  // Chromium and Firefox turn Shift + a mouse wheel into horizontal scrolling: deltaX, with deltaY 0.
+  assert.equal(wheelPitchDelta({ deltaY: 0, deltaX: -100, deltaMode: 0, shiftKey: true }, 0.25), 0.01);
+  assert.equal(wheelPitchDelta({ deltaY: 0, deltaX: 3, deltaMode: 1, shiftKey: true }), -0.01);
+  // Without Shift, a sideways trackpad swipe over the fader leaves the pitch alone.
+  assert.equal(wheelPitchDelta({ deltaY: 0, deltaX: -100, deltaMode: 0 }), 0);
+});
+
 test('fractional trackpad motion accumulates and clamps without losing fine changes', () => {
   let pitch = 0;
   for (let i = 0; i < 100; i++) pitch = adjustedPitch(pitch, wheelPitchDelta({ deltaY: -1, deltaMode: 0 }, 0.01));
