@@ -7,6 +7,7 @@ Read this file before changing anything. It holds the rules, the commands, the a
 ## Ground rules
 
 - **Branches** use CamelCase names (`KeyboardControl`, `ChillSoundsAndLoops`). Start each one from a fresh `main`: `git fetch origin && git switch -c MyBranch origin/main`.
+- **Never use git worktrees, for any reason.** Don't run `git worktree`, and don't use any tool or agent option that creates a worktree (such as an isolated-worktree mode for subagents). All work happens in this checkout, on a branch.
 - **Grounding.** When you describe or change behavior, name the files and symbols, and follow the chain that makes it true (button → `Msg` → `update` → port command → `src/main.js` → `src/audio.js` → worklet → engine). If you are not sure, read more code; don't guess.
 - **Keep the vibe: cool, chill and cute.** Generated things get short, evocative names, never numbers ("Lemon Haze", "Low Tide", kicks "Velvet" and "Pillow"). Default tempos and sounds stay mellow. App copy and notices are warm and a little playful ("Easy, superstar…"). Strawberry Mochi is the cute skin: pastel and playful.
 - **The skin owns everything.** The Winamp-skinned layout is the design baseline. Every word on a skinned page uses the skin's pixel font (`var(--k-pixel)` at `var(--k-text)`, whole-pixel line heights). Every button the page draws must work; if it can't, don't draw it. Dropdowns open the skin's own list (`src/skin-select.js`). Confirm any large visual change with the owner before building it.
