@@ -76,7 +76,9 @@ export function showMobileGate(root, onBypass) {
   const snake = createSnake({
     canvas: root.querySelector('.mg-snake'),
     scoreEl: root.querySelector('.mg-score'),
-    onStatus: (text) => { status.textContent = text; },
+    onStatus: text => {
+      status.textContent = text;
+    },
   });
 
   const enterGame = () => {
@@ -91,19 +93,24 @@ export function showMobileGate(root, onBypass) {
     status.textContent = MESSAGES[msg];
   };
 
-  playBtn.addEventListener('click', () => (snake.playing() || win.classList.contains('mg-playing') ? exitGame() : enterGame()));
-  phone.addEventListener('click', (e) => {
+  playBtn.addEventListener('click', () =>
+    snake.playing() || win.classList.contains('mg-playing') ? exitGame() : enterGame(),
+  );
+  phone.addEventListener('click', e => {
     if (!win.classList.contains('mg-playing')) enterGame();
     else if (!e.target.closest('[data-key]') && !snake.playing()) snake.start();
   });
-  phone.addEventListener('keydown', (e) => {
-    if ((e.key === 'Enter' || e.key === ' ') && !win.classList.contains('mg-playing')) { e.preventDefault(); enterGame(); }
+  phone.addEventListener('keydown', e => {
+    if ((e.key === 'Enter' || e.key === ' ') && !win.classList.contains('mg-playing')) {
+      e.preventDefault();
+      enterGame();
+    }
   });
 
   // Keypad: 2/4/6/8 steer, 5 (re)starts.
   const keyDirs = { 2: 'up', 4: 'left', 6: 'right', 8: 'down' };
   root.querySelectorAll('[data-key]').forEach(btn => {
-    btn.addEventListener('pointerdown', (e) => {
+    btn.addEventListener('pointerdown', e => {
       e.preventDefault();
       if (!win.classList.contains('mg-playing')) return;
       const k = btn.dataset.key;
@@ -115,24 +122,52 @@ export function showMobileGate(root, onBypass) {
 
   // Swipes on the phone steer too.
   let touchStart = null;
-  phone.addEventListener('touchstart', (e) => { touchStart = e.touches[0]; }, { passive: true });
-  phone.addEventListener('touchmove', (e) => {
-    if (!touchStart || !win.classList.contains('mg-playing')) return;
-    e.preventDefault();
-    const t = e.touches[0];
-    const dx = t.clientX - touchStart.clientX, dy = t.clientY - touchStart.clientY;
-    if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
-    snake.steer(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
-    touchStart = t;
-  }, { passive: false });
+  phone.addEventListener(
+    'touchstart',
+    e => {
+      touchStart = e.touches[0];
+    },
+    { passive: true },
+  );
+  phone.addEventListener(
+    'touchmove',
+    e => {
+      if (!touchStart || !win.classList.contains('mg-playing')) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      const dx = t.clientX - touchStart.clientX,
+        dy = t.clientY - touchStart.clientY;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
+      snake.steer(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up');
+      touchStart = t;
+    },
+    { passive: false },
+  );
 
   // Keyboard, for the desktop preview (?mobile=1).
-  const onKey = (e) => {
+  const onKey = e => {
     if (!win.classList.contains('mg-playing')) return;
-    const map = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right', 2: 'up', 8: 'down', 4: 'left', 6: 'right' };
-    if (map[e.key]) { e.preventDefault(); snake.steer(map[e.key]); }
-    else if ((e.key === ' ' || e.key === '5' || e.key === 'Enter') && !snake.playing()) { e.preventDefault(); snake.start(); }
-    else if (e.key === 'Escape') exitGame();
+    const map = {
+      ArrowUp: 'up',
+      ArrowDown: 'down',
+      ArrowLeft: 'left',
+      ArrowRight: 'right',
+      w: 'up',
+      s: 'down',
+      a: 'left',
+      d: 'right',
+      2: 'up',
+      8: 'down',
+      4: 'left',
+      6: 'right',
+    };
+    if (map[e.key]) {
+      e.preventDefault();
+      snake.steer(map[e.key]);
+    } else if ((e.key === ' ' || e.key === '5' || e.key === 'Enter') && !snake.playing()) {
+      e.preventDefault();
+      snake.start();
+    } else if (e.key === 'Escape') exitGame();
   };
   addEventListener('keydown', onKey);
 
@@ -157,13 +192,18 @@ export function showMobileGate(root, onBypass) {
 // Snake on an 84×48 Nokia-style screen. Plays itself until you take over.
 function createSnake({ canvas, scoreEl, onStatus }) {
   const ctx = canvas.getContext('2d');
-  const cell = 4, cols = canvas.width / cell, rows = canvas.height / cell;
+  const cell = 4,
+    cols = canvas.width / cell,
+    rows = canvas.height / cell;
   const DIRS = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
-  const INK = '#1e2b0c', LCD = '#9bbc0f';
+  const INK = '#1e2b0c',
+    LCD = '#9bbc0f';
   let mode = 'auto'; // 'auto' | 'play' | 'over'
   let snake, dir, queue, food, score, timer;
   let high = 0;
-  try { high = Number(localStorage.getItem(HIGH_KEY)) || 0; } catch {}
+  try {
+    high = Number(localStorage.getItem(HIGH_KEY)) || 0;
+  } catch {}
 
   const place = () => {
     let f;
@@ -171,9 +211,13 @@ function createSnake({ canvas, scoreEl, onStatus }) {
     while (snake.some(s => s.x === f.x && s.y === f.y));
     return f;
   };
-  const blocked = (p) => p.x < 0 || p.y < 0 || p.x >= cols || p.y >= rows || snake.some(s => s.x === p.x && s.y === p.y);
+  const blocked = p => p.x < 0 || p.y < 0 || p.x >= cols || p.y >= rows || snake.some(s => s.x === p.x && s.y === p.y);
   const reset = () => {
-    snake = [{ x: 6, y: 6 }, { x: 5, y: 6 }, { x: 4, y: 6 }];
+    snake = [
+      { x: 6, y: 6 },
+      { x: 5, y: 6 },
+      { x: 4, y: 6 },
+    ];
     dir = DIRS.right;
     queue = [];
     food = place();
@@ -181,14 +225,20 @@ function createSnake({ canvas, scoreEl, onStatus }) {
   };
 
   const speed = () => (mode === 'play' ? Math.max(60, 150 - score * 4) : 110);
-  const schedule = () => { clearTimeout(timer); timer = setTimeout(tick, speed()); };
+  const schedule = () => {
+    clearTimeout(timer);
+    timer = setTimeout(tick, speed());
+  };
 
   const autopilotDir = () => {
     const head = snake[0];
     const options = [dir, { x: dir.y, y: -dir.x }, { x: -dir.y, y: dir.x }]
       .map(d => ({ d, p: { x: head.x + d.x, y: head.y + d.y } }))
       .filter(o => !blocked(o.p))
-      .sort((a, b) => (Math.abs(a.p.x - food.x) + Math.abs(a.p.y - food.y)) - (Math.abs(b.p.x - food.x) + Math.abs(b.p.y - food.y)));
+      .sort(
+        (a, b) =>
+          Math.abs(a.p.x - food.x) + Math.abs(a.p.y - food.y) - (Math.abs(b.p.x - food.x) + Math.abs(b.p.y - food.y)),
+      );
     return options[0]?.d;
   };
 
@@ -196,7 +246,11 @@ function createSnake({ canvas, scoreEl, onStatus }) {
     if (mode === 'over') return;
     if (mode === 'auto') {
       const d = autopilotDir();
-      if (!d || snake.length > 40) { reset(); draw(); return schedule(); }
+      if (!d || snake.length > 40) {
+        reset();
+        draw();
+        return schedule();
+      }
       dir = d;
     } else if (queue.length) {
       dir = queue.shift();
@@ -206,24 +260,43 @@ function createSnake({ canvas, scoreEl, onStatus }) {
     snake.unshift(next);
     if (next.x === food.x && next.y === food.y) {
       food = place();
-      if (mode === 'play') { score++; navigator.vibrate?.(15); }
+      if (mode === 'play') {
+        score++;
+        navigator.vibrate?.(15);
+      }
     } else snake.pop();
     draw();
     schedule();
   };
 
   const gameOver = () => {
-    if (mode === 'auto') { reset(); draw(); return schedule(); }
+    if (mode === 'auto') {
+      reset();
+      draw();
+      return schedule();
+    }
     mode = 'over';
     const best = score > high;
-    if (best) { high = score; try { localStorage.setItem(HIGH_KEY, String(high)); } catch {} }
+    if (best) {
+      high = score;
+      try {
+        localStorage.setItem(HIGH_KEY, String(high));
+      } catch {}
+    }
     navigator.vibrate?.([60, 40, 60]);
     let flashes = 0;
     const flash = setInterval(() => {
       draw(flashes % 2 === 0);
-      if (++flashes >= 6) { clearInterval(flash); drawGameOver(best); }
+      if (++flashes >= 6) {
+        clearInterval(flash);
+        drawGameOver(best);
+      }
     }, 120);
-    onStatus(best ? `NEW HIGH SCORE: ${score}! Still no DJ decks though.` : `Game over. Score ${score} · best ${high}. Tap the phone or press 5 to retry.`);
+    onStatus(
+      best
+        ? `NEW HIGH SCORE: ${score}! Still no DJ decks though.`
+        : `Game over. Score ${score} · best ${high}. Tap the phone or press 5 to retry.`,
+    );
   };
 
   const draw = (hideSnake = false) => {
@@ -235,7 +308,7 @@ function createSnake({ canvas, scoreEl, onStatus }) {
     scoreEl.textContent = mode === 'auto' ? (high ? `HI ${high}` : '') : String(score).padStart(4, '0');
   };
 
-  const drawGameOver = (best) => {
+  const drawGameOver = best => {
     ctx.fillStyle = LCD;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = INK;
@@ -274,6 +347,9 @@ function createSnake({ canvas, scoreEl, onStatus }) {
       if (d === last || queue.length >= 3) return;
       queue.push(d);
     },
-    stop() { clearTimeout(timer); mode = 'over'; },
+    stop() {
+      clearTimeout(timer);
+      mode = 'over';
+    },
   };
 }

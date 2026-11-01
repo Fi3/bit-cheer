@@ -11,9 +11,10 @@
     "preview": "vite preview --host 0.0.0.0",
     "fmt:rust": "cargo fmt --manifest-path engine/Cargo.toml",
     "fmt:elm": "elm-format --yes src review/src",
+    "fmt:js": "prettier --write --log-level warn \"{src,public,scripts,tests,engine/tests}/**/*.{js,mjs,cjs}\" \"*.config.js\"",
     "lint:rust": "cargo fmt --manifest-path engine/Cargo.toml --check && cargo clippy --manifest-path engine/Cargo.toml --all-targets --locked -- -D warnings && cargo clippy --manifest-path engine/Cargo.toml --target wasm32-unknown-unknown --locked -- -D warnings",
     "lint:elm": "elm-format --validate src review/src && elm-review",
-    "lint:js": "eslint src public scripts tests engine/tests \"*.config.js\"",
+    "lint:js": "prettier --check --log-level warn \"{src,public,scripts,tests,engine/tests}/**/*.{js,mjs,cjs}\" \"*.config.js\" && eslint src public scripts tests engine/tests \"*.config.js\"",
     "test": "python3 scripts/train-rhythm-model.py --check && npm run build:wasm && cargo test --manifest-path engine/Cargo.toml && node --test tests/*.test.mjs engine/tests/*.test.cjs",
     "test:e2e": "playwright test",
     "predev": "npm run build:wasm && npm run build:elm",
@@ -32,6 +33,7 @@
     "elm-review": "^2.13.5",
     "eslint": "^10.14.0",
     "globals": "^17.13.0",
+    "prettier": "^3.9.10",
     "vite": "^7.1.0"
   },
   "allowScripts": {

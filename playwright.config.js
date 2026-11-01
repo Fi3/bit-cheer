@@ -10,7 +10,8 @@ function executablePath() {
   if (existsSync(chromium.executablePath())) return undefined;
   const cache = path.join(homedir(), '.cache', 'ms-playwright');
   if (!existsSync(cache)) return undefined;
-  return readdirSync(cache).filter(name => /^chromium-\d+$/.test(name))
+  return readdirSync(cache)
+    .filter(name => /^chromium-\d+$/.test(name))
     .sort((a, b) => Number(b.split('-')[1]) - Number(a.split('-')[1]))
     .map(name => path.join(cache, name, 'chrome-linux64', 'chrome'))
     .find(file => existsSync(file));
@@ -35,10 +36,12 @@ export default defineConfig({
       args: ['--autoplay-policy=no-user-gesture-required'],
     },
   },
-  webServer: process.env.PLAYWRIGHT_BASE_URL ? undefined : {
-    command: 'npm run dev -- --port 5173',
-    url: 'http://127.0.0.1:5173',
-    reuseExistingServer: true,
-    timeout: 20000,
-  },
+  webServer: process.env.PLAYWRIGHT_BASE_URL
+    ? undefined
+    : {
+        command: 'npm run dev -- --port 5173',
+        url: 'http://127.0.0.1:5173',
+        reuseExistingServer: true,
+        timeout: 20000,
+      },
 });

@@ -5,7 +5,17 @@ import globals from 'globals';
 
 export default [
   // Build output, the compiled Elm program, and other tools' working copies.
-  { ignores: ['dist/', 'public/elm.js', '**/elm-stuff/', 'engine/target/', '.claude/', 'test-results/', 'playwright-report/'] },
+  {
+    ignores: [
+      'dist/',
+      'public/elm.js',
+      '**/elm-stuff/',
+      'engine/target/',
+      '.claude/',
+      'test-results/',
+      'playwright-report/',
+    ],
+  },
   js.configs.recommended,
   {
     languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: globals.browser },

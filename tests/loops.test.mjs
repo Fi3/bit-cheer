@@ -5,7 +5,8 @@ import { INSTRUMENTS, kickStudyName } from '../src/instruments.js';
 
 test('every named loop is complete, playable and its own', () => {
   assert.ok(LOOPS.length >= 20);
-  for (const key of ['id', 'name', 'seed', 'elements']) assert.equal(new Set(LOOPS.map(loop => loop[key])).size, LOOPS.length, `${key} must be unique`);
+  for (const key of ['id', 'name', 'seed', 'elements'])
+    assert.equal(new Set(LOOPS.map(loop => loop[key])).size, LOOPS.length, `${key} must be unique`);
   for (const loop of LOOPS) {
     assert.match(loop.id, /^[a-z0-9-]+$/);
     assert.ok(loop.name.length > 0 && loop.name.length <= 22, `${loop.name} fits the deck title`);
@@ -16,7 +17,8 @@ test('every named loop is complete, playable and its own', () => {
     assert.ok(count >= 4 && count <= 8, `${loop.name} layers four to eight instruments`);
     for (const [voice, spec] of Object.entries(loop.voices)) {
       assert.ok(spec.sound >= 0 && spec.sound < INSTRUMENTS[voice].sounds.length);
-      assert.ok(spec.gain > 0 && spec.gain <= 1.5); assert.ok(Math.abs(spec.pan) <= 1);
+      assert.ok(spec.gain > 0 && spec.gain <= 1.5);
+      assert.ok(Math.abs(spec.pan) <= 1);
     }
     assert.equal(findLoop(loop.id), loop);
   }
