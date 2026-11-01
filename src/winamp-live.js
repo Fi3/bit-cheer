@@ -50,7 +50,10 @@ export function createWinampLive({ engine, seek, remote, deckState }) {
     images = {},
     vis = [],
     mask = null,
-    scale = 1;
+    scale = 1,
+    drawn = null; // resolves what setSkin returned, once every window on the page shows that skin
+  // Sheets decoded off the page's thread (img.decode), so drawing them never stalls a frame.
+  const decoded = new WeakSet();
   const pressed = new Map(); // canvas -> control name
   const peaks = [new Float32Array(19), new Float32Array(19)],
     bars = [new Float32Array(19), new Float32Array(19)];
@@ -78,7 +81,10 @@ export function createWinampLive({ engine, seek, remote, deckState }) {
   showShade();
 
   // scale: how many image pixels make one skin pixel (4 for the HD look, whose sheets are 4× finer).
+  // Resolves once every window on the page shows the skin (at once when there is nothing to draw).
   function setSkin(custom, sheetScale = 1) {
+    drawn?.(); // a skin replaced before it was drawn: whoever waits for it can go on
+    drawn = null;
     kit = null;
     images = {};
     vis = [];
@@ -94,7 +100,7 @@ export function createWinampLive({ engine, seek, remote, deckState }) {
       !SAFE_IMAGE.test(sheets.main || '')
     ) {
       document.documentElement.dataset.winampLive = '';
-      return;
+      return Promise.resolve();
     }
     kit = custom.kit;
     for (const [name, src] of Object.entries(sheets)) {
@@ -102,10 +108,15 @@ export function createWinampLive({ engine, seek, remote, deckState }) {
       const img = new Image();
       img.src = src;
       images[name] = img;
+      const settle = () => decoded.add(img); // a sheet that can't be decoded is left to `ready` below
+      img.decode().then(settle, settle);
     }
     vis = Array.isArray(kit.vis) ? kit.vis.map(c => (HEX.test(c) ? c : '#00ff00')) : [];
     mask = regionMask(kit.region);
     document.documentElement.dataset.winampLive = 'on';
+    return new Promise(resolve => {
+      drawn = resolve;
+    });
   }
 
   // region.txt polygons become a mask that cuts the window into its real shape.
@@ -128,6 +139,8 @@ export function createWinampLive({ engine, seek, remote, deckState }) {
   }
 
   const ready = name => images[name]?.complete && images[name].naturalWidth > 0;
+  // Every sheet of the skin decoded (or found broken): the windows draw whole or not at all.
+  const sheetsDecoded = () => Object.values(images).every(img => decoded.has(img));
   function sprite(ctx, name, sx, sy, w, h, dx, dy) {
     const img = images[name];
     if (!ready(name)) return false;
@@ -266,10 +279,13 @@ export function createWinampLive({ engine, seek, remote, deckState }) {
     }
   }
 
+  // Draws one deck's window. False while the skin's sheets are still being decoded; a skin whose main
+  // window can't be read draws nothing at all.
   function draw(canvas, now) {
     const deck = Number(canvas.parentElement?.dataset.deck);
     const state = engine.state[deck];
-    if (!kit || !state || !ready('main')) return;
+    if (!kit || !state || !sheetsDecoded()) return false;
+    if (!ready('main')) return true;
     const extra = cachedState(deck, now);
     // The canvas holds the window at the sheets' resolution; everything below draws in skin pixels.
     const shade = isShaded(deck),
@@ -315,7 +331,7 @@ export function createWinampLive({ engine, seek, remote, deckState }) {
           SHADE_SEEK.y,
         );
       }
-      return;
+      return true;
     }
     sprite(ctx, 'main', 0, 0, 275, 116, 0, 0);
     // The title strip with its one working button (shade). No clutter bar: its options do nothing here.
@@ -435,6 +451,7 @@ export function createWinampLive({ engine, seek, remote, deckState }) {
       ctx.drawImage(mask, 0, 0);
       ctx.globalCompositeOperation = 'source-over';
     }
+    return true;
   }
 
   // Page state the window mirrors (loop, EQ, PL, volume) changes rarely: read it a few times a second.
@@ -579,7 +596,13 @@ export function createWinampLive({ engine, seek, remote, deckState }) {
   function frame(now) {
     if (kit && !document.hidden && now - last > 30) {
       last = now;
-      for (const canvas of document.querySelectorAll('.winamp-live canvas')) draw(canvas, now);
+      let shown = true;
+      for (const canvas of document.querySelectorAll('.winamp-live canvas')) shown = draw(canvas, now) && shown;
+      // Every window on the page shows the current skin: setSkin's promise resolves.
+      if (shown) {
+        drawn?.();
+        drawn = null;
+      }
     }
     requestAnimationFrame(frame);
   }

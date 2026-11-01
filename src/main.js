@@ -51,8 +51,9 @@ import { LOOPS } from './loops.js';
 // it's quick, otherwise start on the classic CSS look and dress the app as soon as it's ready.
 const savedSkin = restore('bit-cheer-skin');
 const startupSkin = savedSkin?.id === 'custom' || SELECTABLE_SKINS.includes(savedSkin?.id) ? savedSkin : null;
-// The built-in skin the page starts with is built first (Millennium Chrome also backs custom skins).
-const builtinReady = prepareBuiltinSkins(startupSkin?.id === 'custom' ? DEFAULT_SKIN : startupSkin?.id);
+// The built-in skin the page starts with is built first (Millennium Chrome also backs custom skins); the
+// others wait until the page wears its look (see the startup task at the end).
+const builtinReady = prepareBuiltinSkin(SELECTABLE_SKINS.includes(startupSkin?.id) ? startupSkin.id : DEFAULT_SKIN);
 const builtinInTime = await Promise.race([
   builtinReady,
   new Promise(resolve => setTimeout(() => resolve(false), 2500)),
@@ -70,14 +71,6 @@ let renderMode = 'hd';
 {
   const stored = restore('bit-cheer-render');
   if (RENDER_MODES.includes(stored)) renderMode = stored;
-}
-// With Comfort or HD chosen, the first frame waits for that look (a fraction of a second) instead of
-// showing the original pixels and then changing color; after 1.5 s it shows the original anyway.
-if (renderMode !== 'original' && document.documentElement.dataset.layout === 'kit') {
-  document.documentElement.dataset.render = 'preparing';
-  setTimeout(() => {
-    if (document.documentElement.dataset.render === 'preparing') document.documentElement.dataset.render = 'original';
-  }, 1500);
 }
 // Dropdowns open the skin's own list (kit layout), the same in every browser.
 installSkinSelect();
@@ -191,23 +184,23 @@ let skinStamp = 0;
 let renderEpoch = 0,
   renderDispose = null,
   shownSkin = null;
-// Shows the current skin in the chosen look. The original kit is already on screen; the prepared one
-// replaces it when ready, and the images of the previous look are freed only after that.
+// Shows the current skin in the chosen look. The skin's own pixels go on screen at once, the live windows
+// included; the chosen look is prepared after that and replaces them when ready, and the images of the
+// previous look are freed only then.
 async function refineSkin(dressed) {
   const epoch = ++renderEpoch;
   shownSkin = dressed;
+  const windowsShown = live.setSkin(dressed);
   const done = dispose => {
     renderDispose?.();
     renderDispose = dispose;
   };
-  const shown = () => {
-    if (document.documentElement.dataset.render === 'preparing') document.documentElement.dataset.render = 'original';
-  };
   if (renderMode === 'original' || !dressed?.kit || document.documentElement.dataset.layout !== 'kit') {
     done(null);
-    shown();
     return;
   }
+  await windowsShown;
+  if (epoch !== renderEpoch) return;
   try {
     const { kit, dispose } = await enhanceKit(dressed.kit, { hd: renderMode === 'hd' });
     if (epoch !== renderEpoch) {
@@ -219,18 +212,15 @@ async function refineSkin(dressed) {
     skinStamp++;
     done(dispose);
   } catch (error) {
-    if (epoch === renderEpoch) {
-      done(null);
-      shown();
-    }
+    if (epoch === renderEpoch) done(null);
     console.warn('The skin look could not be prepared; showing the original pixels.', error);
   }
 }
+// Resolves once the skin's look is on screen.
 const skinChanged = (id, name, custom) => {
   skinStamp++;
   const dressed = id === 'custom' ? custom : builtinKit(id);
-  live.setSkin(dressed);
-  refineSkin(dressed);
+  const shown = refineSkin(dressed);
   send({
     type: 'skin',
     id,
@@ -239,6 +229,7 @@ const skinChanged = (id, name, custom) => {
     preview: skinPicture(id, custom),
     source: custom?.source && /^https:\/\/skins\.webamp\.org\//.test(custom.source) ? custom.source : '',
   });
+  return shown;
 };
 const fail = error => {
   if (engine.context) engine.emitRouting();
@@ -705,7 +696,6 @@ async function handle(command) {
       const id = document.documentElement.dataset.skin;
       applySkin(id, id === 'custom' ? shownSkin : undefined);
       skinStamp++;
-      live.setSkin(shownSkin);
       refineSkin(shownSkin);
       send({ type: 'render', mode: renderMode });
       break;
@@ -1319,7 +1309,7 @@ queueMicrotask(async () => {
   }
   const saved = restore('bit-cheer-progress');
   if (saved && Array.isArray(saved.progress) && Array.isArray(saved.history)) send({ type: 'restore', ...saved });
-  skinChanged(document.documentElement.dataset.skin, startupSkinName, startupSkin?.custom);
+  let lookShown = skinChanged(document.documentElement.dataset.skin, startupSkinName, startupSkin?.custom);
   // Winamp skins saved by an older version: fetch them again from the museum for the full look.
   const savedCustom = startupSkin?.id === 'custom' ? startupSkin.custom : null;
   if (savedCustom && (savedCustom.originals || savedCustom.kit) && !validKit(savedCustom.kit)) {
@@ -1340,14 +1330,17 @@ queueMicrotask(async () => {
   }
   if (!builtinInTime) {
     const epoch = skinEpoch;
-    builtinReady.then(ok => {
+    lookShown = builtinReady.then(ok => {
       const id = document.documentElement.dataset.skin;
       if (ok && epoch === skinEpoch && SELECTABLE_SKINS.includes(id)) {
         const name = applySkin(id);
-        skinChanged(id, name);
+        return skinChanged(id, name);
       }
     });
   }
+  // The other built-in skins are built a little after the page wears its own look, so they never delay
+  // it or its first paint; choosing one sooner builds it on the spot.
+  lookShown.then(() => setTimeout(prepareBuiltinSkins, 2000));
   try {
     const hidden = restore('bit-cheer-console-hidden');
     if (typeof hidden === 'string' && /^[ab ]*$/.test(hidden)) document.documentElement.dataset.consoleHidden = hidden;

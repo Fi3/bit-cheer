@@ -73,7 +73,7 @@ Each module's logic runs under `node:test` without a browser, with small fakes f
 | `tests/output-routing.test.mjs` | Hardware route validation, the discrete multichannel graph, mono downmix, bypassing the crossfader in hardware modes, rollback on errors, device loss, and the device picker. |
 | `tests/pitch-control.test.mjs` | Wheel and key pitch steps for every sensitivity and wheel unit, Shift + wheel (including sideways scrolling), fractional trackpad motion, and clamping. |
 | `tests/pixel-font.test.mjs` | Every character the app writes has a glyph in the skin's pixel font, including symbols such as 📁. |
-| `tests/skin-enhance.test.mjs` | The HD redraw (smooth diagonals, sharp corners, lettering, gradients, seamless tiles) and Comfort (no pure black or white, calmer loud colors, readable text). |
+| `tests/skin-enhance.test.mjs` | The HD redraw (smooth diagonals, sharp corners, lettering, gradients, seamless tiles, and exactly the pixels of its plain rules on generated skin art) and Comfort (no pure black or white, calmer loud colors, readable text). |
 | `tests/skins.test.mjs` | Skin bases and palettes, the artwork contract, built-in kits, safe skin switching, ZIP and WSZ imports, kit building from odd skins, text-file parsing, import limits, museum links, and safe kit images. |
 | `tests/training.test.mjs` | Tap tempo, match scoring (tempo, phase, phrase, wrap-around, held history), BPM detection, waveform peaks, the skin template round trip, archive limits, and Star mode drift and scoring. |
 
@@ -84,7 +84,7 @@ Each module's logic runs under `node:test` without a browser, with small fakes f
 - rendering, waveforms and accessible controls; no horizontal scrolling;
 - keyboard control: both hands, focus rules, digits, Focus session and the help;
 - real audio: samples, pitch changing tempo, instruments and the mixer; jog, scrubbing and CUE;
-- skins: Skin studio, TOML, ZIP and WSZ imports, invalid skins, skins with controls painted on a picture, the three looks, and every word in the skin's lettering;
+- skins: Skin studio, TOML, ZIP and WSZ imports, invalid skins, skins with controls painted on a picture, the three looks (with the skin's own pixels and Winamp windows on screen before the chosen look is ready), and every word in the skin's lettering;
 - modes: Foundation's two named kicks, the Loop builder's named loops and sounds, the twenty-voice composer, CHAOS!, tempo and track actions per deck;
 - Pro decks: track pickers, local imports on either deck, folder browsing and its fallback, stale downloads, native tempo on track changes;
 - practice: lessons and their unlocking, drills, Star mode and ★ Star runs, the lesson 8 handover, tap tempo;

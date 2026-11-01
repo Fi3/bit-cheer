@@ -1267,12 +1267,10 @@ html:root[data-layout=kit] .app-shell .rack-title { display: none; }
 :root[data-layout=kit] .app-shell .look-label { margin-right: calc(2 * var(--kp)); color: var(--k-list-dim); font: var(--k-text)/1 var(--k-pixel); text-transform: uppercase; }
 :root[data-layout=kit] .app-shell .look-option.selected { box-shadow: var(--k-bevel-in), 0 0 0 var(--kp) var(--k-edge-dark); background-color: var(--k-list-sel); color: var(--k-list-sel-fg); }
 :root[data-layout=kit][data-kit~=genBtn] .app-shell .look-option.selected { border-image-source: var(--k-gen-btn-down); }
-/* Opening the page with Comfort or HD chosen: it fades in once that look is ready (main.js), and the
-   desk behind it eases into the look's color. */
+/* The page shows the skin's own pixels at once and switches to Comfort or HD as soon as that look is
+   ready (main.js); the desk behind it eases into the look's color. */
 :root[data-layout=kit], :root[data-layout=kit] body { transition: background-color .16s ease-out; }
-:root[data-layout=kit] .app-shell { transition: opacity .16s ease-out; }
-:root[data-layout=kit][data-render=preparing] .app-shell { opacity: 0; transition: none; }
-@media (prefers-reduced-motion: reduce) { :root[data-layout=kit], :root[data-layout=kit] body, :root[data-layout=kit] .app-shell { transition: none; } }
+@media (prefers-reduced-motion: reduce) { :root[data-layout=kit], :root[data-layout=kit] body { transition: none; } }
 /* The HD look hands over images four times finer than the skin pixels they cover: the browser scales
    them smoothly (on a 2× screen they land pixel for pixel). */
 :root[data-layout=kit][data-render=hd] .app-shell,
