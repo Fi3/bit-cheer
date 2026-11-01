@@ -1,0 +1,7 @@
+# The Rust release used everywhere: local builds, CI and the GitHub Pages deployment.
+# rustup reads this file, so `cargo` in this repository always matches CI.
+[toolchain]
+channel = "1.94.1"
+components = ["rustfmt", "clippy"]
+targets = ["wasm32-unknown-unknown"]
+profile = "minimal"
