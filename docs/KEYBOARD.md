@@ -33,15 +33,15 @@ Deck A is the reference; deck B is the one you match. These five keys are enough
 | `Enter` | Check my match |
 | `N` | Next round (a new challenge, a new run…) |
 
-Press `?` at any time to see every key on screen.
+Press `?` at any time to see the keys on screen.
 
 ## 2. Principles
 
 1. **Two hands, two decks.** The left hand plays deck A, the right hand plays deck B, and the mixer keys sit between them (`T` `Y` `G` `H` `B` `N`), like a mixer between two turntables.
 2. **The same shape under each hand.** Each deck has three rows of four keys: pitch on top, transport in the middle, volume and the deck's track key at the bottom. What you learn on one hand works on the other. The index fingers rest on `F` and `J`, the keys with the little bumps, and those two keys play the decks.
 3. **Left is less, right is more.** In every row, the key further left goes down, back or slower; the key further right goes up, forward or faster. The outer keys of the pitch row move ten times as far as the inner ones.
-4. **Shift is finer.** Holding Shift turns every move into a fine move (0.01% pitch, a smaller nudge, 1% volume). On the two keys that don't move anything, Shift gives the key's second job: `Shift`+cue saves the cue, `Shift`+track key goes the other way.
-5. **A key is its button.** Every key does exactly what its on-screen button does, under the same rules: a drill that fixes the tempo refuses the tempo key with the same notice as the button, a Star run can't finish before ten seconds, and so on. Keys never unlock anything the buttons can't do.
+4. **Shift is finer.** Holding Shift turns every move into a fine move (0.01% pitch, a smaller nudge, 1% volume). On the two keys that don't move anything, Shift gives the key's second job: `Shift`+cue saves the cue, `Shift`+track key goes back a track in Pro decks and changes the track in the other views.
+5. **A key is its button.** Every key does exactly what its on-screen button does, under the same rules: a drill that fixes the tempo refuses the tempo key just as it disables the tempo button, a Star run can't finish before ten seconds, and so on. Keys never unlock anything the buttons can't do.
 6. **Hold for continuous moves.** Pitch and volume keys repeat while held. Nudge keys bend the speed while held. Crossfader keys glide while held. Every other key acts once per press, however long you hold it.
 7. **Keys by position.** Keys are matched by where they are on the keyboard (`KeyboardEvent.code`), not by the letter printed on them, so the hand shapes stay intact on AZERTY, QWERTZ and Italian keyboards. This document names keys by their US caps; see [other keyboard layouts](#10-other-keyboard-layouts).
 8. **The browser keeps its shortcuts.** Nothing here uses Ctrl, Alt, Cmd or Meta. Any key pressed with one of them goes to the browser untouched.
@@ -80,7 +80,7 @@ Shortcuts work wherever the page has the keyboard. A focused control keeps only 
 | A dropdown (pitch range, genre, track, add module…) | every key (the skin's list opens with `Enter`, `Space`, `↑` or `↓` and handles its own keys while open) | `Esc` lets go of the dropdown |
 | A slider: pitch fader, volume, crossfader, EQ, level, pan | `↑` `↓` `←` `→`, `Page Up` `Page Down`, `Home` `End` (they move that slider) | shortcuts |
 | The jog wheel | the arrows (`←` `→` nudge it), `Home` `End` (start / end of the track) | shortcuts |
-| A button or toggle **reached with Tab** | `Space` and `Enter` press it | shortcuts |
+| A button or toggle **reached with Tab** | `Space` and `Enter` press it (a toggle keeps only `Space`) | shortcuts |
 | A button or toggle **clicked with the mouse**, or focused by the app (the `?` button after the help closes) | none | shortcuts, `Space` and `Enter` included |
 | A link reached with Tab | `Enter` follows it | shortcuts |
 | The keyboard help dialog | `Tab` / `Shift`+`Tab` go round its three buttons; `Space` and `Enter` press them | only `?` and `Esc` (both close it) |
@@ -103,7 +103,7 @@ Deck keys work on the practice page in all five modes and in Focus session, exce
 | `S` | `K` | **Nudge back** by 0.04 beat | Nudge back by 0.01 beat | after 250 ms, slow the deck down 4% (Shift: 1%) until released |
 | `D` | `L` | **Nudge forward** by 0.04 beat | Nudge forward by 0.01 beat | after 250 ms, speed the deck up 4% (Shift: 1%) until released |
 | `F` | `J` | **Play / pause** | same | once |
-| `Z` | `/` | **Pitch to 0%** (the track's own tempo) | same | once |
+| `Z` | `/` | **Pitch to 0%** (the track's own tempo) | same (on a US keyboard `Shift`+`/` types `?`, the help) | once |
 | `X` | `,` | **Volume down** 5% | Volume down 1% | repeats |
 | `C` | `.` | **Volume up** 5% | Volume up 1% | repeats |
 | `V` | `M` | **Track key**, see the [views](#7-views) | its second job, see the views | once |
@@ -120,7 +120,7 @@ The arrows are a second set of keys for deck B, the deck the lessons ask you to 
 - **One step** is the deck's **Wheel / keys** setting under its pitch fader: Fine 0.01%, Normal 0.05% (the default) or Coarse 0.25%. The same setting drives the mouse wheel and the arrow keys on a focused fader, so all three always agree.
 - **Ten steps** (`Q` `R` `U` `P`) is ten times that: 0.1%, 0.5% or 2.5%. Use them to get close, then the inner keys to settle.
 - **Shift** always moves exactly 0.01%, the finest step, whichever key and setting.
-- Pitch keys never stop at the end of the fader. A press that would go past the pitch range widens it to the next size (±2 → ±4 → ±8 → ±16 → ±32 → ±50%); ±50% is the limit.
+- Pitch keys never stop at the end of the fader. A press that would go past the pitch range widens it to the next size that fits (±2 → ±4 → ±8 → ±16 → ±32 → ±50%); ±50% is the limit.
 - Pitch here is classic varispeed, exactly as with the fader: the tempo and the musical pitch move together.
 
 ### Nudge and bend
@@ -186,12 +186,12 @@ The composer itself (choosing instruments and their sounds, steps, level, pan, s
 
 ### 7.3 By ear (03)
 
-The tempo readouts, elapsed time, waveforms and beat lights are hidden. Everything works as in the Loop builder.
+The tempo readouts, waveforms and beat lights are hidden (a Winamp skin's window on each deck still shows its clock). Everything works as in the Loop builder.
 
 | Key | In By ear |
 | --- | --- |
 | `V` / `M`, `Shift`+`V` / `M`, `N`, `=` | as in the Loop builder |
-| `B` | **Show the BPM** numbers for a peek; press again to hide them. The waveforms, beat lights and time stay hidden in By ear |
+| `B` | **Show the BPM** numbers for a peek; press again to hide them. The waveforms and beat lights stay hidden in By ear |
 
 Training tip: the keys give you everything a blind match needs, so you never have to look at the screen. Use `Shift` with the pitch keys for the last tiny corrections.
 
@@ -201,9 +201,9 @@ A 60-second endurance run: the decks start at the same tempo, then drift on thei
 
 | Key | In Star mode |
 | --- | --- |
-| `Enter` | **Finish the run** once both decks have played together for 10 seconds (before that, a notice asks you to keep going). After the run, a notice points you to `N` for a new one |
+| `Enter` | **Finish the run** once both decks have played together for 10 seconds (before that, a notice asks you to keep going). After the run, a notice points you to **New run** (`N`) |
 | `N` | **New run**: fresh loops, the run starts over |
-| `V` / `M` | Refused with the run's notice: Star mode keeps the tempos equal, and the drift is the challenge |
+| `V` / `M` | Refused with the notice the **Randomize tempo** button gives here ("This drill keeps tempos equal…"): Star mode keeps the tempos equal, and the drift is the challenge |
 | `Shift`+`V` / `M` | **Change track**: another loop on that deck, still at the shared tempo |
 | `=` | **Add an element to both decks** |
 
@@ -248,7 +248,7 @@ Lessons (Learning path) and drills (Training) run in the views above, so the sam
 - In the phase and phrase drills the tempo is fixed: `V` / `M` are refused with the drill's notice, as the disabled **Randomize tempo** buttons are.
 - `Enter` scores the match with the drill's rules (tempo, phase, blind or phrase) or the lesson's rules; a score of 85 completes a lesson.
 - Lesson 8 asks for a crossfader handover from one end to the other over at least 3 seconds while both decks play: hold `Shift`+`H` (or `Shift`+`G`), which glides end to end in 6 seconds. Without Shift the glide takes 2 seconds, too quick on its own.
-- `1`–`5` start a practice mode, which ends the lesson or drill, exactly like the mode bar.
+- `1`–`5` start another practice mode, which ends the lesson or drill, exactly like the mode bar. The digit of the lesson's or drill's own mode does nothing.
 
 ### 7.8 Keyboard help
 
@@ -264,7 +264,7 @@ Lessons (Learning path) and drills (Training) run in the views above, so the sam
 
 **Show more** opens the rest: the three letter rows drawn as key caps in the skin's style (deck A, the mixer keys, deck B) with the pitch row labelled, then a **Pitch** list (every pitch key with the real step sizes from each deck's Wheel / keys setting, such as "A 0.05%, B 0.25%" when the decks differ, plus the Shift step, pitch to 0 and holding), the other deck keys with the track key's meaning in this view, and the keys of the current view. **Show less** goes back to the short version. In Focus session the full version lists only Focus session's keys and leaves the unused caps blank.
 
-While the dialog is open, `Tab` and `Shift`+`Tab` go round its three buttons (close, Show more, Back to the groove), `Space` / `Enter` press them, and `?` or `Esc` close it. On the practice page, closing returns the keyboard focus to the `?` button in the top bar.
+While the dialog is open, `Tab` and `Shift`+`Tab` go round its three buttons (close, Show more, Back to the groove), `Space` / `Enter` press them, and `?` or `Esc` close it. Outside Focus session, closing returns the keyboard focus to the `?` button in the top bar.
 
 ### 7.9 Learning path, Training and Skin studio
 
@@ -273,7 +273,7 @@ These pages are for reading and choosing, not for playing, so they have no short
 ## 8. Feedback
 
 - **Glow.** When a key acts, the control it stands for glows for a moment (a ring in the skin's accent color), so you can see which button each key is. Keys whose control isn't on screen (a hidden module, Focus session) still work.
-- **Notices.** A key the current view refuses answers with the same notice its button would give (for example "This drill keeps tempos equal…").
+- **Notices.** A key the current view refuses answers with a notice that says why (for example "This drill keeps tempos equal…").
 - **Sound.** Everything else you hear: that is the point.
 
 ## 9. Not on the keyboard
@@ -304,7 +304,7 @@ Keys go by position, so on other layouts press the key **in the same place** as 
 | `` ` `` (Focus session) | \ | ^ | ² |
 | `1`–`5` (modes) | 1–5 | 1–5 | & é " ' ( (Shift not needed) |
 
-The help key is the exception: it is the `?` character itself, wherever your layout puts it (Shift+' on Italian, Shift+ß on German, Shift+, on French). On AZERTY, `?` shares its key with deck B's track key; Shift on that key goes to the track key (previous track or change track), so open the help with the `?` button in the top bar there.
+The help key is the exception: it is the `?` character itself, wherever your layout puts it (Shift+' on Italian, Shift+ß on German, Shift+, on French). On AZERTY, `?` shares its key with deck B's track key; Shift on that key goes to the track key (previous track or change track), so on the practice page open the help with the `?` button in the top bar.
 
 ## 11. Complete key table
 
@@ -359,11 +359,11 @@ This table is the specification of record: [`tests/keyboard.test.mjs`](../tests/
 | `Esc` | `Escape` | practice focus page help | escape | | |
 | `?` | the `?` character | practice focus page help | help | | |
 
-Messages from `src/keyboard.js` to Elm have the form `{ type: 'key', action, deck, dir, big, value, shift }` (only the fields the action needs). Nudge and crossfader keys also act in `src/main.js` while they are held: the bend goes straight to the audio engine, and the glide sends small `crossfade` steps with a `value`.
+`src/main.js` sends Elm the action that `src/keyboard.js` resolved, as `{ type: 'key', action, deck, dir, big, value, shift }` (only the fields the action needs). Nudge and crossfader keys also act in `src/main.js` while they are held: the bend goes straight to the audio engine, and the glide sends small `crossfade` steps with a `value`.
 
 ## 12. For developers
 
-- **Adding or changing a key:** change `BINDINGS` in `src/keyboard.js`, the matching `keyAction` branch in `src/Main.elm` if the action is new, this document (the view sections and the [complete key table](#11-complete-key-table)), and the help dialog (`helpView` / `keyboardMap` in `src/Main.elm`). `npm test` fails until the table and the code agree.
+- **Adding or changing a key:** change `BINDINGS` in `src/keyboard.js`, the matching `keyAction` branch in `src/Main.elm` if the action is new, this document (the view sections and the [complete key table](#11-complete-key-table)), the help dialog (`helpView` / `keyboardMap` in `src/Main.elm`), and the control the key glows on (`flashTargets` in `src/main.js`). `npm test` fails until the table and the code agree.
 - **Contexts:** Elm renders `data-keys` on the app shell from `keyContext`; `src/main.js` reads it on every key press, so a key always sees the current view.
 - **Focus rules:** `controlKeeps` in `src/keyboard.js` implements [section 4](#4-where-keys-go-focus-rules). The pitch fader and jog wheel handle their own arrow keys in `src/main.js` before it.
 - **Held keys:** `src/main.js` tracks held nudge and crossfader keys by position, releases them on key up, and releases all of them when the window loses focus.

@@ -15,7 +15,8 @@ mkdirSync(OUT, { recursive: true });
 // The painter's own colors are Millennium Chrome's, so this theme only names it.
 const skin = paintSkin({
   pledit: '[Text]\r\nNormal=#A9C8EC\r\nCurrent=#B8EE75\r\nNormalBG=#0C1D3A\r\nSelectedBG=#1F56A0\r\nFont=Arial\r\n',
-  readme: 'Millennium Chrome\r\nThe original skin of bit.cheer, drawn pixel by pixel by scripts/make-millennium-skin.mjs.\r\nA classic Winamp 2 skin: it also loads in Winamp and Webamp.\r\n',
+  readme:
+    'Millennium Chrome\r\nThe original skin of bit.cheer, drawn pixel by pixel by scripts/make-millennium-skin.mjs.\r\nA classic Winamp 2 skin: it also loads in Winamp and Webamp.\r\n',
 });
 writeFileSync(new URL('millennium.png', ROOT), png(skin.preview));
 writeFileSync(new URL('millennium.wsz', ROOT), wsz(skin.files, 'Millennium_Chrome'));
@@ -24,5 +25,9 @@ writeFileSync(new URL('numbers.png', OUT), png(legacy.numbers));
 writeFileSync(new URL('cbuttons.png', OUT), png(legacy.buttons));
 writeFileSync(new URL('titlebar.png', OUT), png(legacy.title));
 const previewDir = process.argv.find(a => a.startsWith('--png='))?.slice(6);
-if (previewDir) { mkdirSync(previewDir, { recursive: true }); for (const [name, [c]] of Object.entries(skin.sheets)) writeFileSync(`${previewDir}/${name.replace('.bmp', '.png')}`, png(c)); }
+if (previewDir) {
+  mkdirSync(previewDir, { recursive: true });
+  for (const [name, [c]] of Object.entries(skin.sheets))
+    writeFileSync(`${previewDir}/${name.replace('.bmp', '.png')}`, png(c));
+}
 console.log('Millennium Chrome written: public/skins/millennium.wsz and public/skins/millennium/*.png');

@@ -8,8 +8,32 @@ import './skin-studio.css';
 import './kit.css';
 import { AudioEngine } from './audio.js';
 import { assetUrl, BASE_PATH } from './assets.js';
-import { clamp, tapTempo, matchScore, estimateTempo, STAR, createStar, stepDrift, stepScore, starStats, starResult } from './training.js';
-import { applySkin, applyRenderedKit, importSkin, importSkinFromUrl, downloadTemplate, skinPicture, validKit, prepareBuiltinSkins, prepareBuiltinSkin, builtinKit, SELECTABLE_SKINS, DEFAULT_SKIN } from './skins.js';
+import {
+  clamp,
+  tapTempo,
+  matchScore,
+  estimateTempo,
+  STAR,
+  createStar,
+  stepDrift,
+  stepScore,
+  starStats,
+  starResult,
+} from './training.js';
+import {
+  applySkin,
+  applyRenderedKit,
+  importSkin,
+  importSkinFromUrl,
+  downloadTemplate,
+  skinPicture,
+  validKit,
+  prepareBuiltinSkins,
+  prepareBuiltinSkin,
+  builtinKit,
+  SELECTABLE_SKINS,
+  DEFAULT_SKIN,
+} from './skins.js';
 import { SessionLibrary, DeckSelections } from './library.js';
 import { pickFolder, AUDIO_EXTENSIONS } from './folder-browser.js';
 import { adjustedPitch, wheelPitchDelta, keyPitchDelta, pitchSensitivity } from './pitch-control.js';
@@ -29,32 +53,71 @@ const savedSkin = restore('bit-cheer-skin');
 const startupSkin = savedSkin?.id === 'custom' || SELECTABLE_SKINS.includes(savedSkin?.id) ? savedSkin : null;
 // The built-in skin the page starts with is built first (Millennium Chrome also backs custom skins).
 const builtinReady = prepareBuiltinSkins(startupSkin?.id === 'custom' ? DEFAULT_SKIN : startupSkin?.id);
-const builtinInTime = await Promise.race([builtinReady, new Promise(resolve => setTimeout(() => resolve(false), 2500))]);
+const builtinInTime = await Promise.race([
+  builtinReady,
+  new Promise(resolve => setTimeout(() => resolve(false), 2500)),
+]);
 let startupSkinName;
-try { startupSkinName = applySkin(startupSkin?.id || DEFAULT_SKIN, startupSkin?.custom); }
-catch { startupSkinName = applySkin(DEFAULT_SKIN); }
+try {
+  startupSkinName = applySkin(startupSkin?.id || DEFAULT_SKIN, startupSkin?.custom);
+} catch {
+  startupSkinName = applySkin(DEFAULT_SKIN);
+}
 
 // The look: the skin's original pixels, "comfort" (gentler colors and textures) or "hd" (comfort plus
 // 4× pixel art and smooth lettering). Prepared from the stored kit each time a skin is shown.
 let renderMode = 'hd';
-{ const stored = restore('bit-cheer-render'); if (RENDER_MODES.includes(stored)) renderMode = stored; }
+{
+  const stored = restore('bit-cheer-render');
+  if (RENDER_MODES.includes(stored)) renderMode = stored;
+}
 // With Comfort or HD chosen, the first frame waits for that look (a fraction of a second) instead of
 // showing the original pixels and then changing color; after 1.5 s it shows the original anyway.
 if (renderMode !== 'original' && document.documentElement.dataset.layout === 'kit') {
   document.documentElement.dataset.render = 'preparing';
-  setTimeout(() => { if (document.documentElement.dataset.render === 'preparing') document.documentElement.dataset.render = 'original'; }, 1500);
+  setTimeout(() => {
+    if (document.documentElement.dataset.render === 'preparing') document.documentElement.dataset.render = 'original';
+  }, 1500);
 }
 // Dropdowns open the skin's own list (kit layout), the same in every browser.
 installSkinSelect();
 // The instrument bank's names and the named loops are static, so they reach Elm with its flags.
-const app = Elm.Main.init({ node: document.getElementById('app'), flags: { basePath: BASE_PATH, kit: document.documentElement.dataset.layout === 'kit', render: renderMode,
-  instruments: INSTRUMENTS.map(({ name, sounds }) => ({ name, sounds })), loops: LOOPS.map(({ id, name, vibe }) => ({ id, name, vibe })) } });
-let telemetry = [], recent = [], lastStart = performance.now(), mode = 'foundation', catalog = {tracks:[]}, taps = [], zoom = [1,1], mic = null, drill = '', configVersion = 0, micEpoch = 0, micPending = false, focusActive = false, wasFullscreen = false, activeLesson = 1, transition = null;
+const app = Elm.Main.init({
+  node: document.getElementById('app'),
+  flags: {
+    basePath: BASE_PATH,
+    kit: document.documentElement.dataset.layout === 'kit',
+    render: renderMode,
+    instruments: INSTRUMENTS.map(({ name, sounds }) => ({ name, sounds })),
+    loops: LOOPS.map(({ id, name, vibe }) => ({ id, name, vibe })),
+  },
+});
+let telemetry = [],
+  recent = [],
+  lastStart = performance.now(),
+  mode = 'foundation',
+  catalog = { tracks: [] },
+  taps = [],
+  zoom = [1, 1],
+  mic = null,
+  drill = '',
+  configVersion = 0,
+  micEpoch = 0,
+  micPending = false,
+  focusActive = false,
+  wasFullscreen = false,
+  activeLesson = 1,
+  transition = null;
 const send = event => {
-  if(event.type==='telemetry') {
-    telemetry=event.decks;
-    if(telemetry.every(d=>d.playing)) { recent.push({time:performance.now(),decks:telemetry.map(d=>({...d}))}); recent=recent.filter(x=>performance.now()-x.time<4000); }
-    else {recent=[];lastStart=performance.now();}
+  if (event.type === 'telemetry') {
+    telemetry = event.decks;
+    if (telemetry.every(d => d.playing)) {
+      recent.push({ time: performance.now(), decks: telemetry.map(d => ({ ...d })) });
+      recent = recent.filter(x => performance.now() - x.time < 4000);
+    } else {
+      recent = [];
+      lastStart = performance.now();
+    }
   }
   app.ports.incoming.send(event);
 };
@@ -63,13 +126,18 @@ const loops = [true, true];
 let skinEpoch = 0;
 // The skin's Playlist (PL) button shows or hides that deck's console, like Winamp's own.
 function toggleConsole(deck) {
-  const root = document.documentElement, hidden = new Set((root.dataset.consoleHidden || '').split(' ').filter(Boolean));
+  const root = document.documentElement,
+    hidden = new Set((root.dataset.consoleHidden || '').split(' ').filter(Boolean));
   const key = deck ? 'b' : 'a';
-  if (hidden.has(key)) hidden.delete(key); else hidden.add(key);
+  if (hidden.has(key)) hidden.delete(key);
+  else hidden.add(key);
   root.dataset.consoleHidden = [...hidden].join(' ');
   store('bit-cheer-console-hidden', root.dataset.consoleHidden);
 }
-document.addEventListener('click',event=>{const button=event.target.closest?.('.console-shade');if(button)toggleConsole(button.dataset.deck==='1'?1:0);});
+document.addEventListener('click', event => {
+  const button = event.target.closest?.('.console-shade');
+  if (button) toggleConsole(button.dataset.deck === '1' ? 1 : 0);
+});
 const deckState = deck => {
   const scope = deck ? 'deck-b' : 'deck-a';
   return {
@@ -79,456 +147,1108 @@ const deckState = deck => {
     hideBpm: !!document.querySelector(`[data-testid="bpm-${deck ? 'b' : 'a'}"][aria-label="BPM hidden"]`),
   };
 };
-const live = createWinampLive({ engine, deckState, seek: (deck, fraction) => seekWave(deck, fraction), remote: (deck, action, value) => action === 'pl' ? toggleConsole(deck) : action === 'balance' ? engine.balance(deck, value).catch(fail) : send({ type: 'remote', deck, action, value }) });
-const library = new SessionLibrary(), selections = new DeckSelections();
-let sensitivities = [.05,.05], pendingProCatalog = false;
-let folder=null;
-async function showFolder(deck,path){
-  if(!folder){send({type:'folderListing',deck,root:'',path:[],folders:[],files:[]});return;}
-  const source=folder,listing=await source.list(path);
-  if(source===folder)send({type:'folderListing',deck,root:source.name,...listing});
+const live = createWinampLive({
+  engine,
+  deckState,
+  seek: (deck, fraction) => seekWave(deck, fraction),
+  remote: (deck, action, value) =>
+    action === 'pl'
+      ? toggleConsole(deck)
+      : action === 'balance'
+        ? engine.balance(deck, value).catch(fail)
+        : send({ type: 'remote', deck, action, value }),
+});
+const library = new SessionLibrary(),
+  selections = new DeckSelections();
+let sensitivities = [0.05, 0.05],
+  pendingProCatalog = false;
+let folder = null;
+async function showFolder(deck, path) {
+  if (!folder) {
+    send({ type: 'folderListing', deck, root: '', path: [], folders: [], files: [] });
+    return;
+  }
+  const source = folder,
+    listing = await source.list(path);
+  if (source === folder) send({ type: 'folderListing', deck, root: source.name, ...listing });
 }
-async function chooseFolder(deck){
-  const chosen=await pickFolder();
-  if(!chosen)return;
-  folder=chosen;await showFolder(deck,[]);
+async function chooseFolder(deck) {
+  const chosen = await pickFolder();
+  if (!chosen) return;
+  folder = chosen;
+  await showFolder(deck, []);
 }
-function publishLibrary(){catalog.tracks=library.list();send({type:'catalog',tracks:catalog.tracks});}
-function beginSelection(deck){engine.loadVersions[deck]++;return selections.begin(deck);}
-const notice=message=>send({type:'notice',message});
-let skinStamp=0;
-let renderEpoch=0,renderDispose=null,shownSkin=null;
+function publishLibrary() {
+  catalog.tracks = library.list();
+  send({ type: 'catalog', tracks: catalog.tracks });
+}
+function beginSelection(deck) {
+  engine.loadVersions[deck]++;
+  return selections.begin(deck);
+}
+const notice = message => send({ type: 'notice', message });
+let skinStamp = 0;
+let renderEpoch = 0,
+  renderDispose = null,
+  shownSkin = null;
 // Shows the current skin in the chosen look. The original kit is already on screen; the prepared one
 // replaces it when ready, and the images of the previous look are freed only after that.
-async function refineSkin(dressed){
-  const epoch=++renderEpoch;shownSkin=dressed;
-  const done=dispose=>{renderDispose?.();renderDispose=dispose;};
-  const shown=()=>{if(document.documentElement.dataset.render==='preparing')document.documentElement.dataset.render='original';};
-  if(renderMode==='original'||!dressed?.kit||document.documentElement.dataset.layout!=='kit'){done(null);shown();return;}
-  try{
-    const {kit,dispose}=await enhanceKit(dressed.kit,{hd:renderMode==='hd'});
-    if(epoch!==renderEpoch){dispose();return;}
-    applyRenderedKit(kit,renderMode);live.setSkin({...dressed,kit},kit.scale);skinStamp++;done(dispose);
-  }catch(error){if(epoch===renderEpoch){done(null);shown();}console.warn('The skin look could not be prepared; showing the original pixels.',error);}
+async function refineSkin(dressed) {
+  const epoch = ++renderEpoch;
+  shownSkin = dressed;
+  const done = dispose => {
+    renderDispose?.();
+    renderDispose = dispose;
+  };
+  const shown = () => {
+    if (document.documentElement.dataset.render === 'preparing') document.documentElement.dataset.render = 'original';
+  };
+  if (renderMode === 'original' || !dressed?.kit || document.documentElement.dataset.layout !== 'kit') {
+    done(null);
+    shown();
+    return;
+  }
+  try {
+    const { kit, dispose } = await enhanceKit(dressed.kit, { hd: renderMode === 'hd' });
+    if (epoch !== renderEpoch) {
+      dispose();
+      return;
+    }
+    applyRenderedKit(kit, renderMode);
+    live.setSkin({ ...dressed, kit }, kit.scale);
+    skinStamp++;
+    done(dispose);
+  } catch (error) {
+    if (epoch === renderEpoch) {
+      done(null);
+      shown();
+    }
+    console.warn('The skin look could not be prepared; showing the original pixels.', error);
+  }
 }
-const skinChanged=(id,name,custom)=>{skinStamp++;const dressed=id==='custom'?custom:builtinKit(id);live.setSkin(dressed);refineSkin(dressed);send({type:'skin',id,name,kit:document.documentElement.dataset.layout==='kit',preview:skinPicture(id,custom),source:custom?.source&&/^https:\/\/skins\.webamp\.org\//.test(custom.source)?custom.source:''});};
-const fail=error=>{if(engine.context)engine.emitRouting();send({type:'error',message:error instanceof Error?error.message:String(error)});};
-function chooseFile(accept,handle) {
-  const input=document.createElement('input'); input.type='file';input.accept=accept;input.style.display='none';document.body.append(input);
-  input.addEventListener('change',()=>{const file=input.files?.[0];if(file)Promise.resolve(handle(file)).catch(fail);input.remove();},{once:true});
-  input.addEventListener('cancel',()=>input.remove(),{once:true});input.click();
+const skinChanged = (id, name, custom) => {
+  skinStamp++;
+  const dressed = id === 'custom' ? custom : builtinKit(id);
+  live.setSkin(dressed);
+  refineSkin(dressed);
+  send({
+    type: 'skin',
+    id,
+    name,
+    kit: document.documentElement.dataset.layout === 'kit',
+    preview: skinPicture(id, custom),
+    source: custom?.source && /^https:\/\/skins\.webamp\.org\//.test(custom.source) ? custom.source : '',
+  });
+};
+const fail = error => {
+  if (engine.context) engine.emitRouting();
+  send({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+};
+function chooseFile(accept, handle) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = accept;
+  input.style.display = 'none';
+  document.body.append(input);
+  input.addEventListener(
+    'change',
+    () => {
+      const file = input.files?.[0];
+      if (file) Promise.resolve(handle(file)).catch(fail);
+      input.remove();
+    },
+    { once: true },
+  );
+  input.addEventListener('cancel', () => input.remove(), { once: true });
+  input.click();
 }
-function store(key,value) {try{localStorage.setItem(key,JSON.stringify(value));}catch{notice('Browser storage is full or unavailable. This session still works; progress cannot be saved.');}}
-function restore(key) {try{return JSON.parse(localStorage.getItem(key));}catch{return null;}}
-async function loadTrack(deck,id,resumePlayback=false,genreFilter=null) {
-  if(deck!==0&&deck!==1)throw new Error('Choose deck A or B.');
-  const previous={...engine.state[deck]};
-  const token=beginSelection(deck),track=library.find(id);
-  if(!track)throw new Error('Track not found in your session library.');
+function store(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    notice('Browser storage is full or unavailable. This session still works; progress cannot be saved.');
+  }
+}
+function restore(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key));
+  } catch {
+    return null;
+  }
+}
+async function loadTrack(deck, id, resumePlayback = false, genreFilter = null) {
+  if (deck !== 0 && deck !== 1) throw new Error('Choose deck A or B.');
+  const previous = { ...engine.state[deck] };
+  const token = beginSelection(deck),
+    track = library.find(id);
+  if (!track) throw new Error('Track not found in your session library.');
   notice(`Loading ${track.title || track.name}…`);
-  const bytes=await library.audioBytes(id);
-  if(!selections.valid(token))return false;
-  const name=track.local?track.name:`${track.title || track.name} — ${track.artist}`;
-  const loaded=await engine.load(deck,bytes,name,track.bpm||undefined);
-  if(!loaded||!selections.valid(token))return false;
-  engine.state[deck].trackId=track.id;
-  library.update(track.id,{bpm:engine.state[deck].bpm,duration:engine.state[deck].duration});
-  if(resumePlayback){
-    await engine.set(deck,'play',+previous.playing);
-    if(!selections.valid(token))return false;
+  const bytes = await library.audioBytes(id);
+  if (!selections.valid(token)) return false;
+  const name = track.local ? track.name : `${track.title || track.name} — ${track.artist}`;
+  const loaded = await engine.load(deck, bytes, name, track.bpm || undefined);
+  if (!loaded || !selections.valid(token)) return false;
+  engine.state[deck].trackId = track.id;
+  library.update(track.id, { bpm: engine.state[deck].bpm, duration: engine.state[deck].duration });
+  if (resumePlayback) {
+    await engine.set(deck, 'play', +previous.playing);
+    if (!selections.valid(token)) return false;
     engine.emitDeckChanged(deck);
   }
-  publishLibrary();send({type:'trackSelection',deck,track:track.id,...(genreFilter?{genre:genreFilter}:{})});
-  recent=[];lastStart=performance.now();return true;
+  publishLibrary();
+  send({ type: 'trackSelection', deck, track: track.id, ...(genreFilter ? { genre: genreFilter } : {}) });
+  recent = [];
+  lastStart = performance.now();
+  return true;
 }
-async function navigateTrack(deck,genre,direction){
-  pendingProCatalog=false;
-  const state=engine.state[deck];
-  const track=library.choose(state.trackId,genre||'All genres',direction);
-  if(!track){notice('No other playable track in this genre. Import another file or choose another genre.');return;}
-  await loadTrack(deck,track.id,true);
+async function navigateTrack(deck, genre, direction) {
+  pendingProCatalog = false;
+  const state = engine.state[deck];
+  const track = library.choose(state.trackId, genre || 'All genres', direction);
+  if (!track) {
+    notice('No other playable track in this genre. Import another file or choose another genre.');
+    return;
+  }
+  await loadTrack(deck, track.id, true);
 }
 
 function primaryGenre(tags) {
-  const tag=tags.join(' ').toLowerCase();
-  if(/drum.*bass|jungle|dnb/.test(tag))return 'Drum & Bass';
-  if(/techno/.test(tag))return 'Techno';
-  if(/house/.test(tag))return 'House';
-  if(/break/.test(tag))return 'Breakbeat';
-  if(/disco/.test(tag))return 'Disco';
-  if(/ambient|downtempo/.test(tag))return 'Ambient';
-  if(/trance/.test(tag))return 'Trance';
+  const tag = tags.join(' ').toLowerCase();
+  if (/drum.*bass|jungle|dnb/.test(tag)) return 'Drum & Bass';
+  if (/techno/.test(tag)) return 'Techno';
+  if (/house/.test(tag)) return 'House';
+  if (/break/.test(tag)) return 'Breakbeat';
+  if (/disco/.test(tag)) return 'Disco';
+  if (/ambient|downtempo/.test(tag)) return 'Ambient';
+  if (/trance/.test(tag)) return 'Trance';
   return 'Electronic';
 }
 async function constrainDrill() {
-  if(drill!=='phase'&&drill!=='phrase'&&mode!=='star')return;
-  const bpm=engine.state[0].bpm;
-  await engine.set(1,'bpm',bpm);
-  if(mode!=='star')await engine.set(1,'seek',(drill==='phase'?.28:4)*60/bpm);
-  send({type:'randomized',bpms:[bpm,bpm],names:engine.state.map(d=>d.name)});
+  if (drill !== 'phase' && drill !== 'phrase' && mode !== 'star') return;
+  const bpm = engine.state[0].bpm;
+  await engine.set(1, 'bpm', bpm);
+  if (mode !== 'star') await engine.set(1, 'seek', ((drill === 'phase' ? 0.28 : 4) * 60) / bpm);
+  send({ type: 'randomized', bpms: [bpm, bpm], names: engine.state.map(d => d.name) });
 }
 // Drills that set both decks to one tempo, and Star mode, keep that tempo when a deck changes loop.
-const fixedTempo=()=>drill==='phase'||drill==='phrase'||mode==='star';
+const fixedTempo = () => drill === 'phase' || drill === 'phrase' || mode === 'star';
 async function configure(command) {
-  const version=++configVersion;selections.invalidate();engine.loadVersions=engine.loadVersions.map(value=>value+1);pendingProCatalog=false;
-  const requestedMode=command.mode||'foundation';mode=requestedMode;recent=[];lastStart=performance.now();zoom=[1,1];
+  const version = ++configVersion;
+  selections.invalidate();
+  engine.loadVersions = engine.loadVersions.map(value => value + 1);
+  pendingProCatalog = false;
+  const requestedMode = command.mode || 'foundation';
+  mode = requestedMode;
+  recent = [];
+  lastStart = performance.now();
+  zoom = [1, 1];
   await engine.ensure();
-  if(version!==configVersion)return;
-  for(let i=0;i<2;i++){loops[i]=true;await engine.set(i,'play',0);await engine.set(i,'pitch',0);await engine.set(i,'loop',1);await engine.set(i,'bend',0);await engine.set(i,'drift',0);if(requestedMode==='foundation'){for(const band of ['low','mid','high'])await engine.set(i,band,0);await engine.setVoice(i,0,'gain',1);await engine.setVoice(i,0,'pan',0);}}
-  if(version!==configVersion)return;
-  if(requestedMode==='pro') {
-    if(catalog.tracks.length>=2){await loadTrack(0,catalog.tracks[0].id);if(version!==configVersion)return;await loadTrack(1,catalog.tracks[1].id);}
-    else {pendingProCatalog=true;notice('The playable library is loading. You can also import your own files.');}
+  if (version !== configVersion) return;
+  for (let i = 0; i < 2; i++) {
+    loops[i] = true;
+    await engine.set(i, 'play', 0);
+    await engine.set(i, 'pitch', 0);
+    await engine.set(i, 'loop', 1);
+    await engine.set(i, 'bend', 0);
+    await engine.set(i, 'drift', 0);
+    if (requestedMode === 'foundation') {
+      for (const band of ['low', 'mid', 'high']) await engine.set(i, band, 0);
+      await engine.setVoice(i, 0, 'gain', 1);
+      await engine.setVoice(i, 0, 'pan', 0);
+    }
+  }
+  if (version !== configVersion) return;
+  if (requestedMode === 'pro') {
+    if (catalog.tracks.length >= 2) {
+      await loadTrack(0, catalog.tracks[0].id);
+      if (version !== configVersion) return;
+      await loadTrack(1, catalog.tracks[1].id);
+    } else {
+      pendingProCatalog = true;
+      notice('The playable library is loading. You can also import your own files.');
+    }
   } else {
-    await engine.randomize(requestedMode,requestedMode==='foundation'?1:command.elements??3);
+    await engine.randomize(requestedMode, requestedMode === 'foundation' ? 1 : (command.elements ?? 3));
     await constrainDrill();
   }
-  recent=[];lastStart=performance.now();
+  recent = [];
+  lastStart = performance.now();
 }
 // Star mode: the run clock and the drift only advance while both decks play.
-let star=null,starTimer=null,starLast=0;
-function startStar(){
-  stopStar();star=createStar();starLast=performance.now();
-  starTimer=setInterval(tickStar,100);send(starStats(star));
+let star = null,
+  starTimer = null,
+  starLast = 0;
+function startStar() {
+  stopStar();
+  star = createStar();
+  starLast = performance.now();
+  starTimer = setInterval(tickStar, 100);
+  send(starStats(star));
 }
-function stopStar(){
-  clearInterval(starTimer);starTimer=null;star=null;
-  if(engine.node)for(let i=0;i<2;i++)engine.set(i,'drift',0).catch(()=>{});
+function stopStar() {
+  clearInterval(starTimer);
+  starTimer = null;
+  star = null;
+  if (engine.node) for (let i = 0; i < 2; i++) engine.set(i, 'drift', 0).catch(() => {});
 }
-function tickStar(){
-  const now=performance.now(),dt=Math.min(.25,(now-starLast)/1000);starLast=now;
-  if(!star||star.done||telemetry.length!==2||!telemetry.every(d=>d.playing))return;
-  const drift=stepDrift(star,dt);
-  for(let i=0;i<2;i++)engine.set(i,'drift',drift[i]).catch(()=>{});
-  stepScore(star,telemetry,dt);
-  if(star.elapsed>=STAR.length)finishStar();else send(starStats(star));
+function tickStar() {
+  const now = performance.now(),
+    dt = Math.min(0.25, (now - starLast) / 1000);
+  starLast = now;
+  if (!star || star.done || telemetry.length !== 2 || !telemetry.every(d => d.playing)) return;
+  const drift = stepDrift(star, dt);
+  for (let i = 0; i < 2; i++) engine.set(i, 'drift', drift[i]).catch(() => {});
+  stepScore(star, telemetry, dt);
+  if (star.elapsed >= STAR.length) finishStar();
+  else send(starStats(star));
 }
-function finishStar(){
-  star.done=true;clearInterval(starTimer);starTimer=null;
-  for(let i=0;i<2;i++)engine.set(i,'drift',0).catch(()=>{});
-  send(starStats(star));send(starResult(star));
+function finishStar() {
+  star.done = true;
+  clearInterval(starTimer);
+  starTimer = null;
+  for (let i = 0; i < 2; i++) engine.set(i, 'drift', 0).catch(() => {});
+  send(starStats(star));
+  send(starResult(star));
 }
 async function handle(command) {
-  const {type,deck,param,value}=command;
-  switch(type) {
-    case 'set': if(param==='loop'&&(deck===0||deck===1))loops[deck]=!!value; await engine.set(deck,param,param==='elements'&&mode==='foundation'?1:value); if(param==='bpm'&&engine.state[deck].trackId){library.update(engine.state[deck].trackId,{bpm:engine.state[deck].bpm});publishLibrary();}if(['bpm','pitch','elements'].includes(param)){recent=[];lastStart=performance.now();} break;
-    case 'sensitivity': if(deck===0||deck===1)sensitivities[deck]=pitchSensitivity(value);break;
-    case 'layout': {const layout=validateLayout(command.layout);if(layout){sensitivities=layout.sensitivity;store('bit-cheer-layout',layout);}break;}
-    case 'mixer': await engine.mixer(param,value);if(activeLesson===8&&param==='crossfade'&&telemetry.every(d=>d.playing)){if(value<=.1||value>=.9){const edge=value<=.1?0:1;if(!transition)transition={edge,time:performance.now(),done:false};else if(edge!==transition.edge&&performance.now()-transition.time>=3000)transition.done=true;}}break;
-    case 'routing': await engine.setRouting({mode:command.mode,a:command.a,b:command.b});break;
-    case 'refreshOutputs': await engine.refreshOutputs();break;
-    case 'audioOutput': await engine.chooseOutput(command.deviceId);break;
-    case 'pickOutput': await engine.chooseOutput('');break;
-    case 'cue': await engine.set(deck,'play',0);await engine.set(deck,'cue',1);recent=[];lastStart=performance.now();break;
-    case 'setCue': await engine.set(deck,'setCue',1);break;
-    case 'nudge': await engine.set(deck,'nudge',value);break;
-    case 'seek': await engine.set(deck,'seek',clamp(value,0,1)*engine.state[deck].duration);recent=[];lastStart=performance.now();break;
-    case 'zoom': zoom[deck]=clamp(zoom[deck] * value,1,16);break;
-    case 'grid': await engine.set(deck,'beatOffset',engine.state[deck].position);recent=[];lastStart=performance.now();notice('Current position marked as beat one. Grid checks now use this downbeat.');break;
-    case 'randomizeTempo':
-      if(drill==='phase'||drill==='phrase'||mode==='star'){notice('This drill keeps tempos equal. Use New challenge for a fresh offset.');break;}
-      await engine.randomizeTempo(deck,mode);recent=[];lastStart=performance.now();break;
-    case 'changeTrack': {
-      if(mode==='pro')await navigateTrack(deck,command.genre,'random');
-      else {beginSelection(deck);await engine.changeGeneratedTrack(deck,mode,{keepTempo:fixedTempo()});}
-      recent=[];lastStart=performance.now();break;
-    }
-    case 'nextTrack': case 'previousTrack': {
-      const direction=type==='nextTrack'?1:-1;
-      if(mode==='pro')await navigateTrack(deck,command.genre,direction);
-      else if(mode!=='foundation'){beginSelection(deck);await engine.stepLoop(deck,direction,{keepTempo:fixedTempo()});recent=[];lastStart=performance.now();}
+  const { type, deck, param, value } = command;
+  switch (type) {
+    case 'set':
+      if (param === 'loop' && (deck === 0 || deck === 1)) loops[deck] = !!value;
+      await engine.set(deck, param, param === 'elements' && mode === 'foundation' ? 1 : value);
+      if (param === 'bpm' && engine.state[deck].trackId) {
+        library.update(engine.state[deck].trackId, { bpm: engine.state[deck].bpm });
+        publishLibrary();
+      }
+      if (['bpm', 'pitch', 'elements'].includes(param)) {
+        recent = [];
+        lastStart = performance.now();
+      }
+      break;
+    case 'sensitivity':
+      if (deck === 0 || deck === 1) sensitivities[deck] = pitchSensitivity(value);
+      break;
+    case 'layout': {
+      const layout = validateLayout(command.layout);
+      if (layout) {
+        sensitivities = layout.sensitivity;
+        store('bit-cheer-layout', layout);
+      }
       break;
     }
-    case 'loadLoop': if(mode!=='pro'&&mode!=='foundation'){beginSelection(deck);await engine.loadLoop(deck,command.loop,{keepTempo:fixedTempo()});recent=[];lastStart=performance.now();}break;
-    case 'trackGenre': break;
-    case 'voice': if(mode!=='foundation')await engine.setVoice(deck,command.voice,param,value);break;
-    case 'solo': if(mode!=='foundation')await engine.setSolo(deck,command.voice);break;
-    case 'chaos': if(mode!=='foundation'){beginSelection(deck);await engine.chaos(deck);recent=[];lastStart=performance.now();}break;
-    case 'focusSession': focusSession(!!command.active,command.fullscreen!==false);break;
-    case 'focusDeck': focusSession(command.deck>=0,command.fullscreen!==false);break;
-    case 'fullscreen': focusSession(focusActive,!!command.active);break;
-    case 'newChallenge': stopStar();await configure(command);if(mode==='star')startStar();break;
-    case 'mode': activeLesson=null;transition=null;drill='';stopStar();await configure(command);if(mode==='star')startStar();break;
-    case 'lesson': activeLesson=command.lesson;transition=null;drill='';stopStar();await configure(command);break;
-    case 'drill': activeLesson=null;transition=null;drill=command.drill;stopStar();await configure(command);break;
-    case 'starRun': if(command.active)startStar();else stopStar();break;
-    case 'check': {
-      if(star){
-        if(star.done){notice(mode==='star'?'Run\'s over. Take a bow, then hit New run for the encore.':'Run\'s over. Take a bow, then hit New star run for the encore.');break;}
-        if(star.elapsed<10){notice('Easy, superstar. Keep both decks playing for at least 10 seconds before you bow out.');break;}
-        finishStar();break;
+    case 'mixer':
+      await engine.mixer(param, value);
+      if (activeLesson === 8 && param === 'crossfade' && telemetry.every(d => d.playing)) {
+        if (value <= 0.1 || value >= 0.9) {
+          const edge = value <= 0.1 ? 0 : 1;
+          if (!transition) transition = { edge, time: performance.now(), done: false };
+          else if (edge !== transition.edge && performance.now() - transition.time >= 3000) transition.done = true;
+        }
       }
-      if(!telemetry.length||!telemetry.every(d=>d.playing)) {notice('Play both decks, match the pitch, then check your mix.');break;}
-      if(performance.now()-lastStart<3000||recent.length<20){notice('Let both decks run together for at least 3 seconds before checking. Listen for drift.');break;}
-      if(mode==='pro' && !engine.state.every(d=>d.source==='pcm')){notice('Load a real track into both decks before checking a Pro mix.');break;}
-      if(engine.state.some(d=>d.source==='generated'&&d.elements===0)){notice('Add an instrument to both decks so you can hear the match.');break;}
-      const result=matchScore(telemetry,recent.map(x=>x.decks),command.drill||drill);
-      if(activeLesson===8&&result.score>=85&&!transition?.done){notice('Complete the handover: while both decks play, move the crossfader from one end to the other over at least 3 seconds, then check your match.');break;}
-      send(result);break;
+      break;
+    case 'routing':
+      await engine.setRouting({ mode: command.mode, a: command.a, b: command.b });
+      break;
+    case 'refreshOutputs':
+      await engine.refreshOutputs();
+      break;
+    case 'audioOutput':
+      await engine.chooseOutput(command.deviceId);
+      break;
+    case 'pickOutput':
+      await engine.chooseOutput('');
+      break;
+    case 'cue':
+      await engine.set(deck, 'play', 0);
+      await engine.set(deck, 'cue', 1);
+      recent = [];
+      lastStart = performance.now();
+      break;
+    case 'setCue':
+      await engine.set(deck, 'setCue', 1);
+      break;
+    case 'nudge':
+      await engine.set(deck, 'nudge', value);
+      break;
+    case 'zoom':
+      zoom[deck] = clamp(zoom[deck] * value, 1, 16);
+      break;
+    case 'grid':
+      await engine.set(deck, 'beatOffset', engine.state[deck].position);
+      recent = [];
+      lastStart = performance.now();
+      notice('Current position marked as beat one. Grid checks now use this downbeat.');
+      break;
+    case 'randomizeTempo':
+      if (drill === 'phase' || drill === 'phrase' || mode === 'star') {
+        notice('This drill keeps tempos equal. Use New challenge for a fresh offset.');
+        break;
+      }
+      await engine.randomizeTempo(deck, mode);
+      recent = [];
+      lastStart = performance.now();
+      break;
+    case 'changeTrack': {
+      if (mode === 'pro') await navigateTrack(deck, command.genre, 'random');
+      else {
+        beginSelection(deck);
+        await engine.changeGeneratedTrack(deck, mode, { keepTempo: fixedTempo() });
+      }
+      recent = [];
+      lastStart = performance.now();
+      break;
     }
-    case 'tap': {const result=tapTempo(taps,performance.now());taps=result.times;send({type:'tap',bpm:result.bpm,taps:result.taps});break;}
+    case 'nextTrack':
+    case 'previousTrack': {
+      const direction = type === 'nextTrack' ? 1 : -1;
+      if (mode === 'pro') await navigateTrack(deck, command.genre, direction);
+      else if (mode !== 'foundation') {
+        beginSelection(deck);
+        await engine.stepLoop(deck, direction, { keepTempo: fixedTempo() });
+        recent = [];
+        lastStart = performance.now();
+      }
+      break;
+    }
+    case 'loadLoop':
+      if (mode !== 'pro' && mode !== 'foundation') {
+        beginSelection(deck);
+        await engine.loadLoop(deck, command.loop, { keepTempo: fixedTempo() });
+        recent = [];
+        lastStart = performance.now();
+      }
+      break;
+    case 'voice':
+      if (mode !== 'foundation') await engine.setVoice(deck, command.voice, param, value);
+      break;
+    case 'solo':
+      if (mode !== 'foundation') await engine.setSolo(deck, command.voice);
+      break;
+    case 'chaos':
+      if (mode !== 'foundation') {
+        beginSelection(deck);
+        await engine.chaos(deck);
+        recent = [];
+        lastStart = performance.now();
+      }
+      break;
+    case 'focusSession':
+      focusSession(!!command.active, command.fullscreen !== false);
+      break;
+    case 'newChallenge':
+      stopStar();
+      await configure(command);
+      if (mode === 'star') startStar();
+      break;
+    case 'mode':
+      activeLesson = null;
+      transition = null;
+      drill = '';
+      stopStar();
+      await configure(command);
+      if (mode === 'star') startStar();
+      break;
+    case 'lesson':
+      activeLesson = command.lesson;
+      transition = null;
+      drill = '';
+      stopStar();
+      await configure(command);
+      break;
+    case 'drill':
+      activeLesson = null;
+      transition = null;
+      drill = command.drill;
+      stopStar();
+      await configure(command);
+      break;
+    case 'starRun':
+      if (command.active) startStar();
+      else stopStar();
+      break;
+    case 'check': {
+      if (star) {
+        if (star.done) {
+          notice(
+            mode === 'star'
+              ? "Run's over. Take a bow, then hit New run for the encore."
+              : "Run's over. Take a bow, then hit New star run for the encore.",
+          );
+          break;
+        }
+        if (star.elapsed < 10) {
+          notice('Easy, superstar. Keep both decks playing for at least 10 seconds before you bow out.');
+          break;
+        }
+        finishStar();
+        break;
+      }
+      if (!telemetry.length || !telemetry.every(d => d.playing)) {
+        notice('Play both decks, match the pitch, then check your mix.');
+        break;
+      }
+      if (performance.now() - lastStart < 3000 || recent.length < 20) {
+        notice('Let both decks run together for at least 3 seconds before checking. Listen for drift.');
+        break;
+      }
+      if (mode === 'pro' && !engine.state.every(d => d.source === 'pcm')) {
+        notice('Load a real track into both decks before checking a Pro mix.');
+        break;
+      }
+      if (engine.state.some(d => d.source === 'generated' && d.elements === 0)) {
+        notice('Add an instrument to both decks so you can hear the match.');
+        break;
+      }
+      const result = matchScore(
+        telemetry,
+        recent.map(x => x.decks),
+        command.drill || drill,
+      );
+      if (activeLesson === 8 && result.score >= 85 && !transition?.done) {
+        notice(
+          'Complete the handover: while both decks play, move the crossfader from one end to the other over at least 3 seconds, then check your match.',
+        );
+        break;
+      }
+      send(result);
+      break;
+    }
+    case 'tap': {
+      const result = tapTempo(taps, performance.now());
+      taps = result.times;
+      send({ type: 'tap', bpm: result.bpm, taps: result.taps });
+      break;
+    }
     case 'importTrack': {
-      pendingProCatalog=false;const token=beginSelection(deck);
-      chooseFile(['audio/*',...AUDIO_EXTENSIONS.map(ext=>`.${ext}`)].join(','),async file=>{
-        if(file.size>100*1024*1024)throw new Error('Import accepts files up to 100 MB. For larger files such as hi-res FLAC, use 📁 Browse folder (up to 300 MB).');
+      pendingProCatalog = false;
+      const token = beginSelection(deck);
+      chooseFile(['audio/*', ...AUDIO_EXTENSIONS.map(ext => `.${ext}`)].join(','), async file => {
+        if (file.size > 100 * 1024 * 1024)
+          throw new Error(
+            'Import accepts files up to 100 MB. For larger files such as hi-res FLAC, use 📁 Browse folder (up to 300 MB).',
+          );
         notice(`Adding ${file.name} to this session…`);
-        const bytes=await file.arrayBuffer();if(!selections.valid(token))return;
-        const track=library.addLocal(file,bytes);publishLibrary();
-        await loadTrack(deck,track.id,false,'Local files');
-      });break;
+        const bytes = await file.arrayBuffer();
+        if (!selections.valid(token)) return;
+        const track = library.addLocal(file, bytes);
+        publishLibrary();
+        await loadTrack(deck, track.id, false, 'Local files');
+      });
+      break;
     }
-    case 'loadTrack': pendingProCatalog=false;await loadTrack(deck,command.track);break;
-    case 'chooseFolder': await chooseFolder(deck);break;
-    case 'browseFolder': if(folder)await showFolder(deck,command.path);else await chooseFolder(deck);break;
+    case 'loadTrack':
+      pendingProCatalog = false;
+      await loadTrack(deck, command.track);
+      break;
+    case 'chooseFolder':
+      await chooseFolder(deck);
+      break;
+    case 'browseFolder':
+      if (folder) await showFolder(deck, command.path);
+      else await chooseFolder(deck);
+      break;
     case 'loadFolderFile': {
-      if(!folder)throw new Error('Choose a music folder first.');
-      pendingProCatalog=false;
-      const source=folder,path=command.path,name=String(command.name||'');
-      const track=library.addLinked(source.key(path,name),name,()=>source.file(path,name));
-      publishLibrary();await loadTrack(deck,track.id,false,'Local files');break;
+      if (!folder) throw new Error('Choose a music folder first.');
+      pendingProCatalog = false;
+      const source = folder,
+        path = command.path,
+        name = String(command.name || '');
+      const track = library.addLinked(source.key(path, name), name, () => source.file(path, name));
+      publishLibrary();
+      await loadTrack(deck, track.id, false, 'Local files');
+      break;
     }
-    case 'skin': {if(!SELECTABLE_SKINS.includes(command.id))break;const epoch=++skinEpoch;await prepareBuiltinSkin(command.id);if(epoch!==skinEpoch)break;const name=applySkin(command.id);store('bit-cheer-skin',{id:command.id});skinChanged(command.id,name);break;}
-    case 'importSkin': chooseFile('.toml,.zip,.wsz',async file=>{const epoch=++skinEpoch;const custom=await importSkin(file);if(epoch!==skinEpoch)return;const name=applySkin('custom',custom);store('bit-cheer-skin',{id:'custom',custom});skinChanged('custom',name,custom);notice(`Skin loaded: ${name}`);});break;
+    case 'skin': {
+      if (!SELECTABLE_SKINS.includes(command.id)) break;
+      const epoch = ++skinEpoch;
+      await prepareBuiltinSkin(command.id);
+      if (epoch !== skinEpoch) break;
+      const name = applySkin(command.id);
+      store('bit-cheer-skin', { id: command.id });
+      skinChanged(command.id, name);
+      break;
+    }
+    case 'importSkin':
+      chooseFile('.toml,.zip,.wsz', async file => {
+        const epoch = ++skinEpoch;
+        const custom = await importSkin(file);
+        if (epoch !== skinEpoch) return;
+        const name = applySkin('custom', custom);
+        store('bit-cheer-skin', { id: 'custom', custom });
+        skinChanged('custom', name, custom);
+        notice(`Skin loaded: ${name}`);
+      });
+      break;
     case 'loadSkinUrl': {
-      const epoch=++skinEpoch;
+      const epoch = ++skinEpoch;
       try {
-        const custom=await importSkinFromUrl(command.url);
+        const custom = await importSkinFromUrl(command.url);
         // A newer choice made while this one downloaded wins.
-        if(epoch!==skinEpoch){send({type:'skinUrlResult',ok:false,message:'Another skin was chosen while this one was loading.'});break;}
-        const name=applySkin('custom',custom);
-        store('bit-cheer-skin',{id:'custom',custom});skinChanged('custom',name,custom);
-        send({type:'skinUrlResult',ok:true,message:`Loaded “${name}”. Enjoy the view!`});
-      } catch(error) { send({type:'skinUrlResult',ok:false,message:error instanceof Error?error.message:String(error)}); }
+        if (epoch !== skinEpoch) {
+          send({ type: 'skinUrlResult', ok: false, message: 'Another skin was chosen while this one was loading.' });
+          break;
+        }
+        const name = applySkin('custom', custom);
+        store('bit-cheer-skin', { id: 'custom', custom });
+        skinChanged('custom', name, custom);
+        send({ type: 'skinUrlResult', ok: true, message: `Loaded “${name}”. Enjoy the view!` });
+      } catch (error) {
+        send({ type: 'skinUrlResult', ok: false, message: error instanceof Error ? error.message : String(error) });
+      }
       break;
     }
     case 'render': {
-      if(!RENDER_MODES.includes(command.mode)||command.mode===renderMode)break;
-      renderMode=command.mode;store('bit-cheer-render',renderMode);
+      if (!RENDER_MODES.includes(command.mode) || command.mode === renderMode) break;
+      renderMode = command.mode;
+      store('bit-cheer-render', renderMode);
       // Back to the stored kit first, then (for comfort or HD) its prepared look.
-      const id=document.documentElement.dataset.skin;
-      applySkin(id,id==='custom'?shownSkin:undefined);skinStamp++;live.setSkin(shownSkin);refineSkin(shownSkin);
-      send({type:'render',mode:renderMode});break;
+      const id = document.documentElement.dataset.skin;
+      applySkin(id, id === 'custom' ? shownSkin : undefined);
+      skinStamp++;
+      live.setSkin(shownSkin);
+      refineSkin(shownSkin);
+      send({ type: 'render', mode: renderMode });
+      break;
     }
-    case 'exportSkin': downloadTemplate();notice('Your skin kit is downloaded. Edit skin.toml, add optional images, then import the ZIP.');break;
-    case 'persist': store('bit-cheer-progress',{progress:command.progress,history:command.history});break;
-    case 'mic': await toggleMic();break;
-    default: break;
+    case 'exportSkin':
+      downloadTemplate();
+      notice('Your skin kit is downloaded. Edit skin.toml, add optional images, then import the ZIP.');
+      break;
+    case 'persist':
+      store('bit-cheer-progress', { progress: command.progress, history: command.history });
+      break;
+    case 'mic':
+      await toggleMic();
+      break;
+    default:
+      break;
   }
 }
-app.ports.command.subscribe(command=>handle(command).catch(fail));
+app.ports.command.subscribe(command => handle(command).catch(fail));
 
 // Focus session asks for full screen. Leaving it exits full screen; if a new session starts before that exit has
 // finished (Esc then ` in quick succession), full screen comes back once it has.
-let leavingFullscreen=false,enterAfterLeaving=false;
-function focusSession(active,fullscreen=true){
-  focusActive=active;enterAfterLeaving=false;
-  if(!active){if(document.fullscreenElement&&!leavingFullscreen){leavingFullscreen=true;document.exitFullscreen().catch(()=>{leavingFullscreen=false;});}return;}
-  if(fullscreen)enterFullscreen();
+let leavingFullscreen = false,
+  enterAfterLeaving = false;
+function focusSession(active, fullscreen = true) {
+  focusActive = active;
+  enterAfterLeaving = false;
+  if (!active) {
+    if (document.fullscreenElement && !leavingFullscreen) {
+      leavingFullscreen = true;
+      document.exitFullscreen().catch(() => {
+        leavingFullscreen = false;
+      });
+    }
+    return;
+  }
+  if (fullscreen) enterFullscreen();
 }
-function enterFullscreen(){
-  if(leavingFullscreen){enterAfterLeaving=true;return;}
-  if(document.fullscreenElement||!document.documentElement.requestFullscreen)return;
+function enterFullscreen() {
+  if (leavingFullscreen) {
+    enterAfterLeaving = true;
+    return;
+  }
+  if (document.fullscreenElement || !document.documentElement.requestFullscreen) return;
   // In full screen the browser takes Esc for itself. Where it can lend it to the page (Chromium's keyboard lock),
   // Esc first closes the keyboard help and then leaves Focus session, as everywhere else; holding Esc still leaves full screen.
-  document.documentElement.requestFullscreen().then(()=>{wasFullscreen=true;return navigator.keyboard?.lock?.(['Escape']);}).catch(()=>{});
+  document.documentElement
+    .requestFullscreen()
+    .then(() => {
+      wasFullscreen = true;
+      return navigator.keyboard?.lock?.(['Escape']);
+    })
+    .catch(() => {});
 }
-document.addEventListener('fullscreenchange',()=>{
-  if(document.fullscreenElement){wasFullscreen=true;return;}
-  if(!wasFullscreen)return;
-  wasFullscreen=false;
-  if(leavingFullscreen){leavingFullscreen=false;if(enterAfterLeaving&&focusActive){enterAfterLeaving=false;enterFullscreen();}return;}
+document.addEventListener('fullscreenchange', () => {
+  if (document.fullscreenElement) {
+    wasFullscreen = true;
+    return;
+  }
+  if (!wasFullscreen) return;
+  wasFullscreen = false;
+  if (leavingFullscreen) {
+    leavingFullscreen = false;
+    if (enterAfterLeaving && focusActive) {
+      enterAfterLeaving = false;
+      enterFullscreen();
+    }
+    return;
+  }
   // The browser left full screen by itself (Esc held, F11): leave Focus session too.
-  if(focusActive){focusActive=false;send({type:'focus',active:false});}
+  if (focusActive) {
+    focusActive = false;
+    send({ type: 'focus', active: false });
+  }
 });
 
 async function toggleMic() {
-  const epoch=++micEpoch;
-  if(micPending){micPending=false;send({type:'mic',active:false,bpm:0});notice('Microphone request cancelled.');return;}
-  if(mic){mic.capture.port.postMessage({type:'stop'});mic.stream.getTracks().forEach(t=>t.stop());mic.source.disconnect();mic.capture.disconnect();mic.silent.disconnect();mic=null;send({type:'mic',active:false,bpm:0});return;}
-  if(!navigator.mediaDevices?.getUserMedia)throw new Error('Microphone access requires HTTPS or localhost and browser support.');
-  micPending=true;notice('Waiting for microphone permission…');
+  const epoch = ++micEpoch;
+  if (micPending) {
+    micPending = false;
+    send({ type: 'mic', active: false, bpm: 0 });
+    notice('Microphone request cancelled.');
+    return;
+  }
+  if (mic) {
+    mic.capture.port.postMessage({ type: 'stop' });
+    mic.stream.getTracks().forEach(t => t.stop());
+    mic.source.disconnect();
+    mic.capture.disconnect();
+    mic.silent.disconnect();
+    mic = null;
+    send({ type: 'mic', active: false, bpm: 0 });
+    return;
+  }
+  if (!navigator.mediaDevices?.getUserMedia)
+    throw new Error('Microphone access requires HTTPS or localhost and browser support.');
+  micPending = true;
+  notice('Waiting for microphone permission…');
   let stream;
-  try{
-  await engine.ensure();
-  stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
-  if(epoch!==micEpoch){stream.getTracks().forEach(t=>t.stop());return;}
+  try {
+    await engine.ensure();
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    });
+    if (epoch !== micEpoch) {
+      stream.getTracks().forEach(t => t.stop());
+      return;
+    }
     await engine.context.audioWorklet.addModule(assetUrl('/mic-worklet.js'));
-    if(epoch!==micEpoch){stream.getTracks().forEach(t=>t.stop());return;}
-    const source=engine.context.createMediaStreamSource(stream);
-    const capture=new AudioWorkletNode(engine.context,'bit-cheer-mic',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[1]});
-    const silent=engine.context.createGain();silent.gain.value=0;
+    if (epoch !== micEpoch) {
+      stream.getTracks().forEach(t => t.stop());
+      return;
+    }
+    const source = engine.context.createMediaStreamSource(stream);
+    const capture = new AudioWorkletNode(engine.context, 'bit-cheer-mic', {
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      outputChannelCount: [1],
+    });
+    const silent = engine.context.createGain();
+    silent.gain.value = 0;
     source.connect(capture).connect(silent).connect(engine.context.destination);
-    capture.port.onmessage=({data})=>{if(data.type==='samples'&&epoch===micEpoch){const result=estimateTempo(data.pcm,data.sampleRate);send({type:'mic',active:true,bpm:result?.bpm||0});}};
-    mic={stream,source,capture,silent};
-    send({type:'mic',active:true,bpm:0});notice('Microphone listening locally. Give it 6 seconds of a clear rhythm. Click again to stop.');
-  } catch(error){stream?.getTracks().forEach(t=>t.stop());if(epoch===micEpoch)throw error;}finally{if(epoch===micEpoch)micPending=false;}
+    capture.port.onmessage = ({ data }) => {
+      if (data.type === 'samples' && epoch === micEpoch) {
+        const result = estimateTempo(data.pcm, data.sampleRate);
+        send({ type: 'mic', active: true, bpm: result?.bpm || 0 });
+      }
+    };
+    mic = { stream, source, capture, silent };
+    send({ type: 'mic', active: true, bpm: 0 });
+    notice('Microphone listening locally. Give it 6 seconds of a clear rhythm. Click again to stop.');
+  } catch (error) {
+    stream?.getTracks().forEach(t => t.stop());
+    if (epoch === micEpoch) throw error;
+  } finally {
+    if (epoch === micEpoch) micPending = false;
+  }
 }
 
 // Turntable-style jog: wheel temporarily bends rate; dragging scrubs the timeline.
-const bendTimers=[null,null];let drag=null;
-const jogDeck=target=>{const jog=target.closest?.('.jog-wheel');return jog?{element:jog,deck:jog.id==='jog-b'?1:0}:null;};
-const pitchDeck=element=>element.getAttribute('data-deck')==='1'||element.getAttribute('aria-label')?.includes(' B ')?1:0;
-const pitchRequests=[0,0];
-function applyPitch(element,delta,absolute=null){
-  const deck=pitchDeck(element),request=++pitchRequests[deck];
-  const next=absolute===null?adjustedPitch(engine.state[deck].pitch,delta,Number(element.min),Number(element.max)):absolute;
+const bendTimers = [null, null];
+let drag = null;
+const jogDeck = target => {
+  const jog = target.closest?.('.jog-wheel');
+  return jog ? { element: jog, deck: jog.id === 'jog-b' ? 1 : 0 } : null;
+};
+const pitchDeck = element =>
+  element.getAttribute('data-deck') === '1' || element.getAttribute('aria-label')?.includes(' B ') ? 1 : 0;
+const pitchRequests = [0, 0];
+function applyPitch(element, delta, absolute = null) {
+  const deck = pitchDeck(element),
+    request = ++pitchRequests[deck];
+  const next =
+    absolute === null
+      ? adjustedPitch(engine.state[deck].pitch, delta, Number(element.min), Number(element.max))
+      : absolute;
   // Keep high-frequency trackpad/key input cumulative while ensure() is pending.
-  engine.state[deck].pitch=next;
-  engine.set(deck,'pitch',next).then(()=>{if(request===pitchRequests[deck])send({type:'pitchChanged',deck,pitch:engine.state[deck].pitch});}).catch(fail);
-  recent=[];lastStart=performance.now();
+  engine.state[deck].pitch = next;
+  engine
+    .set(deck, 'pitch', next)
+    .then(() => {
+      if (request === pitchRequests[deck]) send({ type: 'pitchChanged', deck, pitch: engine.state[deck].pitch });
+    })
+    .catch(fail);
+  recent = [];
+  lastStart = performance.now();
 }
 
-document.addEventListener('wheel',event=>{
-  const jog=jogDeck(event.target);
-  if(!jog){const pitch=event.target.closest?.('.vertical-fader')||document.activeElement?.matches?.('.vertical-fader')&&document.activeElement;
-    if(pitch){event.preventDefault();const index=pitchDeck(pitch),sensitivity=pitch.getAttribute('data-pitch-sensitivity')||sensitivities[index];applyPitch(pitch,wheelPitchDelta(event,sensitivity));return;}
-    const canvas=event.target.closest?.('canvas[id^=\"waveform-\"]');if(canvas){event.preventDefault();const deck=canvas.id==='waveform-b'?1:0;zoom[deck]=clamp(zoom[deck]*(event.deltaY<0?1.25:.8),1,16);}return;}event.preventDefault();
-  const amount=clamp(-event.deltaY*(event.deltaMode===1?1:.06),-16,16);
-  clearTimeout(bendTimers[jog.deck]);engine.set(jog.deck,'bend',amount).catch(fail);
-  jog.element.classList.add('jogging');
-  bendTimers[jog.deck]=setTimeout(()=>{engine.set(jog.deck,'bend',0).catch(fail);jog.element.classList.remove('jogging');},160);
-},{passive:false});
-document.addEventListener('pointerdown',event=>{
-  const pitch=event.target.closest?.('.vertical-fader');
-  if(pitch&&event.shiftKey){event.preventDefault();pitch.setPointerCapture(event.pointerId);const rect=pitch.getBoundingClientRect();drag={kind:'pitch-fine',deck:pitchDeck(pitch),element:pitch,y:event.clientY,position:engine.state[pitchDeck(pitch)].pitch,scale:(Number(pitch.max)-Number(pitch.min))/Math.max(1,rect.height)*.1};engine.ensure().catch(fail);return;}
-  const jog=jogDeck(event.target);
-  const canvas=event.target.closest?.('canvas[id^="waveform-"]');
-  if(jog){event.preventDefault();jog.element.setPointerCapture(event.pointerId);drag={deck:jog.deck,x:event.clientX,y:event.clientY,position:engine.state[jog.deck].position,element:jog.element,kind:'jog'};jog.element.classList.add('jogging');engine.ensure().catch(fail);}
-  else if(canvas){const deck=canvas.id==='waveform-b'?1:0,r=canvas.getBoundingClientRect();canvas.setPointerCapture(event.pointerId);drag={deck,element:canvas,kind:'waveform'};seekWave(deck,(event.clientX-r.left)/r.width);}
+document.addEventListener(
+  'wheel',
+  event => {
+    const jog = jogDeck(event.target);
+    if (!jog) {
+      const pitch =
+        event.target.closest?.('.vertical-fader') ||
+        (document.activeElement?.matches?.('.vertical-fader') && document.activeElement);
+      if (pitch) {
+        event.preventDefault();
+        const index = pitchDeck(pitch),
+          sensitivity = pitch.getAttribute('data-pitch-sensitivity') || sensitivities[index];
+        applyPitch(pitch, wheelPitchDelta(event, sensitivity));
+        return;
+      }
+      const canvas = event.target.closest?.('canvas[id^="waveform-"]');
+      if (canvas) {
+        event.preventDefault();
+        const deck = canvas.id === 'waveform-b' ? 1 : 0;
+        zoom[deck] = clamp(zoom[deck] * (event.deltaY < 0 ? 1.25 : 0.8), 1, 16);
+      }
+      return;
+    }
+    event.preventDefault();
+    const amount = clamp(-event.deltaY * (event.deltaMode === 1 ? 1 : 0.06), -16, 16);
+    clearTimeout(bendTimers[jog.deck]);
+    engine.set(jog.deck, 'bend', amount).catch(fail);
+    jog.element.classList.add('jogging');
+    bendTimers[jog.deck] = setTimeout(() => {
+      engine.set(jog.deck, 'bend', 0).catch(fail);
+      jog.element.classList.remove('jogging');
+    }, 160);
+  },
+  { passive: false },
+);
+document.addEventListener('pointerdown', event => {
+  const pitch = event.target.closest?.('.vertical-fader');
+  if (pitch && event.shiftKey) {
+    event.preventDefault();
+    pitch.setPointerCapture(event.pointerId);
+    const rect = pitch.getBoundingClientRect();
+    drag = {
+      kind: 'pitch-fine',
+      deck: pitchDeck(pitch),
+      element: pitch,
+      y: event.clientY,
+      position: engine.state[pitchDeck(pitch)].pitch,
+      scale: ((Number(pitch.max) - Number(pitch.min)) / Math.max(1, rect.height)) * 0.1,
+    };
+    engine.ensure().catch(fail);
+    return;
+  }
+  const jog = jogDeck(event.target);
+  const canvas = event.target.closest?.('canvas[id^="waveform-"]');
+  if (jog) {
+    event.preventDefault();
+    jog.element.setPointerCapture(event.pointerId);
+    drag = {
+      deck: jog.deck,
+      x: event.clientX,
+      y: event.clientY,
+      position: engine.state[jog.deck].position,
+      element: jog.element,
+      kind: 'jog',
+    };
+    jog.element.classList.add('jogging');
+    engine.ensure().catch(fail);
+  } else if (canvas) {
+    const deck = canvas.id === 'waveform-b' ? 1 : 0,
+      r = canvas.getBoundingClientRect();
+    canvas.setPointerCapture(event.pointerId);
+    drag = { deck, element: canvas, kind: 'waveform' };
+    seekWave(deck, (event.clientX - r.left) / r.width);
+  }
 });
-document.addEventListener('pointermove',event=>{if(!drag)return;if(drag.kind==='pitch-fine'){const next=adjustedPitch(drag.position,(drag.y-event.clientY)*drag.scale,Number(drag.element.min),Number(drag.element.max));applyPitch(drag.element,0,Math.round(next*100)/100);return;}if(drag.kind==='waveform'){const r=drag.element.getBoundingClientRect();seekWave(drag.deck,(event.clientX-r.left)/r.width);return;}const seconds=drag.position+(event.clientX-drag.x-(event.clientY-drag.y))*.018;engine.set(drag.deck,'seek',Math.max(0,seconds)).catch(fail);recent=[];lastStart=performance.now();});
-const endDrag=()=>{if(drag)drag.element.classList.remove('jogging');drag=null;};
-document.addEventListener('pointerup',endDrag);document.addEventListener('pointercancel',endDrag);
-function seekWave(deck,fraction){const duration=engine.state[deck].duration,visibleDuration=duration/zoom[deck],start=zoom[deck]>1?clamp(engine.state[deck].position-visibleDuration/2,0,duration-visibleDuration):0;engine.set(deck,'seek',start+clamp(fraction,0,1)*visibleDuration).catch(fail);recent=[];lastStart=performance.now();}
+document.addEventListener('pointermove', event => {
+  if (!drag) return;
+  if (drag.kind === 'pitch-fine') {
+    const next = adjustedPitch(
+      drag.position,
+      (drag.y - event.clientY) * drag.scale,
+      Number(drag.element.min),
+      Number(drag.element.max),
+    );
+    applyPitch(drag.element, 0, Math.round(next * 100) / 100);
+    return;
+  }
+  if (drag.kind === 'waveform') {
+    const r = drag.element.getBoundingClientRect();
+    seekWave(drag.deck, (event.clientX - r.left) / r.width);
+    return;
+  }
+  const seconds = drag.position + (event.clientX - drag.x - (event.clientY - drag.y)) * 0.018;
+  engine.set(drag.deck, 'seek', Math.max(0, seconds)).catch(fail);
+  recent = [];
+  lastStart = performance.now();
+});
+const endDrag = () => {
+  if (drag) drag.element.classList.remove('jogging');
+  drag = null;
+};
+document.addEventListener('pointerup', endDrag);
+document.addEventListener('pointercancel', endDrag);
+function seekWave(deck, fraction) {
+  const duration = engine.state[deck].duration,
+    visibleDuration = duration / zoom[deck],
+    start =
+      zoom[deck] > 1 ? clamp(engine.state[deck].position - visibleDuration / 2, 0, duration - visibleDuration) : 0;
+  engine.set(deck, 'seek', start + clamp(fraction, 0, 1) * visibleDuration).catch(fail);
+  recent = [];
+  lastStart = performance.now();
+}
 // Keyboard control mode (docs/KEYBOARD.md). src/keyboard.js turns a key into an action; Elm carries it out
 // like the matching button, except the held keys (nudge bends, crossfader glides), which run here.
-const keyContext=()=>document.querySelector('[data-keys]')?.dataset.keys||'page';
+const keyContext = () => document.querySelector('[data-keys]')?.dataset.keys || 'page';
 // Space and Enter press a button only if the focus got there by Tab (see controlKeeps).
-let lastInput='',tabbed=null;
-document.addEventListener('keydown',event=>{lastInput=event.key;},true);
-document.addEventListener('pointerdown',()=>{lastInput='';},true);
-document.addEventListener('focusin',event=>{tabbed=lastInput==='Tab'?event.target:null;});
-const focusInfo=element=>!element||element===document.body?{}:{tag:element.tagName,type:element.tagName==='INPUT'?element.type:'',role:element.getAttribute('role')||'',editable:element.isContentEditable,tabbed:element===tabbed};
-const heldNudges=new Map(),glides=new Map();
-let glideAt=0,glideFrame=null;
-function bendHeld(deck){
-  const bend=heldBend(heldNudges.values(),deck);
-  engine.set(deck,'bend',bend).catch(fail);
-  document.getElementById(deck?'jog-b':'jog-a')?.classList.toggle('jogging',bend!==0);
+let lastInput = '',
+  tabbed = null;
+document.addEventListener(
+  'keydown',
+  event => {
+    lastInput = event.key;
+  },
+  true,
+);
+document.addEventListener(
+  'pointerdown',
+  () => {
+    lastInput = '';
+  },
+  true,
+);
+document.addEventListener('focusin', event => {
+  tabbed = lastInput === 'Tab' ? event.target : null;
+});
+const focusInfo = element =>
+  !element || element === document.body
+    ? {}
+    : {
+        tag: element.tagName,
+        type: element.tagName === 'INPUT' ? element.type : '',
+        role: element.getAttribute('role') || '',
+        editable: element.isContentEditable,
+        tabbed: element === tabbed,
+      };
+const heldNudges = new Map(),
+  glides = new Map();
+let glideAt = 0,
+  glideFrame = null;
+function bendHeld(deck) {
+  const bend = heldBend(heldNudges.values(), deck);
+  engine.set(deck, 'bend', bend).catch(fail);
+  document.getElementById(deck ? 'jog-b' : 'jog-a')?.classList.toggle('jogging', bend !== 0);
 }
-function pressNudge(code,action){
-  if(heldNudges.has(code))return;
-  send({type:'key',...action});
-  const held={deck:action.deck,dir:action.dir,fine:action.shift,bending:false};
-  held.timer=setTimeout(()=>{held.bending=true;bendHeld(held.deck);},NUDGE.holdMs);
-  heldNudges.set(code,held);
+function pressNudge(code, action) {
+  if (heldNudges.has(code)) return;
+  send({ type: 'key', ...action });
+  const held = { deck: action.deck, dir: action.dir, fine: action.shift, bending: false };
+  held.timer = setTimeout(() => {
+    held.bending = true;
+    bendHeld(held.deck);
+  }, NUDGE.holdMs);
+  heldNudges.set(code, held);
 }
-function releaseNudge(code){
-  const held=heldNudges.get(code);if(!held)return;
-  clearTimeout(held.timer);heldNudges.delete(code);
-  if(held.bending)bendHeld(held.deck);
+function releaseNudge(code) {
+  const held = heldNudges.get(code);
+  if (!held) return;
+  clearTimeout(held.timer);
+  heldNudges.delete(code);
+  if (held.bending) bendHeld(held.deck);
 }
 // The crossfader moves for as long as G or H is down, measured in time so key repeat rates don't matter.
-function glideStep(){
-  const now=performance.now();let delta=0;
-  for(const glide of glides.values())delta+=glide.dir*(now-glideAt)/1000/(glide.fine?GLIDE.fineSeconds:GLIDE.seconds);
-  glideAt=now;if(delta)send({type:'key',action:'crossfade',value:delta});
+function glideStep() {
+  const now = performance.now();
+  let delta = 0;
+  for (const glide of glides.values())
+    delta += (glide.dir * (now - glideAt)) / 1000 / (glide.fine ? GLIDE.fineSeconds : GLIDE.seconds);
+  glideAt = now;
+  if (delta) send({ type: 'key', action: 'crossfade', value: delta });
 }
-function glideLoop(){glideStep();glideFrame=requestAnimationFrame(glideLoop);}
-function pressGlide(code,action){
-  if(glides.has(code))return;
-  if(glides.size)glideStep();else glideAt=performance.now();
-  glides.set(code,{dir:action.dir,fine:action.shift});
-  if(glideFrame===null)glideFrame=requestAnimationFrame(glideLoop);
+function glideLoop() {
+  glideStep();
+  glideFrame = requestAnimationFrame(glideLoop);
 }
-function releaseGlide(code){
-  if(!glides.has(code))return;
-  glideStep();glides.delete(code);
-  if(!glides.size){cancelAnimationFrame(glideFrame);glideFrame=null;}
+function pressGlide(code, action) {
+  if (glides.has(code)) return;
+  if (glides.size) glideStep();
+  else glideAt = performance.now();
+  glides.set(code, { dir: action.dir, fine: action.shift });
+  if (glideFrame === null) glideFrame = requestAnimationFrame(glideLoop);
 }
-function releaseHeldKeys(){for(const code of [...heldNudges.keys()])releaseNudge(code);for(const code of [...glides.keys()])releaseGlide(code);}
+function releaseGlide(code) {
+  if (!glides.has(code)) return;
+  glideStep();
+  glides.delete(code);
+  if (!glides.size) {
+    cancelAnimationFrame(glideFrame);
+    glideFrame = null;
+  }
+}
+function releaseHeldKeys() {
+  for (const code of [...heldNudges.keys()]) releaseNudge(code);
+  for (const code of [...glides.keys()]) releaseGlide(code);
+}
 // A short glow on the control a key just used, so the keys are easy to learn. (An attribute, not a class:
 // Elm rewrites class names when the control changes state.)
-const deckName=deck=>deck?'B':'A';
-const flashTargets={
-  play:a=>`:is([aria-label="Play deck ${deckName(a.deck)}"],[aria-label="Pause deck ${deckName(a.deck)}"]):not(:disabled)`,
-  playBoth:()=>'.play-both-button',
-  cue:a=>a.shift?`[aria-label="Set cue deck ${deckName(a.deck)}"]`:`.deck[data-deck="${a.deck}"] .transport-cue`,
-  nudge:a=>`[aria-label="Nudge deck ${deckName(a.deck)} ${a.dir<0?'backward':'forward'}"]`,
-  pitch:a=>`[aria-label="Fine ${a.dir<0?'decrease':'increase'} deck ${deckName(a.deck)} pitch"]`,
-  pitchZero:a=>`.pitch-section[data-deck="${a.deck}"] .pitch-fine button[title="Reset pitch"]`,
-  volume:a=>`[aria-label="Deck ${deckName(a.deck)} volume"]`,
-  track:a=>`[aria-label="${mode==='pro'?(a.shift?'Previous track':'Next track'):(a.shift?'Change track':'Randomize tempo')} deck ${deckName(a.deck)}"]`,
-  check:()=>'.coach-panel .coach-bottom .primary-button',
-  new:()=>'.toolbar-actions .small-button',
-  hideBpm:()=>'.toolbar-actions .toggle-label',
-  tap:()=>'.tap-button',
-  addElement:()=>'.add-element-button',
-  crossfade:()=>'[aria-label="Crossfader"]',
-  crossfadeCenter:()=>'[aria-label="Crossfader"]',
-  focus:()=>'.session-focus-button, .exit-focus-button',
-  mode:a=>`.mode-list .mode-card:nth-child(${a.value})`,
+const deckName = deck => (deck ? 'B' : 'A');
+const flashTargets = {
+  play: a =>
+    `:is([aria-label="Play deck ${deckName(a.deck)}"],[aria-label="Pause deck ${deckName(a.deck)}"]):not(:disabled)`,
+  playBoth: () => '.play-both-button',
+  cue: a =>
+    a.shift ? `[aria-label="Set cue deck ${deckName(a.deck)}"]` : `.deck[data-deck="${a.deck}"] .transport-cue`,
+  nudge: a => `[aria-label="Nudge deck ${deckName(a.deck)} ${a.dir < 0 ? 'backward' : 'forward'}"]`,
+  pitch: a => `[aria-label="Fine ${a.dir < 0 ? 'decrease' : 'increase'} deck ${deckName(a.deck)} pitch"]`,
+  pitchZero: a => `.pitch-section[data-deck="${a.deck}"] .pitch-fine button[title="Reset pitch"]`,
+  volume: a => `[aria-label="Deck ${deckName(a.deck)} volume"]`,
+  track: a =>
+    `[aria-label="${mode === 'pro' ? (a.shift ? 'Previous track' : 'Next track') : a.shift ? 'Change track' : 'Randomize tempo'} deck ${deckName(a.deck)}"]`,
+  check: () => '.coach-panel .coach-bottom .primary-button',
+  new: () => '.toolbar-actions .small-button',
+  hideBpm: () => '.toolbar-actions .toggle-label',
+  tap: () => '.tap-button',
+  addElement: () => '.add-element-button',
+  crossfade: () => '[aria-label="Crossfader"]',
+  crossfadeCenter: () => '[aria-label="Crossfader"]',
+  focus: () => '.session-focus-button, .exit-focus-button',
+  mode: a => `.mode-list .mode-card:nth-child(${a.value})`,
 };
-const flashTimers=new WeakMap();
-function flashKey(action){
-  const selector=flashTargets[action.action]?.(action);if(!selector)return;
-  for(const element of document.querySelectorAll(selector)){
-    element.setAttribute('data-key-flash','');clearTimeout(flashTimers.get(element));
-    flashTimers.set(element,setTimeout(()=>element.removeAttribute('data-key-flash'),160));
+const flashTimers = new WeakMap();
+function flashKey(action) {
+  const selector = flashTargets[action.action]?.(action);
+  if (!selector) return;
+  for (const element of document.querySelectorAll(selector)) {
+    element.setAttribute('data-key-flash', '');
+    clearTimeout(flashTimers.get(element));
+    flashTimers.set(
+      element,
+      setTimeout(() => element.removeAttribute('data-key-flash'), 160),
+    );
   }
 }
-function runShortcut(action,code,context){
-  if(action.action==='none')return;
+function runShortcut(action, code, context) {
+  if (action.action === 'none') return;
   flashKey(action);
-  if(action.action==='escape'){
+  if (action.action === 'escape') {
     // Esc closes the help or leaves Focus session; otherwise it lets go of the focused control so keys reach the decks.
-    if(context==='help'||context==='focus')send({type:'key',action:'escape'});
-    else if(document.activeElement&&document.activeElement!==document.body)document.activeElement.blur();
-  }
-  else if(action.action==='nudge')pressNudge(code,action);
-  else if(action.action==='crossfade')pressGlide(code,action);
-  else send({type:'key',...action});
+    if (context === 'help' || context === 'focus') send({ type: 'key', action: 'escape' });
+    else if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+  } else if (action.action === 'nudge') pressNudge(code, action);
+  else if (action.action === 'crossfade') pressGlide(code, action);
+  else send({ type: 'key', ...action });
 }
-document.addEventListener('keydown',event=>{
-  if(event.ctrlKey||event.metaKey||event.altKey||event.defaultPrevented)return;
+document.addEventListener('keydown', event => {
+  if (event.ctrlKey || event.metaKey || event.altKey || event.defaultPrevented) return;
   // A focused pitch fader or jog wheel moves with the arrows (and Page Up/Down, Home/End) itself.
-  const pitch=event.target.closest?.('.vertical-fader');
-  if(pitch){const deck=pitchDeck(pitch),delta=keyPitchDelta(event,pitch.getAttribute('data-pitch-sensitivity')||sensitivities[deck]);if(delta!==null||event.code==='Home'||event.code==='End'){event.preventDefault();event.stopPropagation();applyPitch(pitch,delta||0,event.code==='Home'?Number(pitch.min):event.code==='End'?Number(pitch.max):null);return;}}
-  const jog=jogDeck(event.target);
-  if(jog&&['Home','End'].includes(event.code)){event.preventDefault();engine.set(jog.deck,'seek',event.code==='Home'?0:Math.max(0,engine.state[jog.deck].duration-.01)).catch(fail);return;}
-  if(jog&&['ArrowLeft','ArrowRight'].includes(event.code)){event.preventDefault();engine.set(jog.deck,'nudge',event.code==='ArrowRight'?.04:-.04).catch(fail);return;}
-  if(controlKeeps(focusInfo(event.target instanceof Element?event.target:null),event.code))return;
-  const context=keyContext(),action=shortcutFor(event,context);
-  if(!action)return;
+  const pitch = event.target.closest?.('.vertical-fader');
+  if (pitch) {
+    const deck = pitchDeck(pitch),
+      delta = keyPitchDelta(event, pitch.getAttribute('data-pitch-sensitivity') || sensitivities[deck]);
+    if (delta !== null || event.code === 'Home' || event.code === 'End') {
+      event.preventDefault();
+      event.stopPropagation();
+      applyPitch(
+        pitch,
+        delta || 0,
+        event.code === 'Home' ? Number(pitch.min) : event.code === 'End' ? Number(pitch.max) : null,
+      );
+      return;
+    }
+  }
+  const jog = jogDeck(event.target);
+  if (jog && ['Home', 'End'].includes(event.code)) {
+    event.preventDefault();
+    engine
+      .set(jog.deck, 'seek', event.code === 'Home' ? 0 : Math.max(0, engine.state[jog.deck].duration - 0.01))
+      .catch(fail);
+    return;
+  }
+  if (jog && ['ArrowLeft', 'ArrowRight'].includes(event.code)) {
+    event.preventDefault();
+    engine.set(jog.deck, 'nudge', event.code === 'ArrowRight' ? 0.04 : -0.04).catch(fail);
+    return;
+  }
+  if (controlKeeps(focusInfo(event.target instanceof Element ? event.target : null), event.code)) return;
+  const context = keyContext(),
+    action = shortcutFor(event, context);
+  if (!action) return;
   event.preventDefault();
-  runShortcut(action,event.code,context);
+  runShortcut(action, event.code, context);
 });
-document.addEventListener('keyup',event=>{releaseNudge(event.code);releaseGlide(event.code);});
-window.addEventListener('blur',()=>{endDrag();releaseHeldKeys();for(let i=0;i<2;i++)if(engine.node){clearTimeout(bendTimers[i]);engine.set(i,'bend',0).catch(()=>{});}});
+document.addEventListener('keyup', event => {
+  releaseNudge(event.code);
+  releaseGlide(event.code);
+});
+window.addEventListener('blur', () => {
+  endDrag();
+  releaseHeldKeys();
+  for (let i = 0; i < 2; i++)
+    if (engine.node) {
+      clearTimeout(bendTimers[i]);
+      engine.set(i, 'bend', 0).catch(() => {});
+    }
+});
 
-let lastDraw=0;
+let lastDraw = 0;
 function draw(now) {
-  if(now-lastDraw>32&&!document.hidden){lastDraw=now;
-    const style=getComputedStyle(document.documentElement),color=style.getPropertyValue('--accent').trim()||'#b8ee75';
-    for(let deck=0;deck<2;deck++){
+  if (now - lastDraw > 32 && !document.hidden) {
+    lastDraw = now;
+    const style = getComputedStyle(document.documentElement),
+      color = style.getPropertyValue('--accent').trim() || '#b8ee75';
+    for (let deck = 0; deck < 2; deck++) {
       // The jog marker turns with the music, 33⅓ times a minute, and follows scrubbing.
-      const jog=document.getElementById(deck?'jog-b':'jog-a');
-      if(jog)jog.style.setProperty('--jog-angle',`${((engine.state[deck].position||0)%1.8/1.8*360).toFixed(1)}deg`);
-      const canvas=document.getElementById(deck?'waveform-b':'waveform-a');if(!canvas)continue;
-      const rect=canvas.getBoundingClientRect(),ratio=window.devicePixelRatio||1;
-      const w=Math.round(rect.width*ratio),h=Math.round(rect.height*ratio);if(!w||!h)continue;
-      if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
-      const ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);
-      if(document.documentElement.dataset.layout==='kit'){drawKitWave(ctx,canvas,deck,w,h,style);continue;}
-      ctx.fillStyle=style.getPropertyValue('--screen').trim()||'#080b08';ctx.fillRect(0,0,w,h);
-      ctx.strokeStyle=color+'25';ctx.lineWidth=ratio;
-      for(let i=0;i<=16;i++){ctx.beginPath();ctx.moveTo(i*w/16,0);ctx.lineTo(i*w/16,h);ctx.stroke();}
-      ctx.beginPath();ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();
-      const peaks=engine.waveforms[deck],state=engine.state[deck],duration=Math.max(1,state.duration),visibleDuration=duration/zoom[deck],start=zoom[deck]>1?clamp(state.position-visibleDuration/2,0,duration-visibleDuration):0;
-      ctx.fillStyle=color;const step=3*ratio;
-      for(let x=0;x<w;x+=step){const index=Math.min(peaks.length-1,Math.floor((start+x/w*visibleDuration)/duration*peaks.length));const amp=Math.max(.018,peaks[index]||0)*h*.43;ctx.globalAlpha=.65+.35*Math.sin(x*.01)**2;ctx.fillRect(x,h/2-amp,Math.max(ratio,step-ratio),amp*2);}
-      ctx.globalAlpha=1;const playhead=clamp((state.position-start)/visibleDuration,0,1)*w;ctx.fillStyle='#f1e2ad';ctx.fillRect(playhead,0,1.5*ratio,h);
-      ctx.beginPath();ctx.moveTo(playhead-4*ratio,0);ctx.lineTo(playhead+4*ratio,0);ctx.lineTo(playhead,5*ratio);ctx.fill();
+      const jog = document.getElementById(deck ? 'jog-b' : 'jog-a');
+      if (jog)
+        jog.style.setProperty(
+          '--jog-angle',
+          `${((((engine.state[deck].position || 0) % 1.8) / 1.8) * 360).toFixed(1)}deg`,
+        );
+      const canvas = document.getElementById(deck ? 'waveform-b' : 'waveform-a');
+      if (!canvas) continue;
+      const rect = canvas.getBoundingClientRect(),
+        ratio = window.devicePixelRatio || 1;
+      const w = Math.round(rect.width * ratio),
+        h = Math.round(rect.height * ratio);
+      if (!w || !h) continue;
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, w, h);
+      if (document.documentElement.dataset.layout === 'kit') {
+        drawKitWave(ctx, canvas, deck, w, h, style);
+        continue;
+      }
+      ctx.fillStyle = style.getPropertyValue('--screen').trim() || '#080b08';
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = color + '25';
+      ctx.lineWidth = ratio;
+      for (let i = 0; i <= 16; i++) {
+        ctx.beginPath();
+        ctx.moveTo((i * w) / 16, 0);
+        ctx.lineTo((i * w) / 16, h);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(0, h / 2);
+      ctx.lineTo(w, h / 2);
+      ctx.stroke();
+      const peaks = engine.waveforms[deck],
+        state = engine.state[deck],
+        duration = Math.max(1, state.duration),
+        visibleDuration = duration / zoom[deck],
+        start = zoom[deck] > 1 ? clamp(state.position - visibleDuration / 2, 0, duration - visibleDuration) : 0;
+      ctx.fillStyle = color;
+      const step = 3 * ratio;
+      for (let x = 0; x < w; x += step) {
+        const index = Math.min(
+          peaks.length - 1,
+          Math.floor(((start + (x / w) * visibleDuration) / duration) * peaks.length),
+        );
+        const amp = Math.max(0.018, peaks[index] || 0) * h * 0.43;
+        ctx.globalAlpha = 0.65 + 0.35 * Math.sin(x * 0.01) ** 2;
+        ctx.fillRect(x, h / 2 - amp, Math.max(ratio, step - ratio), amp * 2);
+      }
+      ctx.globalAlpha = 1;
+      const playhead = clamp((state.position - start) / visibleDuration, 0, 1) * w;
+      ctx.fillStyle = '#f1e2ad';
+      ctx.fillRect(playhead, 0, 1.5 * ratio, h);
+      ctx.beginPath();
+      ctx.moveTo(playhead - 4 * ratio, 0);
+      ctx.lineTo(playhead + 4 * ratio, 0);
+      ctx.lineTo(playhead, 5 * ratio);
+      ctx.fill();
     }
   }
   requestAnimationFrame(draw);
@@ -537,51 +1257,142 @@ requestAnimationFrame(draw);
 
 // Skinned waveform: chunky 2px pixels in the skin's own visualizer colors. The background grid
 // and a color column are drawn once per size and skin; each frame only stamps slices of them.
-let waveCache=null;
-function waveAssets(style,w,h,px){
-  const key=`${w}x${h}:${px}:${skinStamp}`;
-  if(waveCache?.key===key)return waveCache;
-  const vis=i=>style.getPropertyValue(`--k-vis-${i}`).trim()||'#0f0';
-  const back=document.createElement('canvas');back.width=w;back.height=h;
-  const b=back.getContext('2d');b.fillStyle=vis(0);b.fillRect(0,0,w,h);b.fillStyle=vis(1);
-  for(let y=px;y<h;y+=px*2)for(let x=px;x<w;x+=px*2)b.fillRect(x,y,px/2,px/2);
-  for(let k=1;k<8;k++)b.fillRect(Math.round(k*w/8/px)*px,0,Math.max(1,px/2),h);
-  const rows=Math.floor(h/px),mid=Math.floor(rows/2),column=document.createElement('canvas');column.width=1;column.height=h;
-  const c=column.getContext('2d');
-  for(let r=0;r<mid;r++){c.fillStyle=vis(17-Math.min(15,Math.floor(r/Math.max(1,mid)*16)));c.fillRect(0,(mid-1-r)*px,1,px);c.fillRect(0,(mid+r)*px,1,px);}
-  return waveCache={key,back,column,mid,peak:vis(23)};
-}
-function drawKitWave(ctx,canvas,deck,w,h,style){
-  const px=Math.max(2,Math.round(2*(window.devicePixelRatio||1))),{back,column,mid,peak}=waveAssets(style,w,h,px);
-  ctx.imageSmoothingEnabled=false;ctx.drawImage(back,0,0);
-  const peaks=engine.waveforms[deck],state=engine.state[deck],duration=Math.max(1,state.duration),visibleDuration=duration/zoom[deck],start=zoom[deck]>1?clamp(state.position-visibleDuration/2,0,duration-visibleDuration):0;
-  for(let x=0;x<w;x+=px*2){
-    const index=Math.min(peaks.length-1,Math.floor((start+x/w*visibleDuration)/duration*peaks.length));
-    const amp=Math.max(1,Math.round((peaks[index]||0)*mid*.92)),top=(mid-amp)*px,height=amp*2*px;
-    ctx.drawImage(column,0,top,1,height,x,top,px*1.5,height);
+let waveCache = null;
+function waveAssets(style, w, h, px) {
+  const key = `${w}x${h}:${px}:${skinStamp}`;
+  if (waveCache?.key === key) return waveCache;
+  const vis = i => style.getPropertyValue(`--k-vis-${i}`).trim() || '#0f0';
+  const back = document.createElement('canvas');
+  back.width = w;
+  back.height = h;
+  const b = back.getContext('2d');
+  b.fillStyle = vis(0);
+  b.fillRect(0, 0, w, h);
+  b.fillStyle = vis(1);
+  for (let y = px; y < h; y += px * 2) for (let x = px; x < w; x += px * 2) b.fillRect(x, y, px / 2, px / 2);
+  for (let k = 1; k < 8; k++) b.fillRect(Math.round((k * w) / 8 / px) * px, 0, Math.max(1, px / 2), h);
+  const rows = Math.floor(h / px),
+    mid = Math.floor(rows / 2),
+    column = document.createElement('canvas');
+  column.width = 1;
+  column.height = h;
+  const c = column.getContext('2d');
+  for (let r = 0; r < mid; r++) {
+    c.fillStyle = vis(17 - Math.min(15, Math.floor((r / Math.max(1, mid)) * 16)));
+    c.fillRect(0, (mid - 1 - r) * px, 1, px);
+    c.fillRect(0, (mid + r) * px, 1, px);
   }
-  const playhead=Math.round(clamp((state.position-start)/visibleDuration,0,1)*w/px)*px;
-  ctx.fillStyle=peak;ctx.fillRect(playhead,0,px,h);ctx.fillRect(playhead-px,0,px*3,px);ctx.fillRect(playhead-px,h-px,px*3,px);
+  return (waveCache = { key, back, column, mid, peak: vis(23) });
+}
+function drawKitWave(ctx, canvas, deck, w, h, style) {
+  const px = Math.max(2, Math.round(2 * (window.devicePixelRatio || 1))),
+    { back, column, mid, peak } = waveAssets(style, w, h, px);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(back, 0, 0);
+  const peaks = engine.waveforms[deck],
+    state = engine.state[deck],
+    duration = Math.max(1, state.duration),
+    visibleDuration = duration / zoom[deck],
+    start = zoom[deck] > 1 ? clamp(state.position - visibleDuration / 2, 0, duration - visibleDuration) : 0;
+  for (let x = 0; x < w; x += px * 2) {
+    const index = Math.min(
+      peaks.length - 1,
+      Math.floor(((start + (x / w) * visibleDuration) / duration) * peaks.length),
+    );
+    const amp = Math.max(1, Math.round((peaks[index] || 0) * mid * 0.92)),
+      top = (mid - amp) * px,
+      height = amp * 2 * px;
+    ctx.drawImage(column, 0, top, 1, height, x, top, px * 1.5, height);
+  }
+  const playhead = Math.round((clamp((state.position - start) / visibleDuration, 0, 1) * w) / px) * px;
+  ctx.fillStyle = peak;
+  ctx.fillRect(playhead, 0, px, h);
+  ctx.fillRect(playhead - px, 0, px * 3, px);
+  ctx.fillRect(playhead - px, h - px, px * 3, px);
 }
 
-queueMicrotask(async()=>{
-  const layout=validateLayout(restore('bit-cheer-layout'));if(layout){sensitivities=layout.sensitivity;send({type:'restoreLayout',layout});}
-  const saved=restore('bit-cheer-progress');if(saved&&Array.isArray(saved.progress)&&Array.isArray(saved.history))send({type:'restore',...saved});
-  skinChanged(document.documentElement.dataset.skin,startupSkinName,startupSkin?.custom);
+queueMicrotask(async () => {
+  const layout = validateLayout(restore('bit-cheer-layout'));
+  if (layout) {
+    sensitivities = layout.sensitivity;
+    send({ type: 'restoreLayout', layout });
+  }
+  const saved = restore('bit-cheer-progress');
+  if (saved && Array.isArray(saved.progress) && Array.isArray(saved.history)) send({ type: 'restore', ...saved });
+  skinChanged(document.documentElement.dataset.skin, startupSkinName, startupSkin?.custom);
   // Winamp skins saved by an older version: fetch them again from the museum for the full look.
-  const savedCustom=startupSkin?.id==='custom'?startupSkin.custom:null;
-  if(savedCustom&&(savedCustom.originals||savedCustom.kit)&&!validKit(savedCustom.kit)){
-    const epoch=skinEpoch;
-    if(savedCustom.source)importSkinFromUrl(savedCustom.source).then(custom=>{
-      if(epoch!==skinEpoch)return;
-      if(typeof savedCustom.theme?.name==='string'&&savedCustom.theme.name.trim())custom.theme.name=savedCustom.theme.name.trim().slice(0,60);
-      const name=applySkin('custom',custom);store('bit-cheer-skin',{id:'custom',custom});skinChanged('custom',name,custom);notice(`Skin refreshed: ${name} now dresses every part of your decks.`);
-    }).catch(()=>{});
+  const savedCustom = startupSkin?.id === 'custom' ? startupSkin.custom : null;
+  if (savedCustom && (savedCustom.originals || savedCustom.kit) && !validKit(savedCustom.kit)) {
+    const epoch = skinEpoch;
+    if (savedCustom.source)
+      importSkinFromUrl(savedCustom.source)
+        .then(custom => {
+          if (epoch !== skinEpoch) return;
+          if (typeof savedCustom.theme?.name === 'string' && savedCustom.theme.name.trim())
+            custom.theme.name = savedCustom.theme.name.trim().slice(0, 60);
+          const name = applySkin('custom', custom);
+          store('bit-cheer-skin', { id: 'custom', custom });
+          skinChanged('custom', name, custom);
+          notice(`Skin refreshed: ${name} now dresses every part of your decks.`);
+        })
+        .catch(() => {});
     else notice('Import your Winamp skin again to see its full look on every control.');
   }
-  if(!builtinInTime){const epoch=skinEpoch;builtinReady.then(ok=>{const id=document.documentElement.dataset.skin;if(ok&&epoch===skinEpoch&&SELECTABLE_SKINS.includes(id)){const name=applySkin(id);skinChanged(id,name);}});}
-  try{const hidden=restore('bit-cheer-console-hidden');if(typeof hidden==='string'&&/^[ab ]*$/.test(hidden))document.documentElement.dataset.consoleHidden=hidden;}catch{}
-  try{const response=await fetch(assetUrl('/catalog.json'));if(!response.ok)throw new Error('Library catalog unavailable. Local imports still work.');catalog=await response.json();library.setBundled(catalog.tracks);publishLibrary();send({type:'skins',skins:(catalog.skins||[]).map(skin=>({...skin,preview:skin.preview?assetUrl(skin.preview):'',archive:skin.archive?assetUrl(skin.archive):''}))});send({type:'referenceCatalog',tracks:(catalog.referenceTracks||[]).map(t=>({id:String(t.id),name:t.title,source:t.source,genre:primaryGenre(t.tags||[]),bpm:Number(t.bpm)||0}))});if(pendingProCatalog&&mode==='pro'&&catalog.tracks.length>=2){pendingProCatalog=false;const version=configVersion;await loadTrack(0,catalog.tracks[0].id);if(version===configVersion&&mode==='pro')await loadTrack(1,catalog.tracks[1].id);}}catch(error){fail(error);}
+  if (!builtinInTime) {
+    const epoch = skinEpoch;
+    builtinReady.then(ok => {
+      const id = document.documentElement.dataset.skin;
+      if (ok && epoch === skinEpoch && SELECTABLE_SKINS.includes(id)) {
+        const name = applySkin(id);
+        skinChanged(id, name);
+      }
+    });
+  }
+  try {
+    const hidden = restore('bit-cheer-console-hidden');
+    if (typeof hidden === 'string' && /^[ab ]*$/.test(hidden)) document.documentElement.dataset.consoleHidden = hidden;
+  } catch {}
+  try {
+    const response = await fetch(assetUrl('/catalog.json'));
+    if (!response.ok) throw new Error('Library catalog unavailable. Local imports still work.');
+    catalog = await response.json();
+    library.setBundled(catalog.tracks);
+    publishLibrary();
+    send({
+      type: 'referenceCatalog',
+      tracks: (catalog.referenceTracks || []).map(t => ({
+        id: String(t.id),
+        name: t.title,
+        source: t.source,
+        genre: primaryGenre(t.tags || []),
+        bpm: Number(t.bpm) || 0,
+      })),
+    });
+    if (pendingProCatalog && mode === 'pro' && catalog.tracks.length >= 2) {
+      pendingProCatalog = false;
+      const version = configVersion;
+      await loadTrack(0, catalog.tracks[0].id);
+      if (version === configVersion && mode === 'pro') await loadTrack(1, catalog.tracks[1].id);
+    }
+  } catch (error) {
+    fail(error);
+  }
 });
 // Small diagnostics surface for automated browser/audio verification.
-window.bitCheer={get audio(){return engine;},get telemetry(){return telemetry;},get mode(){return mode;},get library(){return library.list();},get focus(){return focusActive;}};
+window.bitCheer = {
+  get audio() {
+    return engine;
+  },
+  get telemetry() {
+    return telemetry;
+  },
+  get mode() {
+    return mode;
+  },
+  get library() {
+    return library.list();
+  },
+  get focus() {
+    return focusActive;
+  },
+};

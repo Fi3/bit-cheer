@@ -6,10 +6,12 @@ export function validateLayout(layout) {
   if (!layout || typeof layout !== 'object' || !layout.modes || typeof layout.modes !== 'object') return null;
   const modules = (items, allowed) => {
     if (!Array.isArray(items)) return null;
-    const seen = new Set(), clean = [];
+    const seen = new Set(),
+      clean = [];
     for (const item of items) {
       if (!item || !allowed.includes(item.id) || seen.has(item.id)) continue;
-      seen.add(item.id); clean.push({ id: item.id, collapsed: item.collapsed === true });
+      seen.add(item.id);
+      clean.push({ id: item.id, collapsed: item.collapsed === true });
     }
     return clean;
   };
@@ -25,7 +27,13 @@ export function validateLayout(layout) {
   if (!Object.keys(modes).length) return null;
   // Version 2 gave the Loop builder its loop picker: layouts saved before then get it once.
   if (!(layout.version >= LAYOUT_VERSION) && modes.builder) {
-    modes.builder.decks = modes.builder.decks.map(items => items.some(item => item.id === 'picker') ? items : [...items, { id: 'picker', collapsed: false }]);
+    modes.builder.decks = modes.builder.decks.map(items =>
+      items.some(item => item.id === 'picker') ? items : [...items, { id: 'picker', collapsed: false }],
+    );
   }
-  return { version: LAYOUT_VERSION, modes, sensitivity: [0, 1].map(index => pitchSensitivity(layout.sensitivity?.[index])) };
+  return {
+    version: LAYOUT_VERSION,
+    modes,
+    sensitivity: [0, 1].map(index => pitchSensitivity(layout.sensitivity?.[index])),
+  };
 }

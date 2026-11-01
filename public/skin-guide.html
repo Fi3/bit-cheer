@@ -36,7 +36,7 @@
   <ol>
     <li>In <strong>Skin studio</strong>, press <strong>Download template</strong>. You get a ZIP with <code>skin.toml</code> and a README.</li>
     <li>Unzip it and open <code>skin.toml</code> in any text editor.</li>
-    <li>Give your skin a name and change the colors. Each color is a hex code like <code>#b8ee75</code>.</li>
+    <li>Give your skin a name (up to 60 characters) and change the colors. Each color is a hex code like <code>#b8ee75</code>.</li>
     <li>Zip the folder again and press <strong>Import a skin file</strong>. Done. It stays saved on this device.</li>
   </ol>
   <div class="note">Only changing colors? You can import <code>skin.toml</code> on its own, no ZIP needed.</div>
@@ -76,7 +76,7 @@ border     = "#f0b48a"</pre>
 titlebar = "graphics/titlebar.png"   # 275 × 14, the strip above the decks
 buttons  = "graphics/cbuttons.png"   # 136 × 36, play / pause sprite sheet
 numbers  = "graphics/numbers.png"    # 99 × 13, digits 0–9 (9 px each)
-background = "graphics/bg.jpg"       # page background, any size</pre>
+background = "graphics/bg.jpg"       # page background, up to 4096 × 4096</pre>
   <div class="table"><table>
     <tr><th>Asset</th><th>Size</th><th>Notes</th></tr>
     <tr><td><code>titlebar</code></td><td>275 × 14</td><td>Shown above the decks, scaled up</td></tr>
@@ -87,7 +87,7 @@ background = "graphics/bg.jpg"       # page background, any size</pre>
   <p>Formats: PNG, JPG, WebP or BMP. Each image under 2 MB, the ZIP under 10 MB. Paths must be relative. Remote URLs, SVG and scripts are not allowed, so skins are always safe to load.</p>
 
   <h2>Base skin</h2>
-  <p>Use <code>base = "millennium"</code>. Your colors and images go on top of it. More bases are coming later.</p>
+  <p>Use <code>base = "millennium"</code>. Your colors and images go on top of it. You can also start from <code>classic</code>, <code>classified3</code>, <code>classified5</code>, <code>bento</code> or <code>alien</code>; leave <code>base</code> out and you get <code>classic</code>.</p>
 
   <footer>bit.cheer · Millennium Chrome is an original skin. Museum skins belong to their creators.</footer>
 </main></body>

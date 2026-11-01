@@ -12,9 +12,16 @@ async function render(request) {
   engine.engine_init(RATE);
   engine.engine_randomize(0, seed, bpm);
   engine.engine_set(0, 3, elements);
-  if (Array.isArray(voices)) voices.slice(0, engine.engine_voice_count()).forEach((voice, index) => {
-    for (const [param, key] of [[0, 'gain'], [1, 'pan'], [2, 'pattern'], [4, 'sound']]) if (Number.isFinite(voice[key])) engine.engine_voice(0, index, param, voice[key]);
-  });
+  if (Array.isArray(voices))
+    voices.slice(0, engine.engine_voice_count()).forEach((voice, index) => {
+      for (const [param, key] of [
+        [0, 'gain'],
+        [1, 'pan'],
+        [2, 'pattern'],
+        [4, 'sound'],
+      ])
+        if (Number.isFinite(voice[key])) engine.engine_voice(0, index, param, voice[key]);
+    });
   engine.engine_set(0, 0, 1);
   const frames = Math.ceil(engine.engine_duration(0) * RATE);
   const peaks = new Float32Array(POINTS);
@@ -29,7 +36,7 @@ async function render(request) {
       view = new Float32Array(buffer, pointer, BLOCK * 2);
     }
     for (let i = 0; i < count; i++) {
-      const bin = Math.min(POINTS - 1, Math.floor((start + i) / frames * POINTS));
+      const bin = Math.min(POINTS - 1, Math.floor(((start + i) / frames) * POINTS));
       const amplitude = Math.max(Math.abs(view[i]), Math.abs(view[BLOCK + i]));
       if (amplitude > peaks[bin]) peaks[bin] = amplitude;
     }
@@ -46,10 +53,15 @@ async function drain() {
     while (pending.size) {
       const [deck, request] = pending.entries().next().value;
       pending.delete(deck);
-      try { await render(request); }
-      catch (error) { postMessage({ type: 'error', deck, version: request.version, message: error.message }); }
+      try {
+        await render(request);
+      } catch (error) {
+        postMessage({ type: 'error', deck, version: request.version, message: error.message });
+      }
     }
-  } finally { running = false; }
+  } finally {
+    running = false;
+  }
 }
 
 globalThis.onmessage = ({ data }) => {
@@ -58,11 +70,21 @@ globalThis.onmessage = ({ data }) => {
       engine = new WebAssembly.Instance(data.wasmModule, {}).exports;
       postMessage({ type: 'ready' });
       void drain();
-    } catch (error) { postMessage({ type: 'error', message: error.message }); }
+    } catch (error) {
+      postMessage({ type: 'error', message: error.message });
+    }
   } else if (data?.type === 'render') {
     const { deck, version, bpm, seed, elements } = data;
-    if ((deck !== 0 && deck !== 1) || !Number.isInteger(version) || !Number.isFinite(bpm) || bpm < 30 || bpm > 300) return;
-    const request = { deck, version, bpm, seed: Number(seed) >>> 0, elements: Number(elements) & 1048575, voices: data.voices };
+    if ((deck !== 0 && deck !== 1) || !Number.isInteger(version) || !Number.isFinite(bpm) || bpm < 30 || bpm > 300)
+      return;
+    const request = {
+      deck,
+      version,
+      bpm,
+      seed: Number(seed) >>> 0,
+      elements: Number(elements) & 1048575,
+      voices: data.voices,
+    };
     latest.set(deck, version);
     pending.set(deck, request);
     void drain();

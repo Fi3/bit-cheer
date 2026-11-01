@@ -8,9 +8,23 @@ const source = await readFile(new URL('../public/mic-worklet.js', import.meta.ur
 function capture(rate = 48000) {
   let Processor;
   vm.runInNewContext(source, {
-    sampleRate: rate, Float32Array, Math,
-    AudioWorkletProcessor: class { constructor() { this.port = { messages: [], postMessage(data, transfers) { this.messages.push({ data, transfers }); } }; } },
-    registerProcessor(name, constructor) { assert.equal(name, 'bit-cheer-mic'); Processor = constructor; }
+    sampleRate: rate,
+    Float32Array,
+    Math,
+    AudioWorkletProcessor: class {
+      constructor() {
+        this.port = {
+          messages: [],
+          postMessage(data, transfers) {
+            this.messages.push({ data, transfers });
+          },
+        };
+      }
+    },
+    registerProcessor(name, constructor) {
+      assert.equal(name, 'bit-cheer-mic');
+      Processor = constructor;
+    },
   });
   const processor = new Processor();
   const output = [[new Float32Array(128).fill(1)]];
@@ -27,7 +41,7 @@ function capture(rate = 48000) {
 
 test('microphone captures continuous source samples across render blocks and silences output', () => {
   const { processor, output, feed } = capture();
-  feed(6, sample => sample % 71 / 71);
+  feed(6, sample => (sample % 71) / 71);
   assert.equal(processor.port.messages.length, 1);
   const { data, transfers } = processor.port.messages[0];
   assert.equal(data.type, 'samples');
@@ -46,7 +60,7 @@ test('44.1kHz capture reports its true sample rate and preserves a 120 BPM pulse
   const { processor, feed } = capture(44100);
   feed(6, sample => {
     const phase = (sample % 22050) / 44100;
-    return phase < .06 ? Math.sin(sample / 44100 * Math.PI * 2 * 100) * Math.exp(-phase * 70) : 0;
+    return phase < 0.06 ? Math.sin((sample / 44100) * Math.PI * 2 * 100) * Math.exp(-phase * 70) : 0;
   });
   const { data } = processor.port.messages[0];
   assert.equal(data.sampleRate, 8820);
@@ -58,12 +72,12 @@ test('44.1kHz capture reports its true sample rate and preserves a 120 BPM pulse
 
 test('separate capture windows use independent buffers and stop releases the microphone processor', () => {
   const { processor, output, feed } = capture();
-  feed(6, () => .25);
-  feed(6, () => -.5);
+  feed(6, () => 0.25);
+  feed(6, () => -0.5);
   const [a, b] = processor.port.messages.map(message => message.data.pcm);
   assert.notEqual(a.buffer, b.buffer);
-  assert.ok(a.every(sample => sample === .25));
-  assert.ok(b.every(sample => sample === -.5));
+  assert.ok(a.every(sample => sample === 0.25));
+  assert.ok(b.every(sample => sample === -0.5));
   processor.port.onmessage({ data: { type: 'stop' } });
   assert.equal(processor.process([[new Float32Array(128)]], output), false);
   assert.equal(processor.pcm, null);

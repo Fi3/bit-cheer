@@ -7,10 +7,11 @@ with a Rust audio engine; it does not embed any of these applications.
 
 Reference: <https://www.beatmatch.pro/practice>.
 
-The public practice-page catalog returned 574 Bandcamp track links with genre tags.
-These links are retained under `referenceTracks` in `public/catalog.json`, so the
-original selection can be browsed and filtered. Display titles in this discovery
-catalog are derived from the URL slugs and may differ from the artist's exact
+The public practice-page catalog returned 574 Bandcamp links (568 distinct URLs):
+571 track pages and 3 album pages, all but 3 with genre tags. These links are
+retained under `referenceTracks` in `public/catalog.json`, so the original
+selection can be browsed and filtered by genre. Display titles in this discovery
+catalog are derived from the URLs and may differ from the artist's exact
 capitalization. The original artist page is the authoritative source.
 
 The reference app obtains audio through its own server-side `/info` and `/mp3`
@@ -75,18 +76,21 @@ offsets, durations, original download URLs and SHA-256 hashes, and license links
 are retained in `public/catalog.json`. The collection spans House, Techno, Trance,
 Drum & Bass, Breakbeat, Electro, Dubstep, Hip Hop, Downtempo, and Hardcore.
 
-Tempos and starting beat phases are estimated from recorded onsets, including
-multiband periodicity and repeated-section checks for the expanded collection.
-They are not artist-supplied beat grids. Six excerpts carry conservative
-`manualGridRecommended` flags; all tracks can be calibrated by ear with the
-source BPM and Mark beat one controls. Genres follow the SampleSwap listings.
+Tempos and starting beat phases are estimated from recorded onsets: low-frequency
+onset periodicity for the first four tracks, and multiband onset periodicity with
+the beat phase aligned to a local attack for the other 36 (each track's
+`gridMethod`). They are not artist-supplied beat grids. Six excerpts carry
+conservative `manualGridRecommended` flags; all tracks can be calibrated by ear
+with the **SOURCE BPM** field and the **SET GRID** button. Genres follow the
+SampleSwap listings.
 
 The excerpts are committed and require no downloads during app builds. To
 recreate them, install `curl` and `ffmpeg`, then run
 `python3 scripts/prepare-library.py --force`. This optional maintenance script
 verifies original-file hashes and preserves attribution in MP3 metadata. Add
-`--track <catalog-id>` to rebuild one excerpt. Full source recordings stay in
-the temporary cache and are not included in the repository or distribution.
+`--track <catalog-id>` (repeatable) to rebuild only those excerpts. Full source
+recordings stay in the cache directory (`/tmp/bit-cheer-library`, or
+`--cache-dir <path>`) and are not included in the repository or distribution.
 
 These recordings are distinct from Bit Cheer's synthesized practice loops. A local
 learned Markov model trained on 20 original authored rhythm patterns generates
@@ -107,11 +111,21 @@ Reference: <https://skins.webamp.org/>. The first four server-rendered
 | Bento Classified | `Bento_Classified.wsz` | <https://skins.webamp.org/skin/d6010aa35bed659bc1311820daa4b341/> | LuigiHann |
 
 Museum previews and original archives are retained under
-`public/skins/{classic,classified3,classified5,bento}.{png,wsz}`. Original archives
-are unchanged and retain their author metadata/readmes. The original graphics
-remain copyrighted by their respective authors. They are not relicensed as
-Bit Cheer code. Native themes adapt their colors and visual treatment to the
-larger two-deck trainer; they do not emulate every classic Winamp window.
+`public/skins/{classic,classified3,classified5,bento}.{png,wsz}`, with the four
+snapshot records in `public/skins/museum.json`. Original archives are unchanged
+(their MD5 hashes match the museum record IDs) and retain their author
+metadata/readmes. Sprite sheets converted pixel for pixel from them are kept in
+`public/skins/<id>/`, and their title strips in `public/skins/<id>-titlebar.png`.
+The original graphics remain copyrighted by their respective authors. They are
+not relicensed as Bit Cheer code. Native themes adapt their colors and visual
+treatment to the larger two-deck trainer; they do not emulate every classic
+Winamp window.
+
+These native themes are legacy: they stay in `src/skins.js` (`themes`) and
+`public/skins/`, and a `skin.toml` skin can still name one as its `base`, but the
+skin picker does not offer them. The picker offers only bit.cheer's two original
+skins, Millennium Chrome and Strawberry Mochi (`SELECTABLE_SKINS`), drawn by
+`scripts/make-millennium-skin.mjs` and `scripts/make-mochi-skin.mjs`.
 
 ## The supplied green-face reference
 
@@ -131,7 +145,8 @@ author at <https://winamp.spacecatsamba.com/skin/headamp/>. Its preview is
 `alien-bg_drawer_right.png`, and `alien-buttons_player_controls.png` assets are
 extracted from that archive for the requested visual adaptation. The original
 graphics retain their original copyright; they are not Bit Cheer original art.
-The application theme is named **Headspace · Alien Lime**.
+The legacy theme built from them is named **Headspace · Alien Lime** (`alien`);
+like the museum themes, it is not offered in the skin picker.
 
 ## DJcompanion training reference
 

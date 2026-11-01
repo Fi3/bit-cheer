@@ -223,7 +223,6 @@ type Msg
     | DeckValue Int String String
     | Mixer String String
     | SplitCue Bool
-    | ToggleRouting
     | RefreshOutputs
     | RoutingMode String
     | RoutingChannel Int String
@@ -231,7 +230,6 @@ type Msg
     | AudioOutput String
     | PickOutput
     | HideBpm Bool
-    | Advanced Bool
     | Tap
     | Microphone
     | ImportTrack Int
@@ -241,7 +239,6 @@ type Msg
     | LoadFolderFile Int (List String) String
     | CloseFolder Int
     | FolderFilter Int String
-    | LoadTrack Int String
     | Genre String
     | ReferencePage Int
     | SelectSkin String String
@@ -282,7 +279,18 @@ kickStudyDeck instruments kick bpm =
         deck =
             initialDeck ("KICK STUDY · " ++ String.toUpper (soundName instruments 0 kick)) bpm
     in
-    { deck | voices = List.indexedMap (\index voice -> if index == 0 then { voice | sound = kick } else voice) deck.voices }
+    { deck
+        | voices =
+            List.indexedMap
+                (\index voice ->
+                    if index == 0 then
+                        { voice | sound = kick }
+
+                    else
+                        voice
+                )
+                deck.voices
+    }
 
 
 init : Flags -> ( Model, Cmd Msg )
@@ -336,7 +344,7 @@ init flags =
       , loops = flags.loops
       , layouts = Dict.fromList (List.map (\mode -> ( mode, defaultModuleLayout mode )) [ "foundation", "builder", "blind", "star", "pro" ])
       }
-    , send "init" []
+    , Cmd.none
     )
 
 
@@ -757,15 +765,6 @@ update msg model =
         SplitCue enabled ->
             ( { model | splitCue = enabled }, send "mixer" [ ( "param", E.string "splitCue" ), ( "value", E.float (boolNumber enabled) ) ] )
 
-        ToggleRouting ->
-            ( { model | routingOpen = not model.routingOpen }
-            , if model.routingOpen then
-                Cmd.none
-
-              else
-                send "refreshOutputs" []
-            )
-
         RefreshOutputs ->
             ( model, send "refreshOutputs" [] )
 
@@ -819,10 +818,7 @@ update msg model =
             ( model, send "pickOutput" [] )
 
         HideBpm enabled ->
-            ( { model | hideBpm = enabled }, send "visuals" [ ( "hidden", E.bool enabled ) ] )
-
-        Advanced enabled ->
-            ( { model | advanced = enabled }, Cmd.none )
+            ( { model | hideBpm = enabled }, Cmd.none )
 
         Tap ->
             ( model, send "tap" [] )
@@ -855,9 +851,6 @@ update msg model =
 
         FolderFilter deck filter ->
             ( { model | folderFilters = Dict.insert deck filter model.folderFilters }, Cmd.none )
-
-        LoadTrack deck track ->
-            ( model, send "loadTrack" [ ( "deck", E.int deck ), ( "track", E.string track ) ] )
 
         Genre genre ->
             ( { model | genre = genre, referencePage = 0 }, Cmd.none )
@@ -1018,11 +1011,6 @@ voiceDecoder =
         (D.oneOf [ D.field "pattern" D.int, D.succeed -1 ])
         (D.oneOf [ D.field "preview" D.int, D.succeed -1 ])
         (D.oneOf [ D.field "sound" D.int, D.succeed 0 ])
-
-
-instrumentName : List Instrument -> Int -> String
-instrumentName instruments voice =
-    List.head (List.drop voice instruments) |> Maybe.map .name |> Maybe.withDefault ("Voice " ++ String.fromInt (voice + 1))
 
 
 instrumentSounds : List Instrument -> Int -> List String
@@ -2275,44 +2263,44 @@ deckView model number deck =
           else
             text ""
         , div [ class "deck-console" ]
-          [ button [ class "console-shade", attribute "data-deck" (String.fromInt number), attribute "aria-label" ("Fold or unfold deck " ++ letter ++ " console"), title "Fold or unfold this deck's console (like Winamp's playlist shade)" ] []
-          , div [ class "deck-heading" ]
-            [ span [ class "deck-label" ]
-                [ span [ class "deck-letter" ] [ text letter ]
-                , strong [] [ text ("DECK " ++ letter) ]
-                , span [ class "deck-role" ]
-                    [ text
-                        (if number == 0 then
-                            "REFERENCE"
+            [ button [ class "console-shade", attribute "data-deck" (String.fromInt number), attribute "aria-label" ("Fold or unfold deck " ++ letter ++ " console"), title "Fold or unfold this deck's console (like Winamp's playlist shade)" ] []
+            , div [ class "deck-heading" ]
+                [ span [ class "deck-label" ]
+                    [ span [ class "deck-letter" ] [ text letter ]
+                    , strong [] [ text ("DECK " ++ letter) ]
+                    , span [ class "deck-role" ]
+                        [ text
+                            (if number == 0 then
+                                "REFERENCE"
+
+                             else
+                                "MATCH THIS"
+                            )
+                        ]
+                    ]
+                , span [ classList [ ( "deck-state", True ), ( "playing", deck.playing ) ] ]
+                    [ span [ class "status-dot" ] []
+                    , text
+                        (if deck.playing then
+                            "PLAYING"
 
                          else
-                            "MATCH THIS"
+                            "READY"
                         )
                     ]
                 ]
-            , span [ classList [ ( "deck-state", True ), ( "playing", deck.playing ) ] ]
-                [ span [ class "status-dot" ] []
-                , text
-                    (if deck.playing then
-                        "PLAYING"
+            , div [ classList [ ( "deck-module-grid", True ), ( "has-pitch", hasPitch ) ] ]
+                (List.map (\item -> playerModule number item (deckModuleContent model number deck item.id)) (List.filter (\item -> item.id == "screen") modules)
+                    ++ [ transportView model number deck ]
+                    ++ List.map (\item -> playerModule number item (deckModuleContent model number deck item.id)) (List.filter (\item -> item.id /= "screen") modules)
+                )
+            , if List.isEmpty modules then
+                p [ class "empty-deck" ] [ text "Add a module to build this deck." ]
 
-                     else
-                        "READY"
-                    )
-                ]
+              else
+                text ""
+            , addModuleMenu model number
             ]
-        , div [ classList [ ( "deck-module-grid", True ), ( "has-pitch", hasPitch ) ] ]
-            (List.map (\item -> playerModule number item (deckModuleContent model number deck item.id)) (List.filter (\item -> item.id == "screen") modules)
-                ++ [ transportView model number deck ]
-                ++ List.map (\item -> playerModule number item (deckModuleContent model number deck item.id)) (List.filter (\item -> item.id /= "screen") modules)
-            )
-        , if List.isEmpty modules then
-            p [ class "empty-deck" ] [ text "Add a module to build this deck." ]
-
-          else
-            text ""
-        , addModuleMenu model number
-          ]
         ]
 
 
@@ -2644,9 +2632,6 @@ trackPickerView model number deck =
 
         tracks =
             playableTracks model deck
-
-        chosen =
-            selectedPlayable model deck |> Maybe.map .id |> Maybe.withDefault ""
     in
     div [ class "track-picker" ]
         [ label [ class "track-picker-genre" ] [ span [] [ text "GENRE" ], select [ onInput (DeckGenre number), attribute "aria-label" ("Deck " ++ letter ++ " genre") ] (List.map (\genre -> option [ value genre, selected (genre == deck.genre) ] [ text genre ]) genres) ]
@@ -2677,6 +2662,10 @@ trackPickerView model number deck =
                     [ option [] [ text "Import a track to get started" ] ]
 
                  else
+                    let
+                        chosen =
+                            selectedPlayable model deck |> Maybe.map .id |> Maybe.withDefault ""
+                    in
                     List.map (\track -> option [ value track.id, selected (track.id == chosen) ] [ text track.name ]) tracks
                 )
             ]
@@ -2752,14 +2741,15 @@ folderBrowserView model number deck listing =
         crumb ( path, name ) =
             button [ class "folder-crumb", onClick (OpenFolder number path) ] [ text name ]
 
-        parent =
-            List.take (List.length listing.path - 1) listing.path
-
         upEntry =
             if List.isEmpty listing.path then
                 []
 
             else
+                let
+                    parent =
+                        List.take (List.length listing.path - 1) listing.path
+                in
                 [ li [] [ button [ class "folder-entry folder-up", onClick (OpenFolder number parent), attribute "aria-label" ("Up one folder deck " ++ letter) ] [ text "↰ .." ] ] ]
 
         folderEntry name =
@@ -3107,63 +3097,6 @@ vuMeter peak =
         ]
 
 
-mixerView : Model -> Html Msg
-mixerView model =
-    div [ class "mixer" ]
-        [ div [ class "mixer-monitor" ]
-            [ span [ class "control-label" ] [ text "MONITOR" ]
-            , toggleDisabled (model.routing.mode /= "mix") "Split cue" model.splitCue SplitCue
-            , small []
-                [ text
-                    (if model.routing.mode == "mix" then
-                        "A → left / B → right"
-
-                     else
-                        "External output routing active"
-                    )
-                ]
-            ]
-        , div [ class "crossfader" ]
-            [ div [ class "crossfader-labels" ]
-                [ strong [] [ text "A" ]
-                , span []
-                    [ text
-                        (if model.routing.mode == "mix" then
-                            "CROSSFADER"
-
-                         else
-                            "EXTERNAL MIX"
-                        )
-                    ]
-                , strong [] [ text "B" ]
-                ]
-            , input
-                [ type_ "range"
-                , A.min "0"
-                , A.max "1"
-                , step "0.01"
-                , value (String.fromFloat model.crossfade)
-                , onInput (Mixer "crossfade")
-                , attribute "aria-label" "Crossfader"
-                , disabled (model.routing.mode /= "mix")
-                , title
-                    (if model.routing.mode == "mix" then
-                        "Blend the two decks"
-
-                     else
-                        "Separate output channels bypass the software crossfader"
-                    )
-                ]
-                []
-            , div [ class "fader-scale" ] [ span [] [ text "╵ ╵ ╵ ╵ ╵" ], span [] [ text "│" ], span [] [ text "╵ ╵ ╵ ╵ ╵" ] ]
-            ]
-        , label [ class "master-volume" ]
-            [ span [ class "control-label" ] [ text "MASTER", strong [] [ text (fixed 0 (model.master * 100) ++ "%") ] ]
-            , input [ type_ "range", A.min "0", A.max "1", step "0.01", value (String.fromFloat model.master), onInput (Mixer "master"), attribute "aria-label" "Master volume" ] []
-            ]
-        ]
-
-
 routingView : Model -> Html Msg
 routingView model =
     let
@@ -3343,18 +3276,6 @@ coachView model =
 
                     else
                         "Listen for the double hit."
-
-        instruction =
-            case lesson of
-                Just item ->
-                    String.replace ("Lesson " ++ String.fromInt item.number ++ ": ") "" item.instruction
-
-                Nothing ->
-                    if String.isEmpty model.drill then
-                        "Play both decks, then move deck B's pitch fader until the beats stop drifting. Nudge them into place."
-
-                    else
-                        drillInstruction model.drill
     in
     section [ class "coach-panel" ]
         [ div [ class "panel-heading" ]
@@ -3394,6 +3315,19 @@ coachView model =
                         starMeter run
 
                     Nothing ->
+                        let
+                            instruction =
+                                case lesson of
+                                    Just item ->
+                                        String.replace ("Lesson " ++ String.fromInt item.number ++ ": ") "" item.instruction
+
+                                    Nothing ->
+                                        if String.isEmpty model.drill then
+                                            "Play both decks, then move deck B's pitch fader until the beats stop drifting. Nudge them into place."
+
+                                        else
+                                            drillInstruction model.drill
+                        in
                         p [ class "coach-instruction" ] [ text instruction ]
         , div [ class "coach-bottom" ]
             [ if model.mode == "foundation" then
@@ -3510,51 +3444,6 @@ tapView model =
                     )
                 ]
             ]
-        ]
-
-
-libraryView : Model -> Html Msg
-libraryView model =
-    let
-        genres =
-            List.foldl
-                (\genre acc ->
-                    if List.member genre acc then
-                        acc
-
-                    else
-                        acc ++ [ genre ]
-                )
-                [ "All genres" ]
-                (List.map .genre model.tracks ++ List.map .genre model.referenceTracks)
-
-        tracks =
-            List.filter (\track -> model.genre == "All genres" || track.genre == model.genre) model.tracks
-    in
-    section [ class "track-library" ]
-        [ div [ class "section-heading" ]
-            [ div [] [ div [ class "eyebrow" ] [ text "THE CRATE" ], h2 [] [ text "Pick your next groove." ] ]
-            , select [ onInput Genre, attribute "aria-label" "Track genre" ] (List.map (\genre -> option [ selected (genre == model.genre), value genre ] [ text genre ]) genres)
-            ]
-        , if List.isEmpty tracks then
-            div [ class "empty-library" ] [ p [] [ text "Your own music makes the best practice crate. Load a track into either deck to get started." ], button [ class "small-button", onClick (ImportTrack 0) ] [ text "↥ Import track A" ], button [ class "small-button", onClick (ImportTrack 1) ] [ text "↥ Import track B" ] ]
-
-          else
-            div [ class "track-list" ]
-                (List.map
-                    (\track ->
-                        div [ class "track-row" ]
-                            [ span [ class "track-art" ] [ text "♫" ]
-                            , div [ class "track-meta" ] [ strong [] [ text track.name ], small [] [ text (track.artist ++ " · " ++ track.genre) ] ]
-                            , span [ class "track-bpm" ] [ text (fixed 0 track.bpm ++ " BPM") ]
-                            , button [ class "small-button", onClick (LoadTrack 0 track.id), attribute "aria-label" ("Load " ++ track.name ++ " into deck A") ] [ text "A +" ]
-                            , button [ class "small-button", onClick (LoadTrack 1 track.id), attribute "aria-label" ("Load " ++ track.name ++ " into deck B") ] [ text "B +" ]
-                            ]
-                    )
-                    tracks
-                )
-        , referenceLibraryView model
-        , small [ class "library-note" ] [ text "Imported tracks stay on your device. BPM estimates can be half or double time. *File support depends on your browser. ", a [ href (model.basePath ++ "credits.html"), target "_blank", attribute "rel" "noopener noreferrer" ] [ text "Music credits & licenses ↗" ] ]
         ]
 
 
@@ -3697,6 +3586,7 @@ drillInstruction drill =
 
         "phrase" ->
             "Phrase drill: line up beat one of each 16-beat phrase. Use cue and nudge, then check your alignment."
+
         _ ->
             "Blind drill: keep BPM hidden. Listen carefully to the direction of drift, then correct it by ear."
 
@@ -3841,7 +3731,7 @@ otherExampleSkinUrl =
     "https://skins.webamp.org/skin/01b2c3556b18cd77506e49ec769aaf87/tricorder.wsz"
 
 
-{-| bit.cheer's own skins (src/skins.js SELECTABLE_SKINS): id, name and card text.
+{-| bit.cheer's own skins (src/skins.js SELECTABLE\_SKINS): id, name and card text.
 -}
 builtinSkins : List ( String, String, String )
 builtinSkins =
@@ -3915,7 +3805,17 @@ skinsView model =
                     , A.placeholder "Paste a skins.webamp.org link here"
                     , value model.skinUrl
                     , onInput SkinUrlInput
-                    , on "keydown" (D.field "key" D.string |> D.andThen (\key -> if key == "Enter" then D.succeed LoadSkinUrl else D.fail "not enter"))
+                    , on "keydown"
+                        (D.field "key" D.string
+                            |> D.andThen
+                                (\key ->
+                                    if key == "Enter" then
+                                        D.succeed LoadSkinUrl
+
+                                    else
+                                        D.fail "not enter"
+                                )
+                        )
                     , attribute "aria-label" "Winamp Skin Museum link"
                     , attribute "inputmode" "url"
                     , attribute "autocomplete" "off"
@@ -3976,86 +3876,79 @@ helpView model =
             else
                 "A " ++ size model.a.sensitivity ++ ", B " ++ size model.b.sensitivity
 
-        pitchKeys =
-            [ ( "W E · I O", "Down / up one step: " ++ percent 1 ++ " (the deck's Wheel / keys setting)" )
-            , ( "Q R · U P", "Down / up ten steps: " ++ percent 10 )
-            , ( "↓ ↑", "Deck B down / up one step" )
-            , ( "Shift", "With any pitch key: 0.01%, the finest step" )
-            , ( "Z · /", "Back to 0%, the track's own tempo" )
-            , ( "Hold", "Keeps moving; past the fader's end the range widens" )
-            ]
-
-        deckKeys =
-            [ ( "F · J", "Play / pause" )
-            , ( "S D · K L", "Nudge back / forward. Hold to bend the speed" )
-            , ( "← →", "Deck B nudge back / forward" )
-            , ( "A · ;", "Back to the cue. Shift: save the cue here" )
-            , ( "X C · , .", "Volume down / up. Shift: 1%" )
-            ]
-                ++ (if model.focused then
-                        []
-
-                    else if model.mode == "pro" then
-                        [ ( "V · M", "Next track. Shift: previous track" ) ]
-
-                    else
-                        [ ( "V · M", "Randomize tempo. Shift: change track" ) ]
-                   )
-
-        viewKeys =
-            if model.focused then
-                [ ( "Space", "Play / pause both decks" )
-                , ( "G H · Y", "Crossfader: hold to glide · center" )
-                , ( "` · Esc", "Leave Focus session" )
-                , ( "?", "Open or close this help" )
-                ]
-
-            else
-                [ ( "Space", "Play / pause both decks" )
-                , ( "Enter"
-                  , if starRunning model then
-                        "Finish the run"
-
-                    else
-                        "Check my match"
-                  )
-                , ( "N"
-                  , if not (String.isEmpty model.drill) then
-                        "New challenge"
-
-                    else if model.mode == "star" then
-                        "New run"
-
-                    else if model.mode == "pro" then
-                        "Start or stop a ★ Star run"
-
-                    else
-                        "New challenge: fresh loops and tempos"
-                  )
-                , ( "G H · Y", "Crossfader: hold to glide · center" )
-                ]
-                    ++ (if List.member model.mode [ "builder", "blind", "star" ] then
-                            [ ( "=", "Add an element to both decks" ) ]
-
-                        else
-                            []
-                       )
-                    ++ [ ( "`", "Focus session" )
-                       , ( "1 – 5", "Practice mode: Foundation … Pro decks" )
-                       , ( "?", "Open or close this help" )
-                       , ( "Esc", "Close this help · let go of a control" )
-                       ]
-        -- What a first beatmatch needs: play, pitch, nudge. Everything else is behind Show more.
-        essentials =
-            [ ( "Space", "Play / pause both decks" )
-            , ( "F · J", "Play / pause deck A · deck B" )
-            , ( "W E · I O", "Pitch down / up, " ++ percent 1 ++ " a press. Hold to keep going" )
-            , ( "S D · K L", "Nudge back / forward. Hold to bend the speed" )
-            , ( "↓ ↑ · ← →", "Deck B: pitch · nudge" )
-            ]
-
         body =
             if model.helpMore then
+                let
+                    pitchKeys =
+                        [ ( "W E · I O", "Down / up one step: " ++ percent 1 ++ " (the deck's Wheel / keys setting)" )
+                        , ( "Q R · U P", "Down / up ten steps: " ++ percent 10 )
+                        , ( "↓ ↑", "Deck B down / up one step" )
+                        , ( "Shift", "With any pitch key: 0.01%, the finest step" )
+                        , ( "Z · /", "Back to 0%, the track's own tempo" )
+                        , ( "Hold", "Keeps moving; past the fader's end the range widens" )
+                        ]
+
+                    deckKeys =
+                        [ ( "F · J", "Play / pause" )
+                        , ( "S D · K L", "Nudge back / forward. Hold to bend the speed" )
+                        , ( "← →", "Deck B nudge back / forward" )
+                        , ( "A · ;", "Back to the cue. Shift: save the cue here" )
+                        , ( "X C · , .", "Volume down / up. Shift: 1%" )
+                        ]
+                            ++ (if model.focused then
+                                    []
+
+                                else if model.mode == "pro" then
+                                    [ ( "V · M", "Next track. Shift: previous track" ) ]
+
+                                else
+                                    [ ( "V · M", "Randomize tempo. Shift: change track" ) ]
+                               )
+
+                    viewKeys =
+                        if model.focused then
+                            [ ( "Space", "Play / pause both decks" )
+                            , ( "G H · Y", "Crossfader: hold to glide · center" )
+                            , ( "` · Esc", "Leave Focus session" )
+                            , ( "?", "Open or close this help" )
+                            ]
+
+                        else
+                            [ ( "Space", "Play / pause both decks" )
+                            , ( "Enter"
+                              , if starRunning model then
+                                    "Finish the run"
+
+                                else
+                                    "Check my match"
+                              )
+                            , ( "N"
+                              , if not (String.isEmpty model.drill) then
+                                    "New challenge"
+
+                                else if model.mode == "star" then
+                                    "New run"
+
+                                else if model.mode == "pro" then
+                                    "Start or stop a ★ Star run"
+
+                                else
+                                    "New challenge: fresh loops and tempos"
+                              )
+                            , ( "G H · Y", "Crossfader: hold to glide · center" )
+                            ]
+                                ++ (if List.member model.mode [ "builder", "blind", "star" ] then
+                                        [ ( "=", "Add an element to both decks" ) ]
+
+                                    else
+                                        []
+                                   )
+                                ++ [ ( "`", "Focus session" )
+                                   , ( "1 – 5", "Practice mode: Foundation … Pro decks" )
+                                   , ( "?", "Open or close this help" )
+                                   , ( "Esc", "Close this help · let go of a control" )
+                                   ]
+                in
                 [ p [] [ text "Left hand plays deck A, right hand plays deck B, the mixer sits in between. Index fingers on F and J play. Match the tempo with pitch, then line up the beats with nudge." ]
                 , keyboardMap model
                 , div [ class "help-columns" ]
@@ -4077,6 +3970,16 @@ helpView model =
                 ]
 
             else
+                let
+                    -- What a first beatmatch needs: play, pitch, nudge. Everything else is behind Show more.
+                    essentials =
+                        [ ( "Space", "Play / pause both decks" )
+                        , ( "F · J", "Play / pause deck A · deck B" )
+                        , ( "W E · I O", "Pitch down / up, " ++ percent 1 ++ " a press. Hold to keep going" )
+                        , ( "S D · K L", "Nudge back / forward. Hold to bend the speed" )
+                        , ( "↓ ↑ · ← →", "Deck B: pitch · nudge" )
+                        ]
+                in
                 [ p [] [ text "Left hand: deck A. Right hand: deck B. Match the tempo with pitch, then line up the beats with nudge." ]
                 , ul [ class "shortcut-list help-essentials" ] (List.map (\( key, action ) -> li [] [ strong [] [ text key ], span [] [ text action ] ]) essentials)
                 ]
@@ -4086,7 +3989,18 @@ helpView model =
             [ div [ class "section-heading" ] [ h2 [ id "help-title" ] [ text "Hands on. Ears open." ], button [ id "help-close", class "help-button", onClick ToggleHelp, attribute "aria-label" "Close help" ] [ text "×" ] ]
             , div [ class "help-body" ] body
             , div [ class "help-actions" ]
-                [ button [ id "help-more", class "secondary-button", onClick (MoreHelp (not model.helpMore)), attribute "aria-expanded" (if model.helpMore then "true" else "false") ]
+                [ button
+                    [ id "help-more"
+                    , class "secondary-button"
+                    , onClick (MoreHelp (not model.helpMore))
+                    , attribute "aria-expanded"
+                        (if model.helpMore then
+                            "true"
+
+                         else
+                            "false"
+                        )
+                    ]
                     [ text
                         (if model.helpMore then
                             "Show less"
@@ -4101,7 +4015,8 @@ helpView model =
         ]
 
 
-{-| The three letter rows as key caps. Keys that do nothing in this view keep an empty cap. -}
+{-| The three letter rows as key caps. Keys that do nothing in this view keep an empty cap.
+-}
 keyboardMap : Model -> Html Msg
 keyboardMap model =
     let
@@ -4200,9 +4115,6 @@ fixed decimals val =
         whole =
             String.fromInt (rounded // factor)
 
-        fraction =
-            String.fromInt (modBy factor rounded) |> String.padLeft decimals '0'
-
         sign =
             if val < 0 then
                 "−"
@@ -4216,6 +4128,10 @@ fixed decimals val =
                 ""
 
             else
+                let
+                    fraction =
+                        String.fromInt (modBy factor rounded) |> String.padLeft decimals '0'
+                in
                 "." ++ fraction
            )
 
@@ -4231,7 +4147,8 @@ signed decimals val =
         ++ fixed decimals val
 
 
-{-| Exposes a range's position (0–1) to CSS, so skins can pick the matching sprite frame. -}
+{-| Exposes a range's position (0–1) to CSS, so skins can pick the matching sprite frame.
+-}
 rangeVar : Float -> Html.Attribute msg
 rangeVar v =
     attribute "style" ("--v:" ++ String.fromFloat (clamp 0 1 v))

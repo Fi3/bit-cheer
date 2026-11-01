@@ -2,16 +2,25 @@
 // Chromium uses the File System Access API (lazy, nothing read until a track loads).
 // Other browsers fall back to a folder <input>, whose file list we turn into a tree.
 export const AUDIO_EXTENSIONS = ['mp3', 'wav', 'ogg', 'oga', 'opus', 'flac', 'm4a', 'aac', 'aif', 'aiff', 'webm'];
-export const isAudioName = name => AUDIO_EXTENSIONS.includes(String(name).split('.').pop().toLowerCase()) && String(name).includes('.');
+export const isAudioName = name =>
+  AUDIO_EXTENSIONS.includes(String(name).split('.').pop().toLowerCase()) && String(name).includes('.');
 const visible = name => !name.startsWith('.');
 const byName = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-const cleanPath = path => (Array.isArray(path) ? path : []).map(String).filter(part => part && part !== '.' && part !== '..');
+const cleanPath = path =>
+  (Array.isArray(path) ? path : []).map(String).filter(part => part && part !== '.' && part !== '..');
 
 let serial = 0;
 export class FolderSource {
-  constructor(name, root, kind) { this.name = name; this.root = root; this.kind = kind; this.id = ++serial; }
+  constructor(name, root, kind) {
+    this.name = name;
+    this.root = root;
+    this.kind = kind;
+    this.id = ++serial;
+  }
 
-  static fromHandle(handle) { return new FolderSource(handle.name, handle, 'handle'); }
+  static fromHandle(handle) {
+    return new FolderSource(handle.name, handle, 'handle');
+  }
 
   // Files come from <input webkitdirectory>; webkitRelativePath starts with the chosen folder's name.
   static fromFiles(files) {
@@ -33,7 +42,9 @@ export class FolderSource {
     return new FolderSource(name, root, 'files');
   }
 
-  key(path, name) { return `${this.id}/${[...cleanPath(path), name].join('/')}`; }
+  key(path, name) {
+    return `${this.id}/${[...cleanPath(path), name].join('/')}`;
+  }
 
   async directory(path) {
     let node = this.root;
@@ -47,7 +58,8 @@ export class FolderSource {
   // Folders that hold no audio anywhere are still listed for handles: checking would mean reading the whole tree.
   async list(path) {
     const node = await this.directory(path);
-    const folders = [], files = [];
+    const folders = [],
+      files = [];
     if (this.kind === 'handle') {
       for await (const [name, entry] of node.entries()) {
         if (!visible(name)) continue;
@@ -55,7 +67,8 @@ export class FolderSource {
         else if (isAudioName(name)) files.push(name);
       }
     } else {
-      folders.push(...node.folders.keys()); files.push(...node.files.keys());
+      folders.push(...node.folders.keys());
+      files.push(...node.files.keys());
     }
     return { path: cleanPath(path), folders: folders.sort(byName), files: files.sort(byName) };
   }
@@ -71,16 +84,38 @@ export class FolderSource {
 // Resolves to a FolderSource, or null when the user cancels.
 export function pickFolder(win = window) {
   if (typeof win.showDirectoryPicker === 'function') {
-    return win.showDirectoryPicker({ id: 'bit-cheer-tracks', mode: 'read' })
+    return win
+      .showDirectoryPicker({ id: 'bit-cheer-tracks', mode: 'read' })
       .then(handle => FolderSource.fromHandle(handle))
-      .catch(error => { if (error?.name === 'AbortError') return null; throw error; });
+      .catch(error => {
+        if (error?.name === 'AbortError') return null;
+        throw error;
+      });
   }
   return new Promise(resolve => {
     const input = win.document.createElement('input');
-    input.type = 'file'; input.multiple = true; input.webkitdirectory = true; input.style.display = 'none';
+    input.type = 'file';
+    input.multiple = true;
+    input.webkitdirectory = true;
+    input.style.display = 'none';
     win.document.body.append(input);
-    input.addEventListener('change', () => { const files = input.files; input.remove(); resolve(files?.length ? FolderSource.fromFiles(files) : null); }, { once: true });
-    input.addEventListener('cancel', () => { input.remove(); resolve(null); }, { once: true });
+    input.addEventListener(
+      'change',
+      () => {
+        const files = input.files;
+        input.remove();
+        resolve(files?.length ? FolderSource.fromFiles(files) : null);
+      },
+      { once: true },
+    );
+    input.addEventListener(
+      'cancel',
+      () => {
+        input.remove();
+        resolve(null);
+      },
+      { once: true },
+    );
     input.click();
   });
 }

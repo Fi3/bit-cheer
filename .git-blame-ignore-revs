@@ -1,0 +1,5 @@
+# Formatting-only commits that `git blame` should look through. GitHub's blame view reads this
+# file by itself; for local blame run: git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# ADD Prettier and format all JavaScript with it so the code reads consistently
+aab4b941012fe381c232138f04175db4ba8c3434

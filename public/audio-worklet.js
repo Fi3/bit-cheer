@@ -1,5 +1,23 @@
 /* Rust/WASM renders both decks on the audio thread; no JS audio synthesis. */
-const PARAMS = Object.freeze({ play: 0, bpm: 1, pitch: 2, elements: 3, nudge: 4, seek: 5, cue: 6, setCue: 7, low: 8, mid: 9, high: 10, gain: 11, source: 12, loop: 13, beatOffset: 14, bend: 15, drift: 16 });
+const PARAMS = Object.freeze({
+  play: 0,
+  bpm: 1,
+  pitch: 2,
+  elements: 3,
+  nudge: 4,
+  seek: 5,
+  cue: 6,
+  setCue: 7,
+  low: 8,
+  mid: 9,
+  high: 10,
+  gain: 11,
+  source: 12,
+  loop: 13,
+  beatOffset: 14,
+  bend: 15,
+  drift: 16,
+});
 
 class BitCheerProcessor extends AudioWorkletProcessor {
   constructor(options) {
@@ -43,7 +61,13 @@ class BitCheerProcessor extends AudioWorkletProcessor {
       } else if (message.type === 'voice' && (deck === 0 || deck === 1)) {
         const voice = Number(message.voice);
         const param = { gain: 0, pan: 1, pattern: 2, reset: 3, sound: 4 }[message.param];
-        if (Number.isInteger(voice) && voice >= 0 && voice < e.engine_voice_count() && param !== undefined && Number.isFinite(Number(message.value))) {
+        if (
+          Number.isInteger(voice) &&
+          voice >= 0 &&
+          voice < e.engine_voice_count() &&
+          param !== undefined &&
+          Number.isFinite(Number(message.value))
+        ) {
           e.engine_voice(deck, voice, param, Number(message.value));
           if (param === 2 || param === 3) this.patterns(deck);
         }
@@ -56,13 +80,21 @@ class BitCheerProcessor extends AudioWorkletProcessor {
         this.patterns(deck);
       } else if (message.type === 'load' && (deck === 0 || deck === 1)) {
         const left = message.left instanceof Float32Array ? message.left : new Float32Array(message.left);
-        const right = message.right ? (message.right instanceof Float32Array ? message.right : new Float32Array(message.right)) : left;
-        if (left.length !== right.length || left.length < 2) throw new Error('Stereo channels must contain matching PCM frames.');
+        const right = message.right
+          ? message.right instanceof Float32Array
+            ? message.right
+            : new Float32Array(message.right)
+          : left;
+        if (left.length !== right.length || left.length < 2)
+          throw new Error('Stereo channels must contain matching PCM frames.');
         const sourceRate = Number(message.sampleRate);
         const bpm = Number(message.bpm);
         if (!Number.isFinite(bpm) || bpm < 30 || bpm > 300) throw new Error('Track BPM must be between 30 and 300.');
         const pointer = e.engine_reserve(deck, left.length, sourceRate, bpm);
-        if (!pointer) throw new Error('Track exceeds the audio memory limit (28.8 million frames), or its sample rate is unsupported.');
+        if (!pointer)
+          throw new Error(
+            'Track exceeds the audio memory limit (28.8 million frames), or its sample rate is unsupported.',
+          );
         const pcm = new Float32Array(e.memory.buffer, pointer, left.length * 2);
         for (let i = 0; i < left.length; i++) {
           pcm[i * 2] = Number.isFinite(left[i]) ? left[i] : 0;
@@ -80,7 +112,11 @@ class BitCheerProcessor extends AudioWorkletProcessor {
 
   patterns(deck) {
     const count = this.engine.engine_voice_count();
-    this.port.postMessage({ type: 'patterns', deck, patterns: Array.from({ length: count }, (_, voice) => this.engine.engine_voice_pattern(deck, voice)) });
+    this.port.postMessage({
+      type: 'patterns',
+      deck,
+      patterns: Array.from({ length: count }, (_, voice) => this.engine.engine_voice_pattern(deck, voice)),
+    });
   }
 
   process(_inputs, outputs) {
@@ -111,7 +147,7 @@ class BitCheerProcessor extends AudioWorkletProcessor {
           peaks: [this.peaks[0], this.peaks[1]],
           bpms: [e.engine_bpm(0), e.engine_bpm(1)],
           durations: [e.engine_duration(0), e.engine_duration(1)],
-          playing: [!!e.engine_playing(0), !!e.engine_playing(1)]
+          playing: [!!e.engine_playing(0), !!e.engine_playing(1)],
         });
         this.peaks[0] = this.peaks[1] = 0;
       }

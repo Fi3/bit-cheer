@@ -1,0 +1,18 @@
+# Keeps the SHA-pinned GitHub Actions and the npm dependencies current: one grouped pull request
+# per ecosystem each month, and CI checks every update before it can be merged.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      npm:
+        patterns: ['*']

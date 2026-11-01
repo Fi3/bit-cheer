@@ -1,6 +1,6 @@
 # Bit Cheer audio core
 
-The dual-deck transport, generated percussion and melodic voices, interpolating PCM player, gain smoothing, three-band equalizer, and output limiter run in Rust compiled to WebAssembly. `public/audio-worklet.js` is the small transport adapter: it copies two stereo outputs into Web Audio render buffers and posts status roughly 19 times a second. The 128-frame render path allocates no Rust heap memory and never calls back into JavaScript. Track decoding and beat analysis belong on the main thread or an analysis worker, outside the audio callback.
+The dual-deck transport, generated percussion and melodic voices, interpolating PCM player, gain smoothing, three-band equalizer, and output limiter run in Rust compiled to WebAssembly. `public/audio-worklet.js` is the small transport adapter: it copies two stereo outputs into Web Audio render buffers and posts status every 20 render quanta (about 19 times a second at 48 kHz). `public/waveform-worker.js` runs its own instance of the same module at 12 kHz to draw generated-loop waveforms. The 128-frame render path allocates no Rust heap memory and never calls back into JavaScript. Track decoding and beat analysis belong on the main thread or an analysis worker, outside the audio callback.
 
 ## Build and verify
 
@@ -8,11 +8,11 @@ The dual-deck transport, generated percussion and melodic voices, interpolating 
 rustup target add wasm32-unknown-unknown
 cargo test --manifest-path engine/Cargo.toml
 cargo build --manifest-path engine/Cargo.toml --target wasm32-unknown-unknown --release
-node --test engine/tests/worklet.test.cjs
+node --test engine/tests/*.test.cjs
 ```
 
 Build output: `engine/target/wasm32-unknown-unknown/release/bit_cheer_audio.wasm`.
-The application's build script copies this to its public assets.
+`npm run build:wasm` runs the same build and copies it to `public/engine.wasm`, which the app loads.
 
 The benchmark in the worklet tests renders ten seconds of both decks with all twenty voices. Its reported wall-clock percentage is host-specific, not a latency promise. Actual output latency depends on the browser, operating system, and audio device.
 
@@ -22,9 +22,9 @@ Register `public/audio-worklet.js` with `audioContext.audioWorklet.addModule(url
 
 Messages into the worklet:
 
-- `{type: 'set', deck: 0|1, param: string, value: number|boolean}`.
-- `{type: 'randomize', deck, seed: uint32, bpm}` resets the deck to a deterministic generated loop, resets pitch, bend, cue, and grid offset, and retains element toggles and playback state.
-- `{type: 'load', deck, left: Float32Array, right: Float32Array, sampleRate, bpm, beatOffset?: seconds, id?: string}` loads decoded stereo PCM and pauses that deck. Transfer the channel buffers when possible. Right channel can be omitted for mono. The engine supports at most 28,800,000 frames per deck; reject overly long tracks before decoding where feasible.
+- `{type: 'set', deck: 0|1, param: string, value: number|boolean}`. A `set` with an unknown `param`, or a `value` that is not a finite number (booleans count as 1 and 0), is dropped, even for parameters that ignore the value.
+- `{type: 'randomize', deck, seed: uint32, bpm}` resets the deck to a deterministic generated loop from its start, resets pitch, bend, cue, and grid offset, clears manual patterns, and retains drift, element toggles, and playback state.
+- `{type: 'load', deck, left: Float32Array, right: Float32Array, sampleRate, bpm, beatOffset?: seconds, id?: string}` loads decoded stereo PCM and pauses that deck at its start, resetting pitch, bend, and cue (drift is kept); a finite `beatOffset` then sets the grid. Transfer the channel buffers when possible. Right channel can be omitted for mono. `bpm` must be 30–300, `sampleRate` 8,000–192,000 Hz, and the channels equally long, from 2 to 28,800,000 frames per deck (ten minutes at 48 kHz); any other load fails with an `error` and leaves the deck unchanged. Reject overly long tracks before decoding where feasible.
 - `{type: 'reset'}` resets both decks to their original paused state.
 
 Parameters:
@@ -35,33 +35,34 @@ Parameters:
 | `bpm` | Source BPM, 30–300; edits the grid for PCM | 1 |
 | `pitch` | Playback-rate offset in percent, −50 to +50 | 2 |
 | `elements` | 20-bit instrument mask; see voice bank below (maximum 1048575) | 3 |
-| `nudge` | Move playhead by this many beats; wraps around loop | 4 |
+| `nudge` | Move playhead by this many beats; wraps at the start and end, even with `loop` off | 4 |
 | `seek` | Source seconds, clamped to duration | 5 |
 | `cue` | Return to saved cue (value ignored) | 6 |
 | `setCue` | Store current source position (value ignored) | 7 |
 | `low`, `mid`, `high` | EQ gain in dB, −24 to +12 | 8, 9, 10 |
 | `gain` | Linear deck gain, 0–2 | 11 |
-| `source` | 0 returns to generated audio | 12 |
-| `loop` | Boolean | 13 |
+| `source` | 0 returns to generated audio from its start, keeping source BPM, cue, and grid offset; other values are ignored | 12 |
+| `loop` | Boolean; at the end, wrap (default) or stop and pause | 13 |
 | `beatOffset` | Source seconds to first grid beat, 0–duration | 14 |
 | `bend` | Temporary playback-rate offset, −20 to +20 percent; does not alter saved pitch; UI must return it to zero | 15 |
+| `drift` | Hidden playback-rate offset, −10 to +10 percent, added to pitch and bend; Star mode's turntable wobble, never shown as pitch | 16 |
 
 Output messages:
 
 - `{type:'ready', sampleRate, engine}` after initialization.
 - `{type:'loaded', deck, duration, bpm, id}` acknowledges successful PCM load.
 - `{type:'error', message, deck?, id?}` for load or engine errors. A load validation error is recoverable; a render error silences output.
-- `{type:'telemetry', positions, beats, peaks, bpms, durations, playing}` contains arrays of two values. Positions and durations are source seconds; `beats = (position − beatOffset) × sourceBpm / 60`. BPM includes pitch and temporary bend. Peaks are measured from the actual DSP output, accumulated over the telemetry interval. `playing` also reflects end-of-track stopping when loop is disabled.
+- `{type:'telemetry', positions, beats, peaks, bpms, durations, playing}` contains arrays of two values. Positions and durations are source seconds (a generated loop lasts 32 beats); `beats = (position − beatOffset) × sourceBpm / 60`. `bpms` are effective tempos, `bpm × (1 + (pitch + bend + drift) / 100)`, so they include the hidden drift. Peaks are measured from the actual DSP output, accumulated over the telemetry interval. `playing` also reflects end-of-track stopping when loop is disabled.
 
-Playback-rate changes naturally change musical pitch; this engine does not implement time stretching or key lock. Generated music combines procedural voice synthesis with a small locally trained Markov rhythm model. The first seven instrument families use the authored training corpus; the thirteen additional timbres draw independently from those learned family priors. No remote generation service is used. Every voice has several sound versions (six kicks, four of everything else; their names are in `src/instruments.js`), chosen per voice and kept when the track changes; the kick sounds differ in pitch, sweep, decay, transient and drive, so two decks in a kick-only lesson can sound clearly different. A stronger downbeat and an optional last-beat fill mark each sixteen-beat phrase.
+Playback-rate changes naturally change musical pitch; this engine does not implement time stretching or key lock. Generated music combines procedural voice synthesis with a small locally trained Markov rhythm model. The first seven instrument families use the authored training corpus, except that the kick stays on quarter notes; the thirteen additional timbres draw independently from those learned family priors. No remote generation service is used. Every voice has several sound versions (six kicks, four of everything else; their names are in `src/instruments.js`), chosen per voice and kept when the track changes; the kick sounds differ in pitch, sweep, decay, transient and drive, so two decks in a kick-only lesson can sound clearly different. A louder downbeat kick and a last-beat fill (closed hat, snare, and perc, where those voices are on) mark each sixteen-beat phrase.
 
 ## Raw WASM ABI
 
-`engine_init(sample_rate: f64)` initializes one instance. `engine_render(frames: u32)` accepts 0–128 frames and returns a pointer to 512 `f32` samples arranged as four planes of 128 samples: A-left, A-right, B-left, B-right. Unused frames are zero. Memory is exported as `memory`.
+`engine_init(sample_rate: f64)` (re)creates the instance's engine with both decks in their original state; the rate is clamped to 8,000–192,000 Hz. `engine_render(frames: u32)` accepts 0–128 frames and returns a pointer to 512 `f32` samples arranged as four planes of 128 samples: A-left, A-right, B-left, B-right. Unused frames are zero. Memory is exported as `memory`.
 
 `engine_set(deck: u32, parameter: u32, value: f64)` uses the table above. Changing generated source BPM preserves musical playhead, cue, and grid beat positions by rescaling their source seconds; calibrating PCM source BPM leaves source positions unchanged. `engine_randomize(deck, seed: u32, bpm: f64)` sets generated material. `engine_reserve(deck, frames: u32, source_rate: f64, bpm: f64)` returns a writable interleaved stereo PCM pointer, or zero on validation/allocation failure; copy the PCM then call `engine_commit(deck)`. Memory growth invalidates previous JavaScript typed-array views, so the worklet refreshes them after load.
 
-`engine_position`, `engine_beat`, `engine_bpm`, `engine_peak`, and `engine_duration` accept a deck index and return `f64`. `engine_playing` returns `u32` 0 or 1. An instance must only be called from one thread; each worklet gets its own isolated instance.
+`engine_position`, `engine_beat`, `engine_bpm`, `engine_peak`, and `engine_duration` accept a deck index and return `f64`; `engine_bpm` is the effective tempo including drift, and `engine_peak` covers the last render call. `engine_playing` returns `u32` 0 or 1. An instance must only be called from one thread; each worklet gets its own isolated instance.
 
 
 ## Voice bank and composition
@@ -75,15 +76,15 @@ The bank has twenty distinct synthesized voices, indexed in this order:
 | 2 | Snare | 12 | Low tom |
 | 3 | Clap | 13 | High tom |
 | 4 | Bass | 14 | Cowbell |
-| 5 | Percussion | 15 | Conga |
+| 5 | Perc | 15 | Conga |
 | 6 | Synth | 16 | Acid |
 | 7 | Open hat | 17 | Chord |
 | 8 | Shaker | 18 | Noise |
 | 9 | Ride | 19 | Zap |
 
-A bit `1 << index` enables a voice. Per-voice gain (0–1.5), pan (−1 left to +1 right), and optional sixteen-step overrides are changed through `{type:'voice',deck,voice,param,value}`. Parameter names are `gain`, `pan`, `pattern`, `reset`, or `sound` (the voice's sound version, clamped to the ones it has). A pattern is a sixteen-bit integer with the first step in the least significant bit; zero means no hits, and −1 uses the model-generated pattern. `reset` restores the model pattern without changing gain/pan. Overrides repeat each bar and take precedence over model hits and phrase fills. Disabled voices stay silent regardless of their pattern.
+A bit `1 << index` enables a voice. Per-voice gain (0–1.5), pan (−1 left to +1 right), and optional sixteen-step overrides are changed through `{type:'voice',deck,voice,param,value}`. Parameter names are `gain`, `pan`, `pattern`, `reset`, or `sound` (the voice's sound version, clamped to the ones it has); `value` must be a finite number, also for `reset`. A pattern is a sixteen-bit integer with the first step in the least significant bit; zero means no hits, and −1 uses the model-generated pattern. `reset` restores the model pattern without changing gain/pan. Overrides repeat each bar and take precedence over model hits and phrase fills. Disabled voices stay silent regardless of their pattern.
 
-The worklet returns `{type:'patterns',deck,patterns:[20 integers]}` after changing material or manual patterns. Each integer is that voice's actual first-bar pattern, including manual overrides. The UI uses it to show and edit the current pattern.
+The worklet returns `{type:'patterns',deck,patterns:[20 integers]}` after `randomize` and after `pattern` or `reset` voice changes. Each integer is that voice's actual first-bar pattern, including manual overrides. The UI uses it to show and edit the current pattern.
 
 Raw exports: `engine_voice_count() -> u32`, `engine_voice_sounds(voice) -> u32` (how many sound versions a voice has), `engine_voice(deck,voice,param,value)` with parameter IDs 0 gain, 1 pan, 2 pattern, 3 reset, and 4 sound, and `engine_voice_pattern(deck,voice) -> u32`. A silent voice (its envelope at zero) costs nothing until its next hit. Controls update coefficients outside the render loop; no audio-render heap allocation is added.
 

@@ -5,7 +5,8 @@ export function pitchSensitivity(value, shift = false) {
   return PITCH_SENSITIVITIES.includes(parsed) ? parsed : 0.05;
 }
 export function wheelPitchDelta(event, sensitivity = 0.05) {
-  const delta = Number(event.deltaY);
+  // Browsers turn Shift + mouse wheel into sideways scrolling, so with Shift the wheel may arrive as deltaX.
+  const delta = Number(event.deltaY) || (event.shiftKey ? Number(event.deltaX) : 0);
   if (!Number.isFinite(delta) || !delta) return 0;
   // Typical mouse detents are 100 CSS pixels, three lines, or one page.
   // Preserve fractional trackpad movement instead of rounding every event away.

@@ -294,9 +294,9 @@ impl Synth {
         if self.sound[17] > 0 && self.env[17] > 1e-7 {
             let root = sources.bass * 4.0 / rate;
             let intervals = &sounds::CHORDS[self.sound[17]];
-            for note in 0..4 {
-                let phase = self.chord_phase[note] + root * intervals[note];
-                self.chord_phase[note] = if phase >= 1.0 { phase - 1.0 } else { phase };
+            for (phase, interval) in self.chord_phase.iter_mut().zip(intervals) {
+                let next = *phase + root * interval;
+                *phase = if next >= 1.0 { next - 1.0 } else { next };
             }
         }
         let mut output = [0.0; 2];
