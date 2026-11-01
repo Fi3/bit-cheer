@@ -767,6 +767,37 @@ test('skin looks: Comfort and HD are prepared from the stored kit and Original p
   expect((await look()).face, 'Back to Original pixels gives back the exact palette').toBe(original.face);
 });
 
+test("the decks appear at once in the skin's own pixels, and the chosen look replaces them when it is ready", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const seen = (window.__looks = {});
+    new MutationObserver(() => {
+      const root = document.documentElement,
+        shell = document.querySelector('.app-shell');
+      if (shell && !seen.first)
+        seen.first = {
+          render: root.dataset.render,
+          layout: root.dataset.layout,
+          opacity: getComputedStyle(shell).opacity,
+        };
+      if (root.dataset.render === 'hd' && !seen.hd) {
+        const canvas = document.querySelector('.winamp-live canvas');
+        seen.hd = { windowDrawn: canvas.getContext('2d').getImageData(137, 30, 1, 1).data[3] > 0 };
+      }
+    }).observe(document, { childList: true, subtree: true, attributes: true });
+  });
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-render', 'hd');
+  const seen = await page.evaluate(() => window.__looks);
+  expect(seen.first, 'The decks show the skin as drawn without waiting for Comfort + HD').toEqual({
+    render: 'original',
+    layout: 'kit',
+    opacity: '1',
+  });
+  expect(seen.hd.windowDrawn, 'The Winamp windows show the skin before the finer look replaces it').toBe(true);
+});
+
 test("the skin's Winamp window: every button it shows works, shade folds it to a working bar, balance pans the deck", async ({
   page,
 }) => {

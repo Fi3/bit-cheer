@@ -72,14 +72,6 @@ let renderMode = 'hd';
   const stored = restore('bit-cheer-render');
   if (RENDER_MODES.includes(stored)) renderMode = stored;
 }
-// With Comfort or HD chosen, the first frame waits for that look (a fraction of a second) instead of
-// showing the original pixels and then changing color; after 1.5 s it shows the original anyway.
-if (renderMode !== 'original' && document.documentElement.dataset.layout === 'kit') {
-  document.documentElement.dataset.render = 'preparing';
-  setTimeout(() => {
-    if (document.documentElement.dataset.render === 'preparing') document.documentElement.dataset.render = 'original';
-  }, 1500);
-}
 // Dropdowns open the skin's own list (kit layout), the same in every browser.
 installSkinSelect();
 // The instrument bank's names and the named loops are static, so they reach Elm with its flags.
@@ -192,23 +184,23 @@ let skinStamp = 0;
 let renderEpoch = 0,
   renderDispose = null,
   shownSkin = null;
-// Shows the current skin in the chosen look. The original kit is already on screen; the prepared one
-// replaces it when ready, and the images of the previous look are freed only after that.
+// Shows the current skin in the chosen look. The skin's own pixels go on screen at once, the live windows
+// included; the chosen look is prepared after that and replaces them when ready, and the images of the
+// previous look are freed only then.
 async function refineSkin(dressed) {
   const epoch = ++renderEpoch;
   shownSkin = dressed;
+  const windowsShown = live.setSkin(dressed);
   const done = dispose => {
     renderDispose?.();
     renderDispose = dispose;
   };
-  const shown = () => {
-    if (document.documentElement.dataset.render === 'preparing') document.documentElement.dataset.render = 'original';
-  };
   if (renderMode === 'original' || !dressed?.kit || document.documentElement.dataset.layout !== 'kit') {
     done(null);
-    shown();
     return;
   }
+  await windowsShown;
+  if (epoch !== renderEpoch) return;
   try {
     const { kit, dispose } = await enhanceKit(dressed.kit, { hd: renderMode === 'hd' });
     if (epoch !== renderEpoch) {
@@ -220,10 +212,7 @@ async function refineSkin(dressed) {
     skinStamp++;
     done(dispose);
   } catch (error) {
-    if (epoch === renderEpoch) {
-      done(null);
-      shown();
-    }
+    if (epoch === renderEpoch) done(null);
     console.warn('The skin look could not be prepared; showing the original pixels.', error);
   }
 }
@@ -231,7 +220,6 @@ async function refineSkin(dressed) {
 const skinChanged = (id, name, custom) => {
   skinStamp++;
   const dressed = id === 'custom' ? custom : builtinKit(id);
-  live.setSkin(dressed);
   const shown = refineSkin(dressed);
   send({
     type: 'skin',
@@ -708,7 +696,6 @@ async function handle(command) {
       const id = document.documentElement.dataset.skin;
       applySkin(id, id === 'custom' ? shownSkin : undefined);
       skinStamp++;
-      live.setSkin(shownSkin);
       refineSkin(shownSkin);
       send({ type: 'render', mode: renderMode });
       break;

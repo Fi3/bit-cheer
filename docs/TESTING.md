@@ -84,7 +84,7 @@ Each module's logic runs under `node:test` without a browser, with small fakes f
 - rendering, waveforms and accessible controls; no horizontal scrolling;
 - keyboard control: both hands, focus rules, digits, Focus session and the help;
 - real audio: samples, pitch changing tempo, instruments and the mixer; jog, scrubbing and CUE;
-- skins: Skin studio, TOML, ZIP and WSZ imports, invalid skins, skins with controls painted on a picture, the three looks, and every word in the skin's lettering;
+- skins: Skin studio, TOML, ZIP and WSZ imports, invalid skins, skins with controls painted on a picture, the three looks (with the skin's own pixels and Winamp windows on screen before the chosen look is ready), and every word in the skin's lettering;
 - modes: Foundation's two named kicks, the Loop builder's named loops and sounds, the twenty-voice composer, CHAOS!, tempo and track actions per deck;
 - Pro decks: track pickers, local imports on either deck, folder browsing and its fallback, stale downloads, native tempo on track changes;
 - practice: lessons and their unlocking, drills, Star mode and ★ Star runs, the lesson 8 handover, tap tempo;

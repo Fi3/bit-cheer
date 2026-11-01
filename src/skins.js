@@ -1,5 +1,4 @@
 import { assetUrl } from './assets.js';
-import { parse } from 'smol-toml';
 import { unzipSync, strFromU8, zipSync, strToU8 } from 'fflate';
 import { buildKit, renderPreview, mix, KIT_PART_KEYS, KIT_COLOR_KEYS, KIT_VERSION } from './skin-kit.js';
 
@@ -320,10 +319,13 @@ async function fromWsz(files, filename) {
   return { base: 'classic', theme, assets: {}, images: { titlebar: kit.parts.titleStrip }, kit, preview };
 }
 
+// The TOML reader loads only when a skin file is imported: the page doesn't need it to start.
+const parseToml = async text => (await import('smol-toml')).parse(text);
+
 export async function importSkin(file) {
   if (file.size > 10 * 1024 * 1024) throw new Error('Skins must be smaller than 10 MB.');
   if (/\.toml$/i.test(file.name)) {
-    const result = validateSkin(parse(await file.text()));
+    const result = validateSkin(await parseToml(await file.text()));
     if (Object.keys(result.assets).length)
       throw new Error('This skin includes images. Put skin.toml and its images together in a ZIP.');
     return { ...result, images: {} };
@@ -333,7 +335,7 @@ export async function importSkin(file) {
   const path = Object.keys(files).find(name => /(^|\/)skin.toml$/i.test(name));
   if (!path) return fromWsz(files, file.name);
   const root = path.slice(0, -'skin.toml'.length),
-    result = validateSkin(parse(strFromU8(files[path]))),
+    result = validateSkin(await parseToml(strFromU8(files[path]))),
     images = {};
   let numbersWidth = result.base === 'bento' ? 324 : 297;
   for (const [key, path] of Object.entries(result.assets)) {

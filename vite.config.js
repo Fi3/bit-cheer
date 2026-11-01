@@ -35,7 +35,9 @@ function preloadDecks() {
         if (!main) throw new Error('src/main.js is missing from the bundle.');
         const link = attrs => ({ tag: 'link', attrs: { ...attrs, crossorigin: true }, injectTo: 'head' });
         return [
-          ...[main.fileName, ...main.imports].map(file => link({ rel: 'modulepreload', href: base + file })),
+          ...[main.fileName, ...main.imports.filter(file => !bundle[file]?.isEntry)].map(file =>
+            link({ rel: 'modulepreload', href: base + file }),
+          ),
           ...[...main.viteMetadata.importedCss].map(file => link({ rel: 'preload', as: 'style', href: base + file })),
           link({ rel: 'preload', as: 'fetch', href: `${base}skins/millennium.wsz` }),
         ];

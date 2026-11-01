@@ -649,6 +649,8 @@ Skins change how the app looks; they never change what a control does.
 | **LOOK**: **Original pixels**, **Comfort**, **Comfort + HD** | Winamp skins: exactly as the author drew it; gentler contrast, saturation and textures; or Comfort plus pixel art redrawn four times finer with smooth lettering (the default). Remembered on this device. |
 | Skin DNA | Winamp skins: the skin's colors, letters, digits, buttons, slider knobs and analyser colors, as the app uses them. Display only. |
 
+When the page opens, and whenever a Winamp skin or look is put on, the decks appear at once as the author drew the skin, Winamp windows included; Comfort or Comfort + HD replaces that a moment later, as soon as it is ready.
+
 ### 12.2 Built-in skins
 
 Two cards: **Millennium Chrome** (the default) and **Strawberry Mochi**. Clicking a card puts that skin on at once; the active one reads **✓ ACTIVE**, the other **APPLY ↗**.
