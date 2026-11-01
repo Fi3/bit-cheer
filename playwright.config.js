@@ -17,6 +17,11 @@ function executablePath() {
     .find(file => existsSync(file));
 }
 
+// Headless Chromium's screen is its --window-size (800 × 600 unless set). Fullscreen (Focus session)
+// shrinks the window to that screen while the page stays laid out at the viewport, and wheel input
+// outside the window never reaches the page, so the screen must be as large as the viewport.
+const viewport = { width: 1440, height: 1100 };
+
 export default defineConfig({
   testDir: './tests',
   testMatch: 'e2e.spec.js',
@@ -27,13 +32,13 @@ export default defineConfig({
   reporter: 'list',
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:5173',
-    viewport: { width: 1440, height: 1100 },
+    viewport,
     headless: true,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     launchOptions: {
       executablePath: executablePath(),
-      args: ['--autoplay-policy=no-user-gesture-required'],
+      args: ['--autoplay-policy=no-user-gesture-required', `--window-size=${viewport.width},${viewport.height}`],
     },
   },
   webServer: process.env.PLAYWRIGHT_BASE_URL
