@@ -216,6 +216,28 @@ test('desktop renders real waveform canvases and accessible two-deck controls', 
   await expect(page.getByRole('button', { name: 'Keyboard shortcuts and help', exact: true })).toBeFocused();
 });
 
+test('the top bar links the video tutorial on every page and opens it in a new tab only when clicked', async ({
+  page,
+}) => {
+  const tutorialUrl = 'https://www.youtube.com/watch?v=SLSok7xQwCY';
+  await page
+    .context()
+    .route('https://www.youtube.com/**', route =>
+      route.fulfill({ contentType: 'text/html', body: '<title>Tutorial</title>' }),
+    );
+  const tutorial = page.getByRole('link', { name: /Video tutorial/ });
+  for (const name of ['Learning path', 'Training', 'Skin studio', 'Practice']) {
+    await page.getByRole('button', { name, exact: true }).click();
+    await expect(tutorial).toBeVisible();
+  }
+  expect(page.__requests.filter(url => new URL(url).hostname.endsWith('youtube.com'))).toEqual([]);
+  const app = page.url();
+  const [tab] = await Promise.all([page.context().waitForEvent('page'), tutorial.click()]);
+  await expect.poll(() => tab.url()).toBe(tutorialUrl);
+  expect(page.url()).toBe(app);
+  await tab.close();
+});
+
 test('browser modifier shortcuts do not start playback but plain F still plays deck A', async ({ page }) => {
   await page.getByRole('heading', { name: 'Find your rhythm.' }).click();
   await page.keyboard.press('Control+f');

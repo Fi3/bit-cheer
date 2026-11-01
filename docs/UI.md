@@ -71,6 +71,7 @@ Every page shares a top bar, a mode bar on the left, a notice bar above the page
 | --- | --- |
 | **Skip to practice** | Appears only when reached with `Tab`; jumps the keyboard focus to the page content. |
 | **bit.cheer** logo | Goes to the Practice page. Nothing is reset. |
+| **▶ Tutorial** | Opens the bit.cheer video tutorial on YouTube in a new tab. The app loads nothing from YouTube until you click it. |
 | **Practice** | Goes to the Practice page (the decks). |
 | **Learning path** | Goes to the [Learning path page](#8-learning-path-page). |
 | **Training** | Goes to the [Training page](#9-training-page). |
