@@ -29,7 +29,9 @@ The workflow determines the base path from the repository name:
 | `alice/bit-cheer` | `https://alice.github.io/bit-cheer/` | `/bit-cheer/` |
 | `alice/alice.github.io` | `https://alice.github.io/` | `/` |
 
-The compiled JavaScript, Elm image and credits links, CSS graphics, catalog audio, WebAssembly, and worker URLs all use that base. The app's tabs do not require a server-side route fallback.
+The compiled JavaScript, Elm image and credits links, CSS graphics, catalog audio, WebAssembly, worker URLs, and the preload hints in `index.html` all use that base. The app's tabs do not require a server-side route fallback.
+
+The production build also minifies `elm.js` and lets the page download the decks' code, their styles and the default skin (`public/skins/millennium.wsz`) alongside `elm.js` (`vite.config.js`). `npm run dev` serves the files as they are.
 
 For a custom domain, configure the domain in **Settings → Pages**, then set the repository Actions variable **VITE_BASE_PATH** to `/` under **Settings → Secrets and variables → Actions → Variables**. For another intentional subdirectory, set that variable to the desired leading-and-trailing-slash path, such as `/practice/`. Run the deployment workflow again after changing it.
 

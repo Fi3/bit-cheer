@@ -51,8 +51,9 @@ import { LOOPS } from './loops.js';
 // it's quick, otherwise start on the classic CSS look and dress the app as soon as it's ready.
 const savedSkin = restore('bit-cheer-skin');
 const startupSkin = savedSkin?.id === 'custom' || SELECTABLE_SKINS.includes(savedSkin?.id) ? savedSkin : null;
-// The built-in skin the page starts with is built first (Millennium Chrome also backs custom skins).
-const builtinReady = prepareBuiltinSkins(startupSkin?.id === 'custom' ? DEFAULT_SKIN : startupSkin?.id);
+// The built-in skin the page starts with is built first (Millennium Chrome also backs custom skins); the
+// others wait until the page wears its look (see the startup task at the end).
+const builtinReady = prepareBuiltinSkin(SELECTABLE_SKINS.includes(startupSkin?.id) ? startupSkin.id : DEFAULT_SKIN);
 const builtinInTime = await Promise.race([
   builtinReady,
   new Promise(resolve => setTimeout(() => resolve(false), 2500)),
@@ -226,11 +227,12 @@ async function refineSkin(dressed) {
     console.warn('The skin look could not be prepared; showing the original pixels.', error);
   }
 }
+// Resolves once the skin's look is on screen.
 const skinChanged = (id, name, custom) => {
   skinStamp++;
   const dressed = id === 'custom' ? custom : builtinKit(id);
   live.setSkin(dressed);
-  refineSkin(dressed);
+  const shown = refineSkin(dressed);
   send({
     type: 'skin',
     id,
@@ -239,6 +241,7 @@ const skinChanged = (id, name, custom) => {
     preview: skinPicture(id, custom),
     source: custom?.source && /^https:\/\/skins\.webamp\.org\//.test(custom.source) ? custom.source : '',
   });
+  return shown;
 };
 const fail = error => {
   if (engine.context) engine.emitRouting();
@@ -1319,7 +1322,7 @@ queueMicrotask(async () => {
   }
   const saved = restore('bit-cheer-progress');
   if (saved && Array.isArray(saved.progress) && Array.isArray(saved.history)) send({ type: 'restore', ...saved });
-  skinChanged(document.documentElement.dataset.skin, startupSkinName, startupSkin?.custom);
+  let lookShown = skinChanged(document.documentElement.dataset.skin, startupSkinName, startupSkin?.custom);
   // Winamp skins saved by an older version: fetch them again from the museum for the full look.
   const savedCustom = startupSkin?.id === 'custom' ? startupSkin.custom : null;
   if (savedCustom && (savedCustom.originals || savedCustom.kit) && !validKit(savedCustom.kit)) {
@@ -1340,14 +1343,17 @@ queueMicrotask(async () => {
   }
   if (!builtinInTime) {
     const epoch = skinEpoch;
-    builtinReady.then(ok => {
+    lookShown = builtinReady.then(ok => {
       const id = document.documentElement.dataset.skin;
       if (ok && epoch === skinEpoch && SELECTABLE_SKINS.includes(id)) {
         const name = applySkin(id);
-        skinChanged(id, name);
+        return skinChanged(id, name);
       }
     });
   }
+  // The other built-in skins are built a little after the page wears its own look, so they never delay
+  // it or its first paint; choosing one sooner builds it on the spot.
+  lookShown.then(() => setTimeout(prepareBuiltinSkins, 2000));
   try {
     const hidden = restore('bit-cheer-console-hidden');
     if (typeof hidden === 'string' && /^[ab ]*$/.test(hidden)) document.documentElement.dataset.consoleHidden = hidden;

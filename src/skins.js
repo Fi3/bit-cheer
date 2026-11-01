@@ -286,12 +286,9 @@ export function prepareBuiltinSkin(id) {
   ); // the classic CSS look still works without it
   return builtinBuilds[id];
 }
-/** Builds the skin the page starts with first (the default when none is saved); the others follow. */
-export async function prepareBuiltinSkins(first = DEFAULT_SKIN) {
-  const start = SELECTABLE_SKINS.includes(first) ? first : DEFAULT_SKIN;
-  const ready = await prepareBuiltinSkin(start);
-  for (const id of SELECTABLE_SKINS) if (id !== start) prepareBuiltinSkin(id);
-  return ready;
+/** Builds every built-in skin's kit not built yet, one after another (the page starts with one of them). */
+export async function prepareBuiltinSkins() {
+  for (const id of SELECTABLE_SKINS) await prepareBuiltinSkin(id);
 }
 export const builtinKit = id => builtinKits[id] || null;
 

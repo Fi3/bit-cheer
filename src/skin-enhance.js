@@ -169,6 +169,14 @@ function comfortImage(data) {
 // A neighbour's index: clamped at the edges, or wrapped around for pieces the page repeats as tiles
 // (title bar fill, window sides), so their seams stay invisible.
 const edge = (n, size, wrap) => (wrap ? ((n % size) + size) % size : Math.max(0, Math.min(size - 1, n)));
+// `edge` as a table for every position from two before the start to two past the end (as far as any
+// rule here looks), times `stride` (the row width, for rows): `table[n + 2]` is `edge(n) * stride`.
+// The pixel loops read their neighbours from it instead of clamping or wrapping each time.
+function edges(size, wrap, stride = 1) {
+  const table = new Int32Array(size + 4);
+  for (let n = -2; n < size + 2; n++) table[n + 2] = edge(n, size, wrap) * stride;
+  return table;
+}
 
 // Calmer fine texture (dithering, grain, noisy gradients) with every edge kept: each pixel takes the
 // average of its neighbours that are already close to it in color; anything farther (an edge, a
@@ -176,20 +184,42 @@ const edge = (n, size, wrap) => (wrap ? ((n % size) + size) % size : Math.max(0,
 function calmTexture(data, { range = 30, wrapX = false, wrapY = false } = {}) {
   const { width: w, height: h } = data,
     src = data.data,
-    out = new Uint8ClampedArray(src);
-  for (let y = 0; y < h; y++)
+    src32 = new Uint32Array(src.buffer, src.byteOffset, w * h),
+    out = new Uint8ClampedArray(src),
+    cols = edges(w, wrapX),
+    rows = edges(h, wrapY, w);
+  for (let y = 0; y < h; y++) {
+    const above = rows[y + 1],
+      row = rows[y + 2],
+      below = rows[y + 3];
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4;
       if (src[i + 3] < 255) continue;
+      // Among neighbours all of exactly this color, the average is the color itself: nothing to do.
+      const color = src32[row + x],
+        left = cols[x + 1],
+        right = cols[x + 3];
+      if (
+        src32[above + left] === color &&
+        src32[above + x] === color &&
+        src32[above + right] === color &&
+        src32[row + left] === color &&
+        src32[row + right] === color &&
+        src32[below + left] === color &&
+        src32[below + x] === color &&
+        src32[below + right] === color
+      )
+        continue;
       let r = src[i] * 2,
         g = src[i + 1] * 2,
         b = src[i + 2] * 2,
         n = 2;
-      for (let dy = -1; dy <= 1; dy++)
+      for (let dy = -1; dy <= 1; dy++) {
+        if (!wrapY && (y + dy < 0 || y + dy >= h)) continue;
+        const line = rows[y + dy + 2];
         for (let dx = -1; dx <= 1; dx++) {
-          if ((!dx && !dy) || (!wrapX && (x + dx < 0 || x + dx >= w)) || (!wrapY && (y + dy < 0 || y + dy >= h)))
-            continue;
-          const j = (edge(y + dy, h, wrapY) * w + edge(x + dx, w, wrapX)) * 4;
+          if ((!dx && !dy) || (!wrapX && (x + dx < 0 || x + dx >= w))) continue;
+          const j = (line + cols[x + dx + 2]) * 4;
           if (
             src[j + 3] < 255 ||
             Math.abs(src[j] - src[i]) + Math.abs(src[j + 1] - src[i + 1]) + Math.abs(src[j + 2] - src[i + 2]) > range
@@ -200,10 +230,12 @@ function calmTexture(data, { range = 30, wrapX = false, wrapY = false } = {}) {
           b += src[j + 2];
           n++;
         }
+      }
       out[i] = r / n;
       out[i + 1] = g / n;
       out[i + 2] = b / n;
     }
+  }
   data.data.set(out);
   return data;
 }
@@ -220,7 +252,9 @@ export function scale2x(src, { tolerance = 24, wrapX = false, wrapY = false } = 
     s = new Uint32Array(src.data.buffer, src.data.byteOffset, w * h);
   const out = new ImageData(w * 2, h * 2),
     o = new Uint32Array(out.data.buffer),
-    W = w * 2;
+    W = w * 2,
+    cols = edges(w, wrapX),
+    rows = edges(h, wrapY, w);
   const eq = (p, q) => {
     if (p === q) return true;
     const pa = p >>> 24,
@@ -234,28 +268,31 @@ export function scale2x(src, { tolerance = 24, wrapX = false, wrapY = false } = 
       tolerance
     );
   };
-  const at = (x, y) => s[edge(y, h, wrapY) * w + edge(x, w, wrapX)];
-  for (let y = 0; y < h; y++)
+  const at = (x, y) => s[rows[y + 2] + cols[x + 2]];
+  // The corner toward (dx, dy) of the pixel E at (x, y), where `K` comes in from both sides.
+  const bends = (x, y, dx, dy, E, K) =>
+    !eq(at(x + dx, y + dy), K) ||
+    (eq(at(x + dx, y - dy), E) && eq(at(x + 2 * dx, y - dy), K)) ||
+    (eq(at(x - dx, y + dy), E) && eq(at(x - dx, y + 2 * dy), K));
+  for (let y = 0; y < h; y++) {
+    const above = rows[y + 1],
+      row = rows[y + 2],
+      below = rows[y + 3];
     for (let x = 0; x < w; x++) {
-      const E = s[y * w + x],
-        B = at(x, y - 1),
-        H = at(x, y + 1),
-        D = at(x - 1, y),
-        F = at(x + 1, y);
+      const E = s[row + x],
+        B = s[above + x],
+        H = s[below + x],
+        D = s[row + cols[x + 1]],
+        F = s[row + cols[x + 3]];
       let e0 = E,
         e1 = E,
         e2 = E,
         e3 = E;
       if (!eq(B, H) && !eq(D, F)) {
-        // The corner toward (dx, dy), where `K` comes in from both sides.
-        const bends = (dx, dy, K) =>
-          !eq(at(x + dx, y + dy), K) ||
-          (eq(at(x + dx, y - dy), E) && eq(at(x + 2 * dx, y - dy), K)) ||
-          (eq(at(x - dx, y + dy), E) && eq(at(x - dx, y + 2 * dy), K));
-        if (eq(D, B) && bends(-1, -1, D)) e0 = D;
-        if (eq(B, F) && bends(1, -1, F)) e1 = F;
-        if (eq(D, H) && bends(-1, 1, D)) e2 = D;
-        if (eq(H, F) && bends(1, 1, F)) e3 = F;
+        if (eq(D, B) && bends(x, y, -1, -1, E, D)) e0 = D;
+        if (eq(B, F) && bends(x, y, 1, -1, E, F)) e1 = F;
+        if (eq(D, H) && bends(x, y, -1, 1, E, D)) e2 = D;
+        if (eq(H, F) && bends(x, y, 1, 1, E, F)) e3 = F;
       }
       const r = y * 2 * W + x * 2;
       o[r] = e0;
@@ -263,8 +300,22 @@ export function scale2x(src, { tolerance = 24, wrapX = false, wrapY = false } = 
       o[r + W] = e2;
       o[r + W + 1] = e3;
     }
+  }
   return out;
 }
+
+// Each of an HD pixel's 16 sub-pixels (index row * 4 + column) sits this far from the pixel's center,
+// in source pixels, and blends the pixel with its close neighbours beside it, above or below it and
+// across the corner by these bilinear weights.
+const OFF = [-0.375, -0.125, 0.125, 0.375];
+const subWeights = weight =>
+  Float64Array.from({ length: 16 }, (_, k) => weight(Math.abs(OFF[k % 4]), Math.abs(OFF[k >> 2])));
+const SUB_WEIGHTS = {
+  own: subWeights((u, v) => (1 - u) * (1 - v)),
+  horizontal: subWeights((u, v) => u * (1 - v)),
+  vertical: subWeights((u, v) => (1 - u) * v),
+  diagonal: subWeights((u, v) => u * v),
+};
 
 // HD: four times the pixels. Hard edges follow the Scale2x rules (twice), so staircases become clean
 // diagonals and nothing blurs; soft areas (painted pictures, shading, gradients) are interpolated
@@ -279,42 +330,72 @@ export function hdScale(src, { soft = true, softRange = 42, wrapX = false, wrapY
     o = out.data,
     W = w * 4;
   if (!soft) return out;
-  const OFF = [-0.375, -0.125, 0.125, 0.375];
-  const idx = (x, y) => (edge(y, h, wrapY) * w + edge(x, w, wrapX)) * 4;
+  const cols = edges(w, wrapX),
+    rows = edges(h, wrapY, w),
+    s32 = new Uint32Array(s.buffer, s.byteOffset, w * h);
   const near = (i, j) =>
     s[j + 3] === 255 &&
     Math.abs(s[i] - s[j]) + Math.abs(s[i + 1] - s[j + 1]) + Math.abs(s[i + 2] - s[j + 2]) <= softRange;
-  for (let y = 0; y < h; y++)
+  for (let y = 0; y < h; y++) {
+    const above = rows[y + 1],
+      row = rows[y + 2],
+      below = rows[y + 3];
     for (let x = 0; x < w; x++) {
-      const e = idx(x, y);
+      const e = (row + x) * 4;
       if (s[e + 3] !== 255) continue;
+      const left = cols[x + 1],
+        right = cols[x + 3],
+        up = (above + x) * 4,
+        down = (below + x) * 4,
+        before = (row + left) * 4,
+        after = (row + right) * 4;
+      const nearUp = near(e, up),
+        nearDown = near(e, down),
+        nearBefore = near(e, before),
+        nearAfter = near(e, after);
       // A pixel whose four neighbours are all close to it lies in a soft area (a painted picture, a
       // gradient) and is interpolated through and through; elsewhere the Scale2x diagonals stay and only
       // the spots they left alone lean toward close neighbours.
-      const inSoft =
-        near(e, idx(x, y - 1)) && near(e, idx(x, y + 1)) && near(e, idx(x - 1, y)) && near(e, idx(x + 1, y));
-      for (let j = 0; j < 4; j++)
-        for (let i = 0; i < 4; i++) {
-          const p = ((y * 4 + j) * W + x * 4 + i) * 4;
-          if (!inSoft && (o[p] !== s[e] || o[p + 1] !== s[e + 1] || o[p + 2] !== s[e + 2] || o[p + 3] !== 255))
+      const inSoft = nearUp && nearDown && nearBefore && nearAfter,
+        color = s32[row + x];
+      // Each quarter of the pixel leans toward its own side: the neighbour beside it (nh), above or
+      // below it (nv), and across the corner (nd), each only when close in color.
+      for (let qy = 0; qy < 2; qy++) {
+        const nv = qy ? down : up,
+          towardV = qy ? nearDown : nearUp;
+        for (let qx = 0; qx < 2; qx++) {
+          const nh = qx ? after : before,
+            towardH = qx ? nearAfter : nearBefore,
+            nd = ((qy ? below : above) + (qx ? right : left)) * 4,
+            towardD = towardH && towardV && near(e, nd);
+          // A quarter leaning only toward neighbours of exactly this color stays as Scale2x drew it: the
+          // blend gives the color back (every weight is a multiple of 1/64, so each sum is exact), and
+          // Scale2x drew every spot the blend would touch in that color.
+          if (
+            (!towardH || s32[nh >> 2] === color) &&
+            (!towardV || s32[nv >> 2] === color) &&
+            (!towardD || s32[nd >> 2] === color)
+          )
             continue;
-          const u = Math.abs(OFF[i]),
-            v = Math.abs(OFF[j]),
-            dx = OFF[i] < 0 ? -1 : 1,
-            dy = OFF[j] < 0 ? -1 : 1;
-          const nh = idx(x + dx, y),
-            nv = idx(x, y + dy),
-            nd = idx(x + dx, y + dy);
-          const wE = (1 - u) * (1 - v),
-            wH = near(e, nh) ? u * (1 - v) : 0,
-            wV = near(e, nv) ? (1 - u) * v : 0;
-          const wD = wH && wV && near(e, nd) ? u * v : 0,
-            sum = wE + wH + wV + wD;
-          for (let c = 0; c < 3; c++)
-            o[p + c] = (s[e + c] * wE + s[nh + c] * wH + s[nv + c] * wV + s[nd + c] * wD) / sum;
-          o[p + 3] = 255;
+          for (let j = qy * 2; j < qy * 2 + 2; j++)
+            for (let i = qx * 2; i < qx * 2 + 2; i++) {
+              const p = ((y * 4 + j) * W + x * 4 + i) * 4;
+              if (!inSoft && (o[p] !== s[e] || o[p + 1] !== s[e + 1] || o[p + 2] !== s[e + 2] || o[p + 3] !== 255))
+                continue;
+              const k = j * 4 + i,
+                wE = SUB_WEIGHTS.own[k],
+                wH = towardH ? SUB_WEIGHTS.horizontal[k] : 0,
+                wV = towardV ? SUB_WEIGHTS.vertical[k] : 0,
+                wD = towardD ? SUB_WEIGHTS.diagonal[k] : 0,
+                sum = wE + wH + wV + wD;
+              for (let c = 0; c < 3; c++)
+                o[p + c] = (s[e + c] * wE + s[nh + c] * wH + s[nv + c] * wV + s[nd + c] * wD) / sum;
+              o[p + 3] = 255;
+            }
         }
+      }
     }
+  }
   return out;
 }
 

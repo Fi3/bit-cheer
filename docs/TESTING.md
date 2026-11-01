@@ -73,7 +73,7 @@ Each module's logic runs under `node:test` without a browser, with small fakes f
 | `tests/output-routing.test.mjs` | Hardware route validation, the discrete multichannel graph, mono downmix, bypassing the crossfader in hardware modes, rollback on errors, device loss, and the device picker. |
 | `tests/pitch-control.test.mjs` | Wheel and key pitch steps for every sensitivity and wheel unit, Shift + wheel (including sideways scrolling), fractional trackpad motion, and clamping. |
 | `tests/pixel-font.test.mjs` | Every character the app writes has a glyph in the skin's pixel font, including symbols such as 📁. |
-| `tests/skin-enhance.test.mjs` | The HD redraw (smooth diagonals, sharp corners, lettering, gradients, seamless tiles) and Comfort (no pure black or white, calmer loud colors, readable text). |
+| `tests/skin-enhance.test.mjs` | The HD redraw (smooth diagonals, sharp corners, lettering, gradients, seamless tiles, and exactly the pixels of its plain rules on generated skin art) and Comfort (no pure black or white, calmer loud colors, readable text). |
 | `tests/skins.test.mjs` | Skin bases and palettes, the artwork contract, built-in kits, safe skin switching, ZIP and WSZ imports, kit building from odd skins, text-file parsing, import limits, museum links, and safe kit images. |
 | `tests/training.test.mjs` | Tap tempo, match scoring (tempo, phase, phrase, wrap-around, held history), BPM detection, waveform peaks, the skin template round trip, archive limits, and Star mode drift and scoring. |
 
